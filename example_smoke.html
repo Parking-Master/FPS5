@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dust Hit Effect - Fixed</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #111; 
+        }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-family: Arial;
+            font-size: 16px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Click the WALL to see dust burst!</div>
+    <script src="js/three.js"></script>
+    <script src="js/particles.js"></script>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        camera.position.z = 5;
+        const wallGeometry = new THREE.PlaneGeometry(8, 6);
+        const wallMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x8B4513, 
+            transparent: true, 
+            opacity: 0.9 
+        });
+        const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+        wall.position.z = -2;
+        scene.add(wall);
+        const light = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(light);
+
+        function animate() {
+          requestAnimationFrame(animate);
+          updateParticles();
+          renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPS-X web shooter</title>
+    <style>
+      html, body {
+        margin: 0;
+        overflow: hidden !important;
+        user-select: none !important;
+      }
+      body {
+        margin: 0;
+        position: fixed;
+        inset: 0;
+        display: flex;
+      }
+      .vignette {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        margin: 0;
+        padding: 0;
+        pointer-events: none !important;
+        transition: opacity .15s;
+      }
+      .crosshair {
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        left: 50%;
+        top: 50%;
+        margin-left: -25px;
+        margin-top: -25px;
+      }
+      .ui {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        pointer-events: none !important;
+        z-index: 2147483645;
+      }
+      canvas {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="/js/three.js"></script>
+    <script src="/js/GLTFLoader.js"></script>
+    <script src="https://fpsx.parkingmaster.tk/lib/Capsule.min.js"></script>
+    <script src="https://fpsx.parkingmaster.tk/lib/Octree.min.js"></script>
+    <script src="https://fpsx.parkingmaster.tk/lib/PointerLockControls.min.js"></script>
+    <script src="https://fpsx.parkingmaster.tk/lib/UI.js"></script>
+    <script src="https://fpsx.parkingmaster.tk/lib/tween.min.js"></script>
+    <script src="https://fpsx.parkingmaster.tk/lib/plugins.js"></script>
+    <div class="ui" id="game-ui">
+      <img class="vignette" src="https://fpsx.parkingmaster.tk/images/other/vignette.png">
+      <img class="crosshair" src="https://fpsx.parkingmaster.tk/images/icons/ui/crosshair.png">
+    </div>
+    <script>
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, 1440 / 900, 0.1, 1000);
+      const clock = new THREE.Clock();
+      const worldOctree = new THREE.Octree();
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      const hemisphereLight = new THREE.HemisphereLight(0xa1c5e0, 0x002244, 0.5);
+
+      let keyStates = {};
+      let playerOnFloor = false;
+
+      let vector3 = new THREE.Vector3();
+      let playerDefaultPosition = {
+        x: 13.5,
+        y: .35,
+        z: -18.5
+      };
+
+      const STEPS_PER_FRAME = 4;
+      const GRAVITY = 40;
+      const grenades = [];
+
+      const playerCollider = new THREE.Capsule(new THREE.Vector3(0, .35, 0), new THREE.Vector3(0, 1, 0), .35);
+      const playerVelocity = vector3.clone();
+      const playerDirection = vector3.clone();
+
+      renderer.setPixelRatio(1.8);
+      renderer.setSize(1440, 900);
+      renderer.setClearAlpha();
+      renderer.setClearColor(0x000000, 0);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.VSMShadowMap;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+      renderer.domElement.style = "";
+      renderer.domElement.width = "1440";
+      renderer.domElement.height = "900";
+      renderer.setViewport(0, 0, (1440 / 2) + 80, (900 / 2) + 50);
+
+      camera.rotation.order = "YXZ";
+      playerCollider.start.set(playerDefaultPosition.x, playerDefaultPosition.y, playerDefaultPosition.z);
+      playerCollider.end.set(playerDefaultPosition.x, playerDefaultPosition.y + .65, playerDefaultPosition.z);
+      directionalLight.position.set(-5, 25, -1);
+      directionalLight.castShadow = true;
+      directionalLight.shadow.camera.near = .01;
+      directionalLight.shadow.camera.far = 500;
+      directionalLight.shadow.camera.right = 30;
+      directionalLight.shadow.camera.left = -30;
+      directionalLight.shadow.camera.top = 30;
+      directionalLight.shadow.camera.bottom = -30;
+      directionalLight.shadow.mapSize.width = 1024;
+      directionalLight.shadow.mapSize.height = 1024;
+      directionalLight.shadow.radius = 4;
+      directionalLight.shadow.bias = -0.00006;
+      hemisphereLight.position.set(2, 1, 1);
+      document.body.appendChild(renderer.domElement);
+
+      scene.add(hemisphereLight);
+      scene.add(directionalLight);
+
+      let frameCount = 0;
+      let lastTime = performance.now();
+      let fps = 0;
+      function animate(now) {
+        const clockDelta = clock.getDelta();
+        const deltaTime = Math.min(0.05, clockDelta) / STEPS_PER_FRAME;
+
+        renderer.render(scene, camera);
+
+        teleportPlayerIfOob();
+
+        TWEEN.update();
+        for (let i = 0; i < STEPS_PER_FRAME; i++) {
+          controls(deltaTime);
+          updatePlayer(deltaTime);
+          updateGrenades(deltaTime);
+        }
+
+        frameCount++;
+        const diff = now - lastTime;
+        if (diff >= 1000) {
+          fps = (frameCount * 1000) / diff;
+          frameCount = 0;
+          lastTime = now;
+          console.log('FPS:', fps.toFixed(1));
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      let map = null;
+
+      function update() {
+        renderer.shadowMap.needsUpdate = true;
+      }
+      function getForwardVector() {
+        camera.getWorldDirection(playerDirection);
+        playerDirection.y = 0;
+        playerDirection.normalize();
+        return playerDirection;
+      }
+      function getSideVector() {
+        camera.getWorldDirection(playerDirection);
+        playerDirection.y = 0;
+        playerDirection.normalize();
+        playerDirection.cross(camera.up);
+        return playerDirection;
+      }
+      function controls(deltaTime) {
+        const speedDelta = deltaTime;
+        const walkSpeed = deltaTime * (playerOnFloor ? 15 : 2);
+        if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
+          playerVelocity.add(getForwardVector().multiplyScalar(walkSpeed));
+        }
+        if (keyStates["KeyS"] || keyStates["ArrowDown"]) {
+          playerVelocity.add(getForwardVector().multiplyScalar(-walkSpeed));
+        }
+        if (keyStates["KeyA"] || keyStates["ArrowLeft"]) {
+          playerVelocity.add(getSideVector().multiplyScalar(-walkSpeed));
+        }
+        if (keyStates["KeyD"] || keyStates["ArrowRight"]) {
+          playerVelocity.add(getSideVector().multiplyScalar(walkSpeed));
+        }
+        if (playerOnFloor && keyStates["Space"]) {
+          playerVelocity.y = 8;
+        }
+      }
+      function playerCollisions() {
+        const result = worldOctree.capsuleIntersect(playerCollider);
+        playerOnFloor = false;
+        if (result) {
+          playerOnFloor = result.normal.y > 0;
+          if (!playerOnFloor) {
+            playerVelocity.addScaledVector(result.normal, - result.normal.dot(playerVelocity));
+          }
+          playerCollider.translate(result.normal.multiplyScalar(result.depth));
+        }
+      }
+      function updatePlayer(deltaTime) {
+        let damping = Math.exp(-4 * deltaTime) - 1;
+        if (!playerOnFloor) {
+          playerVelocity.y -= GRAVITY * (deltaTime);
+          damping *= 0.1;
+        }
+        playerVelocity.addScaledVector(playerVelocity, damping);
+        const deltaPosition = playerVelocity.clone().multiplyScalar(deltaTime);
+        playerCollider.translate(deltaPosition);
+        playerCollisions();
+        camera.position.copy(playerCollider.end);
+      }
+      function updateGrenades(deltaTime) {
+        for (let i = 0; i < grenades.length; i++) {
+          let grenade = grenades[i];
+
+          grenade.mesh.rotation.x += grenade.angularVelocity.x * deltaTime;
+          grenade.mesh.rotation.y += grenade.angularVelocity.y * deltaTime;
+          grenade.mesh.rotation.z += grenade.angularVelocity.z * deltaTime;
+
+          grenade.collider.center.addScaledVector(grenade.velocity, deltaTime);
+          const result = worldOctree.sphereIntersect(grenade.collider);
+          if (result) {
+            grenade.hits++;
+            grenade.velocity.addScaledVector(result.normal, -result.normal.dot(grenade.velocity) * 1.5);
+
+            const rotationAxis = new THREE.Vector3().crossVectors(result.normal, grenade.velocity).normalize();
+            const rotationSpeed = grenade.velocity.length() * 0.5;
+            grenade.angularVelocity.addScaledVector(rotationAxis, rotationSpeed);
+
+            grenade.collider.center.add(result.normal.multiplyScalar(result.depth));
+          } else {
+            grenade.velocity.y -= (GRAVITY * deltaTime + .01);
+          }
+          const damping = Math.exp(deltaTime * -1.5) - 1.003;
+          grenade.velocity.addScaledVector(grenade.velocity, damping);
+          grenade.angularVelocity.addScaledVector(grenade.angularVelocity, damping);
+        }
+        grenadeCollisions();
+        for (let grenade of grenades) {
+          grenade.mesh.position.copy(grenade.collider.center);
+        }
+      }
+      function grenadeCollisions() {
+        for (let i = 0, length = grenades.length; i < length; i++) {
+          const s1 = grenades[i];
+          for (let j = i + 1; j < length; j++) {
+            const s2 = grenades[j];
+            const d2 = s1.collider.center.distanceToSquared(s2.collider.center);
+            const r = s1.collider.radius + s2.collider.radius;
+            const r2 = r * r;
+            if (d2 < r2) {
+              const normal = _vector1.subVectors(s1.collider.center, s2.collider.center).normalize();
+              const v1 = _vector2.copy(normal).multiplyScalar(normal.dot(s1.velocity));
+              const v2 = _vector3.copy(normal).multiplyScalar(normal.dot(s2.velocity));
+              s1.velocity.add(v2).sub(v1);
+              s2.velocity.add(v1).sub(v2);
+              const d = (r - Math.sqrt(d2)) / 2;
+              s1.collider.center.addScaledVector(normal, d);
+              s2.collider.center.addScaledVector(normal, - d);
+            }
+          }
+        }
+      }
+      function teleportPlayerIfOob() {
+        if (camera.position.y <= -25) {
+          playerCollider.start.set(13.5, 0.35, -18.5);
+          playerCollider.end.set(13.5, 1, -18.5);
+          playerCollider.radius = 0.35;
+          camera.position.copy(playerCollider.end);
+          camera.rotation.set(0, Math.PI, 0);
+        }
+      }
+
+      function onWindowResize() {
+        renderer.setPixelRatio(1.8);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth * 0.5, window.innerHeight * 0.5, false);
+      }
+      window.addEventListener("resize", onWindowResize);
+      onWindowResize();
+
+      let globalRepeat = false;
+      document.addEventListener("keydown", (event) => {
+        if (!PointerControls.isLocked) return;
+        keyStates[event.code] = true;
+        globalRepeat = true;
+      });
+
+      document.addEventListener("keyup", (event) => {
+        globalRepeat = false;
+        keyStates[event.code] = false;
+      });
+
+      document.addEventListener("mousedown", (event) => {
+        if (document.pointerLockElement != null) return;
+        document.body.requestPointerLock();
+        PointerControls.lock();
+      });
+
+      document.addEventListener("mouseup", (event) => {
+        if (!PointerControls.isLocked) return;
+        PointerControls.lock();
+      });
+
+      new THREE.GLTFLoader().load("/maps/Cargo_Port.glb", (model) => {
+        map = model.scene;
+
+        map.traverse(object => object.frustumCulled = false);
+        worldOctree.fromGraphNode(map);
+        scene.add(map);
+        map.traverse(child => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            if (child.material.map) {
+              child.material.map.anisotropy = 4;
+            }
+          }
+        });
+
+        new THREE.TextureLoader().load("sky.png", function(texture) {
+          sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide }));
+          sky.material.side = THREE.BackSide;
+          scene.add(sky);
+        });
+
+        animate();
+        update();
+      });
+
+      const PointerControls = new PointerLockControls(camera, renderer.domElement);
+      PointerControls.pointerSpeed = 2;
+      PointerControls.isLocked = false;
+    </script>
+  </body>
+</html>
