@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FPS-X web shooter</title>
+    <title>FPS5 multiplayer shooter</title>
     <style>
       @keyframes health-flash {
         0% {
@@ -185,7 +185,7 @@
     <script>
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.1, 1000);
+      const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
       const clock = new THREE.Clock();
       const worldOctree = new THREE.Octree();
       const directionalLight = new THREE.DirectionalLight(0xfcc394, 0.8);
@@ -247,8 +247,8 @@ function renderRadar(enemies) {
   }
   ctx.restore();
 }
-e=new THREE.Mesh(new THREE.BoxGeometry(1,1,1));e.position.y=1;scene.add(e);
-setInterval(()=>renderRadar([e]),200);
+// e=new THREE.Mesh(new THREE.BoxGeometry(1,1,1));e.position.y=1;scene.add(e);
+// setInterval(()=>renderRadar([e]),200);
 
       let keyStates = {};
       let playerOnFloor = false;
@@ -308,8 +308,6 @@ setInterval(()=>renderRadar([e]),200);
         const clockDelta = clock.getDelta();
         const deltaTime = Math.min(0.05, clockDelta) / STEPS_PER_FRAME;
 
-        renderer.render(scene, camera);
-
         teleportPlayerIfOob();
 
         // TWEEN.update();
@@ -318,6 +316,16 @@ setInterval(()=>renderRadar([e]),200);
           controls(deltaTime);
           updatePlayer(deltaTime);
           updateGrenades(deltaTime);
+        }
+
+        utils.weapons.position();
+
+        for (let i = 0; i < sandbox.models.length; i++) {
+          if (sandbox.models[i].loaded) {
+            if (sandbox.models[i].model.animationMixer) {
+              sandbox.models[i].model.animationMixer.update(clockDelta);
+            }
+          }
         }
 
         frameCount++;
@@ -329,6 +337,7 @@ setInterval(()=>renderRadar([e]),200);
           console.log('FPS:', fps.toFixed(1));
         }
 
+        renderer.render(scene, camera);
         requestAnimationFrame(animate);
       }
 
@@ -352,7 +361,7 @@ setInterval(()=>renderRadar([e]),200);
       }
       function controls(deltaTime) {
         const speedDelta = deltaTime;
-        const walkSpeed = deltaTime * (playerOnFloor ? 13 : .3);
+        const walkSpeed = deltaTime * (playerOnFloor ? 22 : 1);
         if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
           playerVelocity.add(getForwardVector().multiplyScalar(walkSpeed));
         }
@@ -381,7 +390,7 @@ setInterval(()=>renderRadar([e]),200);
         }
       }
       function updatePlayer(deltaTime) {
-        let damping = Math.exp(-4 * deltaTime) - 1;
+        let damping = (Math.exp(-4 * deltaTime) - 1) * 2;
         if (!playerOnFloor) {
           playerVelocity.y -= GRAVITY * (deltaTime);
           damping *= 0.1;
@@ -454,6 +463,136 @@ setInterval(()=>renderRadar([e]),200);
         }
       }
 
+      sandbox = {
+        loadout: ["AK-74", "AK-74"],
+        currentWeapon: null,
+        primaryWeapon: null,
+        secondaryWeapon: null,
+        models: [
+          {
+            id: "weapon.AK-74",
+            path: "/models/weapons/AK-74.glb",
+            model: null,
+            loaded: false
+          }
+        ],
+        weapons: {
+          // animationStructure: [animationIndex, animationTimeScale, animationWeight]
+          "AK-74": {
+            name: "AK-74",
+            displayName: "AK-74 Assault Rifle",
+            model: null,
+            loaded: false,
+            requiredMaps: ["Cargo_Port"],
+            animationStructure: {
+              draw: [0, 1, 1],
+              idle: [1, 1, 1],
+              reload: [2, 1, 1],
+              reload_full: [3, 1, 1],
+              run: [5, 1, 1],
+              shoot: [6, 1, 1],
+              walk: [7, 1, 1]
+            }
+          }
+        }
+      };
+      utils = {
+        options: {
+          store: {},
+          set: function(key, value) {
+            utils.options.store[key] = value;
+          },
+          get: function(key) {
+            if (typeof utils.options.store[key] == "undefined") {
+              return null;
+            }
+            return utils.options.store[key];
+          }
+        },
+        weapons: {
+          animations: {
+            start: function(animation, options = {}) {
+              let weapon = utils.weapons.getCurrentEntry();
+              let clip = weapon.model.animationMixer.clipAction(weapon.model.animations[weapon.animationStructure[animation][0]]);
+              clip.timeScale = weapon.animationStructure[animation][1];
+              clip.weight = weapon.animationStructure[animation][2];
+              if (animation == "idle") clip.loop = THREE.LoopRepeat;
+              if (animation == "walk") clip.loop = THREE.LoopRepeat, clip.reset(), clip.fadeIn(0.3);
+              clip.play();
+            },
+            stop: function(animation, options = {}) {
+              let weapon = utils.weapons.getCurrentEntry();
+              let clip = weapon.model.animationMixer.clipAction(weapon.model.animations[weapon.animationStructure[animation][0]]);
+              if (animation == "walk") {
+                clip.fadeOut(0.3);
+              } else {
+                clip.stop();
+              }
+            },
+          },
+          position: function() {
+            if (sandbox.currentWeapon) {
+              sandbox.currentWeapon.position.copy(camera.position);
+              sandbox.currentWeapon.rotation.copy(camera.rotation);
+              sandbox.currentWeapon.rotateY(Math.PI);
+              sandbox.currentWeapon.rotateX(-0.05);
+              sandbox.currentWeapon.translateX(-0.02);
+              sandbox.currentWeapon.translateY(-0.068);
+              sandbox.currentWeapon.translateZ(0.032);
+            }
+          },
+          setCurrent: function(model) {
+            sandbox.currentWeapon = model;
+          },
+          setPrimary: function(model) {
+            sandbox.primaryWeapon = model;
+          },
+          setSecondary: function(model) {
+            sandbox.secondaryWeapon = model;
+          },
+          getCurrentEntry: function() {
+            if (sandbox.currentWeapon == sandbox.primaryWeapon) {
+              return sandbox.weapons[sandbox.loadout[0]];
+            } else {
+              return sandbox.weapons[sandbox.loadout[1]];
+            }
+          },
+          switch: function(slot = null) {
+            if (slot == "primary") {
+              utils.weapons.animations.stop("idle");
+              scene.remove(sandbox.currentWeapon);
+              utils.weapons.setCurrent(sandbox.primaryWeapon);
+              utils.weapons.animations.start("idle");
+              scene.add(sandbox.currentWeapon);
+            }
+          }
+        }
+      };
+
+      for (let i = 0; i < sandbox.models.length; i++) {
+        new THREE.GLTFLoader().load(sandbox.models[i].path, function(model) {
+          sandbox.models[i].model = model;
+          sandbox.models[i].loaded = true;
+          if (model.animations) {
+            sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
+          }
+          let idSplit = sandbox.models[i].id.split(".");
+          if (idSplit[0] == "weapon") {
+            let name = idSplit[1];
+            // todo: update with selected map name
+            if (sandbox.weapons[name].requiredMaps.includes("Cargo_Port") || sandbox.loadout.includes(name)) {
+              model.scene.traverse(child => child.frustumCulled = false);
+              sandbox.weapons[name].model = model;
+              sandbox.weapons[name].loaded = true;
+              if (name == sandbox.loadout[0]) {
+                utils.weapons.setPrimary(model.scene);
+                utils.weapons.switch("primary");
+              }
+            }
+          }
+        });
+      }
+
       function onWindowResize() {
         renderer.setPixelRatio(1.4);
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -468,12 +607,22 @@ setInterval(()=>renderRadar([e]),200);
       document.addEventListener("keydown", (event) => {
         if (!PointerControls.isLocked) return;
         keyStates[event.code] = true;
+        if (!event.repeat && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) {
+          utils.options.set("Walking", true);
+          utils.weapons.animations.stop("idle");
+          utils.weapons.animations.start("walk");
+        }
         globalRepeat = true;
       });
 
       document.addEventListener("keyup", (event) => {
         globalRepeat = false;
         keyStates[event.code] = false;
+        if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) {
+          utils.options.set("Walking", false);
+          utils.weapons.animations.stop("walk");
+          utils.weapons.animations.start("idle");
+        }
       });
 
       document.addEventListener("mousedown", (event) => {
@@ -522,6 +671,8 @@ setInterval(()=>renderRadar([e]),200);
       PointerControls.minPolarAngle = .15;
       PointerControls.pointerSpeed = .6;
       PointerControls.isLocked = true;
+
+      utils.options.set("Walking", false);
     </script>
   </body>
 </html>
