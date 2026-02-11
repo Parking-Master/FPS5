@@ -154,6 +154,7 @@
   <body>
     <script src="/js/three.js"></script>
     <script src="/js/GLTFLoader.js"></script>
+    <script src="/js/DecalGeometry.js"></script>
     <script src="/js/bloom.js"></script>
     <script src="/js/particles.js"></script>
     <script src="https://fpsx.parkingmaster.tk/lib/Capsule.min.js"></script>
@@ -481,6 +482,9 @@ function renderRadar(enemies) {
           "AK-74": {
             name: "AK-74",
             displayName: "AK-74 Assault Rifle",
+            ammo: 36,
+            damage: 4,
+            spread: 1,
             model: null,
             loaded: false,
             requiredMaps: ["Cargo_Port"],
@@ -514,10 +518,12 @@ function renderRadar(enemies) {
             start: function(animation, options = {}) {
               let weapon = utils.weapons.getCurrentEntry();
               let clip = weapon.model.animationMixer.clipAction(weapon.model.animations[weapon.animationStructure[animation][0]]);
-              clip.timeScale = weapon.animationStructure[animation][1];
+              clip.timeScale = options.timeScale || weapon.animationStructure[animation][1];
               clip.weight = weapon.animationStructure[animation][2];
               if (animation == "idle") clip.loop = THREE.LoopRepeat;
               if (animation == "walk") clip.loop = THREE.LoopRepeat, clip.reset(), clip.fadeIn(0.3);
+              if (options.loop) clip.loop = options.loop;
+              if (options.reset) clip.reset();
               clip.play();
             },
             stop: function(animation, options = {}) {
@@ -528,6 +534,7 @@ function renderRadar(enemies) {
               } else {
                 clip.stop();
               }
+              if (options.reset) clip.reset();
             },
           },
           position: function() {
@@ -564,6 +571,58 @@ function renderRadar(enemies) {
               utils.weapons.setCurrent(sandbox.primaryWeapon);
               utils.weapons.animations.start("idle");
               scene.add(sandbox.currentWeapon);
+            }
+          },
+          fire: function(rounds = 1, rate = 1000) {
+            let weapon = utils.weapons.getCurrentEntry();
+            let timeScale = (weapon.model.animations[weapon.animationStructure["shoot"][0]].duration * 1000) / rate;
+            let lastFire = Date.now() - rate;
+            let roundsFired = 0;
+            let spreads = Array(rounds * 2).fill(0).map(x => { const spread = Math.random() / 60 * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
+
+            if (timeScale < 1) timeScale = 1;
+
+            let interval = setInterval(function() {
+              if (roundsFired < rounds) {
+                if (Date.now() - lastFire >= rate) {
+                  roundsFired++;
+                  lastFire = Date.now();
+                  utils.weapons.animations.stop("walk");
+                  utils.weapons.animations.stop("idle");
+                  utils.weapons.animations.start("shoot", { loop: THREE.LoopOnce, reset: true });
+                  utils.effects.bulletHole(spreads[roundsFired], spreads[roundsFired + 1]);
+                }
+              } else {
+                clearInterval(interval);
+              }
+            });
+          }
+        },
+        effects: {
+          bulletHole: function(spreadX, spreadY) {
+            let raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera({ x: spreadX, y: spreadY }, camera);
+            const intersects = raycaster.intersectObjects(map.children);
+
+            if (intersects.length > 0) {
+              const intersect = intersects[0];
+              const scale = 0.05;
+              const size = new THREE.Vector3(scale, scale, scale);
+              const normal = intersect.face.normal.clone();
+              normal.transformDirection(intersect.object.matrixWorld);
+              const rotation = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal));
+
+              const decalGeometry = new THREE.DecalGeometry(intersect.object, intersect.point, rotation, size);
+              const decalMesh = new THREE.Mesh(decalGeometry, utils.options.get("bulletHoleMaterial"));
+              scene.add(decalMesh);
+
+              THREE.particles.dust(intersect.point);
+
+              setTimeout(async function() {
+                scene.remove(decalMesh);
+                decalGeometry.dispose();
+                raycaster = null;
+              }, 20000);
             }
           }
         }
@@ -673,6 +732,7 @@ function renderRadar(enemies) {
       PointerControls.isLocked = true;
 
       utils.options.set("Walking", false);
+      utils.options.set("bulletHoleMaterial", new THREE.MeshPhongMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), color: 0x000000, transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }));
     </script>
   </body>
 </html>

@@ -131,8 +131,8 @@ THREE.particles = {
         vx: (Math.random() - 0.5) * 0.08,
         vy: (Math.random() - 0.4) * 0.05,
         vz: (Math.random() - 0.4) * 0.06,
-        life: 1.0,
-        maxLife: 1.0,
+        life: 2.0,
+        maxLife: 2.0,
         size: 0.01 + Math.random() * 0.02
       };
       burst.particles.push(particle);
@@ -220,6 +220,7 @@ THREE.particles = {
       dustGeometry.attributes.size.needsUpdate = true;
       dustGeometry.attributes.customPosition.needsUpdate = true;
       dustGeometry.attributes.life.needsUpdate = true;
+      dustGeometry.computeBoundingSphere();
     } else if (dustPoints) {
       scene.remove(dustPoints);
       dustGeometry.dispose();
@@ -231,6 +232,7 @@ THREE.particles = {
       if (!explosionGeometry || explosionPoints === undefined) {
         explosionGeometry = new THREE.BufferGeometry();
         explosionPoints = new THREE.Points(explosionGeometry, explosionMaterial);
+        explosionPoints.frustumCulled = false;
         scene.add(explosionPoints);
       }
       const positions = new Float32Array(explosionParticles.length * 3);
