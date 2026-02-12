@@ -154,13 +154,13 @@
   <body>
     <script src="/js/three.js"></script>
     <script src="/js/GLTFLoader.js"></script>
+    <script src="https://fpsx.parkingmaster.tk/lib/Capsule.min.js"></script>
+    <script src="/js/Octree.js"></script>
     <script src="/js/DecalGeometry.js"></script>
     <script src="/js/bloom.js"></script>
     <script src="/js/particles.js"></script>
-    <script src="https://fpsx.parkingmaster.tk/lib/Capsule.min.js"></script>
-    <script src="https://fpsx.parkingmaster.tk/lib/Octree.min.js"></script>
+    <script src="/js/Tween.js"></script>
     <script src="https://fpsx.parkingmaster.tk/lib/PointerLockControls.min.js"></script>
-    <!-- <script src="https://fpsx.parkingmaster.tk/lib/tween.min.js"></script> -->
     <!-- <script src="https://fpsx.parkingmaster.tk/lib/plugins.js"></script> -->
     <div class="ui" id="game-ui">
       <img class="vignette" src="/images/vignette.png">
@@ -311,8 +311,9 @@ function renderRadar(enemies) {
 
         teleportPlayerIfOob();
 
-        // TWEEN.update();
+        TWEEN.update();
         THREE.particles.update();
+
         for (let i = 0; i < STEPS_PER_FRAME; i++) {
           controls(deltaTime);
           updatePlayer(deltaTime);
@@ -485,6 +486,11 @@ function renderRadar(enemies) {
             ammo: 36,
             damage: 4,
             spread: 1,
+            muzzleFlash: true,
+            zoomPosition: [.0395, 0.0132, -.05, .045, -.025, 0.12],
+            zoomFov: 35,
+            zoomDuration: 300,
+            reticle: 0,
             model: null,
             loaded: false,
             requiredMaps: ["Cargo_Port"],
@@ -521,7 +527,11 @@ function renderRadar(enemies) {
               clip.timeScale = options.timeScale || weapon.animationStructure[animation][1];
               clip.weight = weapon.animationStructure[animation][2];
               if (animation == "idle") clip.loop = THREE.LoopRepeat;
-              if (animation == "walk") clip.loop = THREE.LoopRepeat, clip.reset(), clip.fadeIn(0.3);
+              if (animation == "walk") {
+                clip.loop = THREE.LoopRepeat;
+                clip.reset();
+                if (!options.instant) clip.fadeIn(0.3);
+              }
               if (options.loop) clip.loop = options.loop;
               if (options.reset) clip.reset();
               clip.play();
@@ -537,7 +547,7 @@ function renderRadar(enemies) {
               if (options.reset) clip.reset();
             },
           },
-          position: function() {
+          position: function(zoom = false, zoomTarget) {
             if (sandbox.currentWeapon) {
               sandbox.currentWeapon.position.copy(camera.position);
               sandbox.currentWeapon.rotation.copy(camera.rotation);
@@ -574,28 +584,69 @@ function renderRadar(enemies) {
             }
           },
           fire: function(rounds = 1, rate = 1000) {
+            utils.options.set("Firing", true);
             let weapon = utils.weapons.getCurrentEntry();
             let timeScale = (weapon.model.animations[weapon.animationStructure["shoot"][0]].duration * 1000) / rate;
             let lastFire = Date.now() - rate;
             let roundsFired = 0;
-            let spreads = Array(rounds * 2).fill(0).map(x => { const spread = Math.random() / 60 * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
+            let spreads = Array(rounds * 2).fill(0).map(x => { const spread = Math.random() / (utils.options.get("Zoomed") ? 90 : 60) * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
 
             if (timeScale < 1) timeScale = 1;
+
+            utils.weapons.animations.stop("walk");
+            utils.weapons.animations.stop("idle");
 
             let interval = setInterval(function() {
               if (roundsFired < rounds) {
                 if (Date.now() - lastFire >= rate) {
-                  roundsFired++;
                   lastFire = Date.now();
-                  utils.weapons.animations.stop("walk");
-                  utils.weapons.animations.stop("idle");
                   utils.weapons.animations.start("shoot", { loop: THREE.LoopOnce, reset: true });
                   utils.effects.bulletHole(spreads[roundsFired], spreads[roundsFired + 1]);
+                  if (weapon.muzzleFlash) utils.effects.muzzleFlash();
+                  roundsFired++;
                 }
               } else {
                 clearInterval(interval);
+                utils.weapons.animations.start("idle");
+                if (utils.options.get("Walking")) utils.weapons.animations.start("walk", { instant: true });
+                utils.options.set("Firing", false);
               }
             });
+          },
+          zoom: function() {
+            if (utils.options.get("Zoomed")) {
+              const weapon = utils.weapons.getCurrentEntry();
+              if (utils.options.get("globalZoomTween")) {
+                utils.options.get("globalZoomTween").in.position.stop();
+                utils.options.get("globalZoomTween").in.rotation.stop();
+                utils.options.get("globalZoomTween").in.fov.stop();
+              }
+              utils.options.set("globalZoomTween", {
+                out: {
+                  position: new TWEEN.Tween(weapon.model.scene.children[0].position).to({ x: 0, y: 0, z: 0 }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).start(),
+                  rotation: new TWEEN.Tween(weapon.model.scene.children[0].rotation).to({ x: 0, y: 0, z: 0 }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).start(),
+                  fov: new TWEEN.Tween(camera).to({ fov: 45 }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => { camera.updateProjectionMatrix() }).start(),
+                }
+              });
+              weapon.animationStructure["walk"][2] *= 10;
+              utils.options.set("Zoomed", false);
+            } else {
+              const weapon = utils.weapons.getCurrentEntry();
+              if (utils.options.get("globalZoomTween")) {
+                utils.options.get("globalZoomTween").out.position.stop();
+                utils.options.get("globalZoomTween").out.rotation.stop();
+                utils.options.get("globalZoomTween").out.fov.stop();
+              }
+              utils.options.set("globalZoomTween", {
+                in: {
+                  position: new TWEEN.Tween(weapon.model.scene.children[0].position).to({ x: weapon.zoomPosition[0], y: weapon.zoomPosition[1], z: weapon.zoomPosition[2] }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).start(),
+                  rotation: new TWEEN.Tween(weapon.model.scene.children[0].rotation).to({ x: weapon.zoomPosition[3], y: weapon.zoomPosition[4], z: weapon.zoomPosition[5] }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).start(),
+                  fov: new TWEEN.Tween(camera).to({ fov: weapon.zoomFov }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => { camera.updateProjectionMatrix() }).start(),
+                }
+              });
+              weapon.animationStructure["walk"][2] /= 10;
+              utils.options.set("Zoomed", true);
+            }
           }
         },
         effects: {
@@ -624,6 +675,14 @@ function renderRadar(enemies) {
                 raycaster = null;
               }, 20000);
             }
+          },
+          muzzleFlash: function() {
+            let flash = sandbox.currentWeapon.getObjectByName("muzzleFlash");
+            flash.rotateZ(Math.random());
+            flash.material.color.setHex(0xff6604);
+            flash.material.emissive.setHex(0xff2211);
+            flash.material.opacity = 1;
+            setTimeout(() => flash.material.opacity = 0, 20);
           }
         }
       };
@@ -668,8 +727,10 @@ function renderRadar(enemies) {
         keyStates[event.code] = true;
         if (!event.repeat && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) {
           utils.options.set("Walking", true);
-          utils.weapons.animations.stop("idle");
-          utils.weapons.animations.start("walk");
+          if (!utils.options.get("Firing")) {
+            utils.weapons.animations.stop("idle");
+            utils.weapons.animations.start("walk");
+          }
         }
         globalRepeat = true;
       });
@@ -732,7 +793,10 @@ function renderRadar(enemies) {
       PointerControls.isLocked = true;
 
       utils.options.set("Walking", false);
-      utils.options.set("bulletHoleMaterial", new THREE.MeshPhongMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), color: 0x000000, transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }));
+      utils.options.set("Firing", false);
+      utils.options.set("Zoomed", false);
+      utils.options.set("bulletHoleMaterial", new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }));
+      utils.options.set("globalZoomTween", null);
     </script>
   </body>
 </html>
