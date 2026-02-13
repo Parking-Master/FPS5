@@ -466,7 +466,7 @@ function renderRadar(enemies) {
       }
 
       sandbox = {
-        loadout: ["AK-74", "AK-74"],
+        loadout: ["FN-502", "AK-74"],
         currentWeapon: null,
         primaryWeapon: null,
         secondaryWeapon: null,
@@ -476,7 +476,13 @@ function renderRadar(enemies) {
             path: "/models/weapons/AK-74.glb",
             model: null,
             loaded: false
-          }
+          },
+          {
+            id: "weapon.FN-502",
+            path: "/models/weapons/FN-502.glb",
+            model: null,
+            loaded: false
+          },
         ],
         weapons: {
           // animationStructure: [animationIndex, animationTimeScale, animationWeight]
@@ -485,6 +491,7 @@ function renderRadar(enemies) {
             displayName: "AK-74 Assault Rifle",
             ammo: 36,
             damage: 4,
+            headshotDamage: 5,
             spread: 1,
             muzzleFlash: true,
             zoomPosition: [.0395, 0.0132, -.05, .045, -.025, 0.12],
@@ -495,13 +502,35 @@ function renderRadar(enemies) {
             loaded: false,
             requiredMaps: ["Cargo_Port"],
             animationStructure: {
-              draw: [0, 1, 1],
               idle: [1, 1, 1],
               reload: [2, 1, 1],
               reload_full: [3, 1, 1],
               run: [5, 1, 1],
               shoot: [6, 1, 1],
               walk: [7, 1, 1]
+            }
+          },
+          "FN-502": {
+            name: "FN-502",
+            displayName: "FN-502 Pistol",
+            ammo: 12,
+            damage: 6,
+            spread: 1.3,
+            muzzleFlash: false,
+            zoomPosition: [0.0475, 0.0144, -0.016, 0.04991641660703782, -0.0778416846389471, 0.09494591130849153],
+            zoomFov: 30,
+            zoomDuration: 200,
+            reticle: 0,
+            model: null,
+            loaded: false,
+            requiredMaps: ["Cargo_Port"],
+            animationStructure: {
+              reload: [0, 1, 1],
+              reload_full: [1, 1, 1],
+              idle: [2, 0.5, 0.2],
+              run: [2, 1, 1],
+              shoot: [3, 1, 1],
+              walk: [4, 1, 1]
             }
           }
         }
@@ -547,7 +576,7 @@ function renderRadar(enemies) {
               if (options.reset) clip.reset();
             },
           },
-          position: function(zoom = false, zoomTarget) {
+          position: function() {
             if (sandbox.currentWeapon) {
               sandbox.currentWeapon.position.copy(camera.position);
               sandbox.currentWeapon.rotation.copy(camera.rotation);
@@ -704,6 +733,7 @@ function renderRadar(enemies) {
               sandbox.weapons[name].loaded = true;
               if (name == sandbox.loadout[0]) {
                 utils.weapons.setPrimary(model.scene);
+                utils.weapons.setCurrent(model.scene);
                 utils.weapons.switch("primary");
               }
             }

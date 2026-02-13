@@ -199,6 +199,7 @@ THREE.particles = {
       if (!dustGeometry || dustPoints === undefined) {
         dustGeometry = new THREE.BufferGeometry();
         dustPoints = new THREE.Points(dustGeometry, dustMaterial);
+        dustPoints.frustumCulled = false;
         scene.add(dustPoints);
       }
       const positions = new Float32Array(dustParticles.length * 3);
