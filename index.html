@@ -363,7 +363,7 @@ function renderRadar(enemies) {
       }
       function controls(deltaTime) {
         const speedDelta = deltaTime;
-        const walkSpeed = deltaTime * (playerOnFloor ? 22 : 1);
+        const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1);
         if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
           playerVelocity.add(getForwardVector().multiplyScalar(walkSpeed));
         }
@@ -466,11 +466,54 @@ function renderRadar(enemies) {
       }
 
       sandbox = {
-        loadout: ["FN-502", "AK-74"],
+        loadout: ["AK-74", "FN-502"],
         currentWeapon: null,
         primaryWeapon: null,
         secondaryWeapon: null,
+        controls: {
+          "fire": ["KeyF", "BracketRight"],
+          "zoom": ["KeyI"],
+          "reload": ["KeyR"],
+          "switch": ["KeyY", "Tab"],
+        },
+        initialize: function() {
+          animate();
+          update();
+          utils.weapons.switch("primary");
+        },
+        loadingManager: new THREE.LoadingManager(),
         models: [
+          {
+            id: "map",
+            path: "/models/maps/Cargo_Port.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            callback: function(model) {
+              map = model.scene;
+              worldOctree.fromGraphNode(map);
+              scene.add(map);
+              map.traverse(child => {
+                child.frustumCulled = false;
+                if (child.isMesh) {
+                  child.castShadow = true;
+                  child.receiveShadow = true;
+                  if (child.material.map) {
+                    child.material.map.anisotropy = 4;
+                  }
+                }
+              });
+              sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshStandardMaterial({
+                emissive: 0xf2a76a,
+                map: new THREE.TextureLoader().load("/images/assets/skies/0.png"),
+                side: THREE.BackSide,
+                emissiveIntensity: .4,
+                roughness: 0,
+                metalness: 0
+              }));
+              scene.add(sky);
+            }
+          },
           {
             id: "weapon.AK-74",
             path: "/models/weapons/AK-74.glb",
@@ -489,7 +532,9 @@ function renderRadar(enemies) {
           "AK-74": {
             name: "AK-74",
             displayName: "AK-74 Assault Rifle",
-            ammo: 36,
+            ammo: 72,
+            maxAmmo: 36,
+            currentAmmo: 36,
             damage: 4,
             headshotDamage: 5,
             spread: 1,
@@ -497,6 +542,8 @@ function renderRadar(enemies) {
             zoomPosition: [.0395, 0.0132, -.05, .045, -.025, 0.12],
             zoomFov: 35,
             zoomDuration: 300,
+            fireMode: "auto",
+            fireRate: 120,
             reticle: 0,
             model: null,
             loaded: false,
@@ -513,13 +560,17 @@ function renderRadar(enemies) {
           "FN-502": {
             name: "FN-502",
             displayName: "FN-502 Pistol",
-            ammo: 12,
+            ammo: 24,
+            maxAmmo: 12,
+            currentAmmo: 12,
             damage: 6,
             spread: 1.3,
-            muzzleFlash: false,
-            zoomPosition: [0.0475, 0.0144, -0.016, 0.04991641660703782, -0.0778416846389471, 0.09494591130849153],
+            muzzleFlash: true,
+            zoomPosition: [0.0325, 0.013, -0.016, 0.04991641660703782, -0.0778416846389471, 0.09494591130849153],
             zoomFov: 30,
             zoomDuration: 200,
+            fireMode: "semi",
+            fireRate: 200,
             reticle: 0,
             model: null,
             loaded: false,
@@ -530,7 +581,7 @@ function renderRadar(enemies) {
               idle: [2, 0.5, 0.2],
               run: [2, 1, 1],
               shoot: [3, 1, 1],
-              walk: [4, 1, 1]
+              walk: [4, 1.3, 1]
             }
           }
         }
@@ -550,23 +601,39 @@ function renderRadar(enemies) {
         },
         weapons: {
           animations: {
-            start: function(animation, options = {}) {
-              let weapon = utils.weapons.getCurrentEntry();
+            start: function(animation, options = {}, onfinish = null) {
+              const weapon = utils.weapons.getCurrentEntry();
               let clip = weapon.model.animationMixer.clipAction(weapon.model.animations[weapon.animationStructure[animation][0]]);
               clip.timeScale = options.timeScale || weapon.animationStructure[animation][1];
               clip.weight = weapon.animationStructure[animation][2];
+
               if (animation == "idle") clip.loop = THREE.LoopRepeat;
               if (animation == "walk") {
                 clip.loop = THREE.LoopRepeat;
                 clip.reset();
                 if (!options.instant) clip.fadeIn(0.3);
               }
+
               if (options.loop) clip.loop = options.loop;
               if (options.reset) clip.reset();
               clip.play();
+
+              if (typeof onfinish == "function") {
+                let finished = false;
+                let customCallback = function(event) {
+                  if (event.action === clip) {
+                    if (finished) return;
+                    finished = true;
+                    onfinish();
+                    weapon.model.animationMixer.removeEventListener("finished", customCallback);
+                  }
+                };
+                weapon.model.animationMixer.addEventListener("finished", customCallback);
+                return customCallback;
+              }
             },
             stop: function(animation, options = {}) {
-              let weapon = utils.weapons.getCurrentEntry();
+              const weapon = utils.weapons.getCurrentEntry();
               let clip = weapon.model.animationMixer.clipAction(weapon.model.animations[weapon.animationStructure[animation][0]]);
               if (animation == "walk") {
                 clip.fadeOut(0.3);
@@ -574,6 +641,14 @@ function renderRadar(enemies) {
                 clip.stop();
               }
               if (options.reset) clip.reset();
+            },
+            cancelCallback: function(callbackFunction) {
+              const weapon = utils.weapons.getCurrentEntry();
+              weapon.model.animationMixer.removeEventListener("finished", callbackFunction);
+            },
+            restart: function(animation) {
+              utils.weapons.animations.stop(animation);
+              utils.weapons.animations.start(animation);
             },
           },
           position: function() {
@@ -604,45 +679,78 @@ function renderRadar(enemies) {
             }
           },
           switch: function(slot = null) {
+            utils.options.set("Switching", true);
+            utils.weapons.stopReload();
+            if (!slot) slot = sandbox.currentWeapon == sandbox.secondaryWeapon ? "primary" : "secondary";
+            if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
+            if (utils.options.get("Walking")) utils.weapons.animations.stop("walk");
             if (slot == "primary") {
               utils.weapons.animations.stop("idle");
               scene.remove(sandbox.currentWeapon);
               utils.weapons.setCurrent(sandbox.primaryWeapon);
               utils.weapons.animations.start("idle");
               scene.add(sandbox.currentWeapon);
+            } else if (slot == "secondary") {
+              utils.weapons.animations.stop("idle");
+              scene.remove(sandbox.currentWeapon);
+              utils.weapons.setCurrent(sandbox.secondaryWeapon);
+              utils.weapons.animations.start("idle");
+              scene.add(sandbox.currentWeapon);
             }
+            setTimeout(() => utils.options.set("Switching", false), 200);
+            if (utils.options.get("Walking")) utils.weapons.animations.start("walk");
+            utils.weapons.update();
           },
           fire: function(rounds = 1, rate = 1000) {
+            const weapon = utils.weapons.getCurrentEntry();
+            if (utils.options.get("Firing") || utils.options.get("Reloading") || weapon.currentAmmo <= 0) return;
             utils.options.set("Firing", true);
-            let weapon = utils.weapons.getCurrentEntry();
-            let timeScale = (weapon.model.animations[weapon.animationStructure["shoot"][0]].duration * 1000) / rate;
+            utils.options.set("ContinueFiring", true);
+
+            rate = weapon.fireRate;
+            if (weapon.fireMode == "auto") {
+              rounds = 200;
+            } else if (weapon.fireMode == "burst") {
+              rounds = 3;
+            }
+
+            // let timeScale = (weapon.model.animations[weapon.animationStructure["shoot"][0]].duration * 1000) / rate;
             let lastFire = Date.now() - rate;
             let roundsFired = 0;
-            let spreads = Array(rounds * 2).fill(0).map(x => { const spread = Math.random() / (utils.options.get("Zoomed") ? 90 : 60) * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
+            let spreads = Array(rounds *  2).fill(0).map(x => { const spread = Math.random() / (utils.options.get("Zoomed") ? 90 : 60) * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
 
-            if (timeScale < 1) timeScale = 1;
+            // if (timeScale < 1) timeScale = 1;
 
             utils.weapons.animations.stop("walk");
             utils.weapons.animations.stop("idle");
 
             let interval = setInterval(function() {
-              if (roundsFired < rounds) {
+              if (roundsFired < rounds && weapon.currentAmmo > 0 && utils.options.get("ContinueFiring")) {
                 if (Date.now() - lastFire >= rate) {
                   lastFire = Date.now();
                   utils.weapons.animations.start("shoot", { loop: THREE.LoopOnce, reset: true });
                   utils.effects.bulletHole(spreads[roundsFired], spreads[roundsFired + 1]);
                   if (weapon.muzzleFlash) utils.effects.muzzleFlash();
+
                   roundsFired++;
+                  weapon.currentAmmo--;
+                  utils.weapons.update();
                 }
               } else {
                 clearInterval(interval);
-                utils.weapons.animations.start("idle");
-                if (utils.options.get("Walking")) utils.weapons.animations.start("walk", { instant: true });
+                if (!utils.options.get("Reloading")) {
+                  utils.weapons.animations.start("idle");
+                  if (utils.options.get("Walking")) utils.weapons.animations.start("walk", { instant: true });
+                }
                 utils.options.set("Firing", false);
               }
             });
           },
-          zoom: function() {
+          stopFire: function() {
+            utils.options.set("ContinueFiring", false);
+          },
+          zoom: function(force = false) {
+            if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
             if (utils.options.get("Zoomed")) {
               const weapon = utils.weapons.getCurrentEntry();
               if (utils.options.get("globalZoomTween")) {
@@ -657,7 +765,8 @@ function renderRadar(enemies) {
                   fov: new TWEEN.Tween(camera).to({ fov: 45 }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => { camera.updateProjectionMatrix() }).start(),
                 }
               });
-              weapon.animationStructure["walk"][2] *= 10;
+              weapon.animationStructure["walk"][2] *= 5;
+              if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
               utils.options.set("Zoomed", false);
             } else {
               const weapon = utils.weapons.getCurrentEntry();
@@ -673,8 +782,51 @@ function renderRadar(enemies) {
                   fov: new TWEEN.Tween(camera).to({ fov: weapon.zoomFov }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => { camera.updateProjectionMatrix() }).start(),
                 }
               });
-              weapon.animationStructure["walk"][2] /= 10;
+              weapon.animationStructure["walk"][2] /= 5;
+              if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
               utils.options.set("Zoomed", true);
+            }
+          },
+          reload: function(full = false) {
+            const weapon = utils.weapons.getCurrentEntry();
+            if (utils.options.get("Reloading") || weapon.ammo <= 0) return;
+            utils.options.set("Reloading", true);
+
+            if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
+
+            let animation = null;
+            if (full) {
+              animation = "reload_full";
+            } else {
+              animation = "reload";
+            }
+
+            utils.weapons.animations.stop("idle");
+            utils.weapons.animations.stop("walk");
+            const callbackFunction = utils.weapons.animations.start(animation, { loop: THREE.LoopOnce, reset: true }, function() {
+              const weapon = utils.weapons.getCurrentEntry();
+              const ammo = weapon.ammo;
+              weapon.ammo = Math.max(weapon.ammo - (weapon.maxAmmo - weapon.currentAmmo), 0);
+              console.log(144, ammo)
+              weapon.currentAmmo = Math.min(weapon.maxAmmo, ammo);
+              utils.options.set("Reloading", false);
+              utils.weapons.animations.start("idle");
+              if (utils.options.get("Walking")) utils.weapons.animations.start("walk");
+            });
+            utils.options.set("ReloadCallbackFunction", callbackFunction);
+          },
+          stopReload: function() {
+            if (utils.options.get("Reloading")) {
+              utils.weapons.animations.cancelCallback(utils.options.get("ReloadCallbackFunction"));
+              utils.weapons.animations.stop("reload");
+              utils.weapons.animations.stop("reload_full");
+              utils.options.set("Reloading", false);
+            }
+          },
+          update: function() {
+            const weapon = utils.weapons.getCurrentEntry();
+            if (weapon.currentAmmo <= 0) {
+              utils.weapons.reload(true);
             }
           }
         },
@@ -713,16 +865,25 @@ function renderRadar(enemies) {
             flash.material.opacity = 1;
             setTimeout(() => flash.material.opacity = 0, 20);
           }
-        }
+        },
+        precompileShaders: function(object) {
+          scene.add(object);
+          object.position.set(0, -1000, 0);
+          renderer.compile(scene, camera);
+          setTimeout(() => scene.remove(object));
+        },
       };
 
       for (let i = 0; i < sandbox.models.length; i++) {
-        new THREE.GLTFLoader().load(sandbox.models[i].path, function(model) {
+        new THREE.GLTFLoader(sandbox.loadingManager).load(sandbox.models[i].path, async function(model) {
           sandbox.models[i].model = model;
           sandbox.models[i].loaded = true;
+          scene.add(model.scene);
+          renderer.render(scene, camera);
           if (model.animations) {
             sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
           }
+          if (typeof sandbox.models[i].callback == "function") sandbox.models[i].callback(model);
           let idSplit = sandbox.models[i].id.split(".");
           if (idSplit[0] == "weapon") {
             let name = idSplit[1];
@@ -731,15 +892,22 @@ function renderRadar(enemies) {
               model.scene.traverse(child => child.frustumCulled = false);
               sandbox.weapons[name].model = model;
               sandbox.weapons[name].loaded = true;
-              if (name == sandbox.loadout[0]) {
-                utils.weapons.setPrimary(model.scene);
-                utils.weapons.setCurrent(model.scene);
-                utils.weapons.switch("primary");
-              }
+              if (name == sandbox.loadout[0]) utils.weapons.setPrimary(model.scene);
+              if (name == sandbox.loadout[1]) utils.weapons.setSecondary(model.scene);
             }
           }
         });
       }
+
+      sandbox.loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
+        const progress = itemsLoaded / itemsTotal;
+        if (progress >= 1) {
+          sandbox.models.forEach(model => {
+            if (typeof model.removeAfterLoaded == "undefined") scene.remove(model.model.scene);
+          });
+          sandbox.initialize();
+        }
+      };
 
       function onWindowResize() {
         renderer.setPixelRatio(1.4);
@@ -755,12 +923,19 @@ function renderRadar(enemies) {
       document.addEventListener("keydown", (event) => {
         if (!PointerControls.isLocked) return;
         keyStates[event.code] = true;
+
         if (!event.repeat && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) {
           utils.options.set("Walking", true);
-          if (!utils.options.get("Firing")) {
+          if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.start("walk");
           }
+        }
+        if (!event.repeat) {
+          if (sandbox.controls.fire.includes(event.code)) utils.weapons.fire();
+          if (sandbox.controls.zoom.includes(event.code)) utils.weapons.zoom();
+          if (sandbox.controls.reload.includes(event.code)) utils.weapons.reload();
+          if (sandbox.controls.switch.includes(event.code)) utils.weapons.switch();
         }
         globalRepeat = true;
       });
@@ -768,10 +943,17 @@ function renderRadar(enemies) {
       document.addEventListener("keyup", (event) => {
         globalRepeat = false;
         keyStates[event.code] = false;
+
+        const weapon = utils.weapons.getCurrentEntry();
         if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) {
           utils.options.set("Walking", false);
-          utils.weapons.animations.stop("walk");
-          utils.weapons.animations.start("idle");
+          if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
+            utils.weapons.animations.stop("walk");
+            utils.weapons.animations.start("idle");
+          }
+        }
+        if (weapon.fireMode == "auto" && sandbox.controls.fire.includes(event.code)) {
+          utils.weapons.stopFire();
         }
       });
 
@@ -786,36 +968,6 @@ function renderRadar(enemies) {
         PointerControls.lock();
       });
 
-      new THREE.GLTFLoader().load("/maps/Cargo_Port.glb", (model) => {
-        map = model.scene;
-
-        map.traverse(object => object.frustumCulled = false);
-        worldOctree.fromGraphNode(map);
-        scene.add(map);
-        map.traverse(child => {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            if (child.material.map) {
-              child.material.map.anisotropy = 4;
-            }
-          }
-        });
-
-        sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshStandardMaterial({
-          emissive: 0xf2a76a,
-          map: new THREE.TextureLoader().load("sky2.png"),
-          side: THREE.BackSide,
-          emissiveIntensity: .4,
-          roughness: 0,
-          metalness: 0
-        }));
-        scene.add(sky);
-
-        animate();
-        update();
-      });
-
       const PointerControls = new PointerLockControls(camera, renderer.domElement);
       PointerControls.maxPolarAngle = Math.PI - .15;
       PointerControls.minPolarAngle = .15;
@@ -825,6 +977,9 @@ function renderRadar(enemies) {
       utils.options.set("Walking", false);
       utils.options.set("Firing", false);
       utils.options.set("Zoomed", false);
+      utils.options.set("Reloading", false);
+      utils.options.set("Switching", false);
+      utils.options.set("ReloadCallbackFunction", () => {});
       utils.options.set("bulletHoleMaterial", new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }));
       utils.options.set("globalZoomTween", null);
     </script>
