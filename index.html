@@ -174,7 +174,9 @@
     <script src="/js/bloom.js"></script>
     <script src="/js/particles.js"></script>
     <script src="/js/Tween.js"></script>
+    <script src="/js/gametime.js"></script>
     <script src="https://fpsx.parkingmaster.tk/lib/PointerLockControls.min.js"></script>
+    <!-- <script src="https://fpsx.parkingmaster.tk/lib/SkeletonUtils.js"></script> -->
     <!-- <script src="https://fpsx.parkingmaster.tk/lib/plugins.js"></script> -->
     <div class="ui" id="game-ui">
       <img class="vignette" src="/images/vignette.png">
@@ -339,6 +341,7 @@ function renderRadar(enemies) {
         }
 
         utils.weapons.position();
+        utils.players.update();
 
         for (let i = 0; i < sandbox.models.length; i++) {
           if (sandbox.models[i].loaded) {
@@ -495,9 +498,17 @@ function renderRadar(enemies) {
           "switch": ["KeyY", "Tab"],
         },
         initialize: function() {
-          animate();
-          update();
-          utils.weapons.switch("primary");
+          gametime.set("player", {
+            character: "SWAT",
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+          });
+          gametime.connect();
+          gametime.onconnect = function() {
+            animate();
+            update();
+            utils.weapons.switch("primary");
+          };
         },
         loadingManager: new THREE.LoadingManager(),
         models: [
@@ -542,7 +553,7 @@ function renderRadar(enemies) {
             path: "/models/weapons/FN-502.glb",
             model: null,
             loaded: false
-          },
+          }
         ],
         weapons: {
           "AK-74": {
@@ -633,6 +644,36 @@ function renderRadar(enemies) {
               utils.ui.elements.ammoRemainingValue.textContent = "/ " + remainingAmmo;
               utils.ui.cache.ammoRemainingValue = remainingAmmo;
             }
+          }
+        },
+        players: {
+          objects: {},
+          add: function(player) {
+            utils.players.objects[player.uuid] = null;
+            utils.models.reload(`/models/characters/${player.data.character}.glb`, function(playerObject) {
+              scene.add(playerObject.scene);
+              utils.players.objects[player.uuid] = playerObject;
+            });
+          },
+          update: function() {
+            gametime.player.data.position = [camera.position.x, camera.position.y - 1, camera.position.z];
+            gametime.update();
+            for (player in gametime.players) {
+              if (player != gametime.player.uuid && typeof utils.players.objects[player] !== "undefined" && utils.players.objects[player] != null) {
+                const position = gametime.players[player].data.position;
+                utils.players.objects[player].scene.position.set(position[0], position[1], position[2]);
+              }
+            }
+          },
+        },
+        models: {
+          get: function(id) {
+            return sandbox.models.filter(model => model.id == id)[0];
+          },
+          reload: function(path, callback) {
+            new THREE.GLTFLoader().load(path, function(model) {
+              callback(model);
+            });
           }
         },
         weapons: {
@@ -1018,6 +1059,13 @@ function renderRadar(enemies) {
       utils.options.set("ReloadCallbackFunction", () => {});
       utils.options.set("bulletHoleMaterial", new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }));
       utils.options.set("globalZoomTween", null);
+
+      gametime.onupdate = function(player) {
+        if (player.uuid == gametime.player.uuid) return;
+        if (typeof utils.players.objects[player.uuid] === "undefined") {
+          utils.players.add(player);
+        }
+      };
     </script>
-  </body>
+  </bodfy>
 </html>
