@@ -350,6 +350,19 @@ function renderRadar(enemies) {
             }
           }
         }
+        for (player in utils.players.objects) {
+          if (utils.players.objects[player]) {
+            if (utils.players.objects[player].animationMixer) {
+              const playerObject = utils.players.objects[player];
+              playerObject.animationMixer.update(clockDelta);
+              const offset = playerObject.weapon.type == "pistol" ? 1.3 : 0.9;
+              const weaponRotation = Math.min(Math.max(-playerObject.weaponRotation + offset, 0.1), 1.7);
+              playerObject.scene.getObjectByName("mixamorigRightShoulder").rotation.x = weaponRotation;
+              playerObject.scene.getObjectByName("mixamorigLeftShoulder").rotation.x = weaponRotation;
+              playerObject.scene.getObjectByName("mixamorigHead").rotation.x = weaponRotation - offset;
+            }
+          }
+        }
 
         frameCount++;
         const diff = now - lastTime;
@@ -399,6 +412,7 @@ function renderRadar(enemies) {
         }
         if (playerOnFloor && keyStates["Space"]) {
           playerVelocity.y = 4;
+          gametime.run("jump", [gametime.player.uuid]);
         }
       }
       function playerCollisions() {
@@ -553,7 +567,19 @@ function renderRadar(enemies) {
             path: "/models/weapons/FN-502.glb",
             model: null,
             loaded: false
-          }
+          },
+          {
+            id: "propweapon.AK-74",
+            path: "/models/characters/weapons/AK-74.glb",
+            model: null,
+            loaded: false
+          },
+          {
+            id: "propweapon.FN-502",
+            path: "/models/characters/weapons/FN-502.glb",
+            model: null,
+            loaded: false
+          },
         ],
         weapons: {
           "AK-74": {
@@ -572,6 +598,7 @@ function renderRadar(enemies) {
             fireMode: "auto",
             fireRate: 120,
             reticle: 0,
+            type: "rifle",
             model: null,
             loaded: false,
             requiredMaps: ["Cargo_Port"],
@@ -599,6 +626,7 @@ function renderRadar(enemies) {
             fireMode: "semi",
             fireRate: 200,
             reticle: 0,
+            type: "pistol",
             model: null,
             loaded: false,
             requiredMaps: ["Cargo_Port"],
@@ -652,19 +680,97 @@ function renderRadar(enemies) {
             utils.players.objects[player.uuid] = null;
             utils.models.reload(`/models/characters/${player.data.character}.glb`, function(playerObject) {
               scene.add(playerObject.scene);
+              playerObject.animationMixer = new THREE.AnimationMixer(playerObject.scene);
+              playerObject.animationStructure = {
+                "death": [0, 1, 1],
+                "throw_grenade": [1, 1, 1],
+                "pistol_idle": [2, 1, 1],
+                "pistol_jump": [3, 1, 1],
+                "pistol_walk": [4, 1, 1],
+                "rifle_idle": [5, 1, 1],
+                "rifle_jump": [6, 1, 1],
+                "rifle_shoot": [7, 1, 1],
+                "rifle_walk": [8, 1, 1],
+              };
+              playerObject.isWalking = false;
+              playerObject.weapon = null;
+              playerObject.weaponRotation = 0;
               utils.players.objects[player.uuid] = playerObject;
             });
           },
           update: function() {
             gametime.player.data.position = [camera.position.x, camera.position.y - 1, camera.position.z];
+            gametime.player.data.rotation = [camera.rotation.x, camera.rotation.y, camera.rotation.z];
             gametime.update();
             for (player in gametime.players) {
               if (player != gametime.player.uuid && typeof utils.players.objects[player] !== "undefined" && utils.players.objects[player] != null) {
                 const position = gametime.players[player].data.position;
+                const rotation = gametime.players[player].data.rotation;
                 utils.players.objects[player].scene.position.set(position[0], position[1], position[2]);
+                utils.players.objects[player].scene.rotation.set(0, rotation[1], 0);
+                utils.players.objects[player].weaponRotation = rotation[0];
               }
             }
           },
+          animations: {
+            start: function(player, animation, options = {}) {
+              let clip = player.animationMixer.clipAction(player.animations[player.animationStructure[animation][0]]);
+              clip.timeScale = options.timeScale || player.animationStructure[animation][1];
+              clip.weight = player.animationStructure[animation][2];
+
+              if (animation == "rifle_idle" || animation == "pistol_idle") clip.loop = THREE.LoopRepeat;
+              if (animation == "rifle_walk" || animation == "pistol_walk") {
+                clip.loop = THREE.LoopRepeat;
+                clip.reset();
+                if (!options.instant) clip.fadeIn(0.3);
+              }
+
+              if (options.loop) clip.loop = options.loop;
+              if (options.reset) clip.reset();
+              clip.play();
+            },
+            stop: function(player, animation, options = {}) {
+              let clip = player.animationMixer.clipAction(player.animations[player.animationStructure[animation][0]]);
+              if (animation == "rifle_walk" || animation == "pistol_walk") {
+                clip.fadeOut(0.3);
+              } else {
+                clip.stop();
+              }
+              if (options.reset) clip.reset();
+            },
+            // cancelCallback: function(callbackFunction) {
+            //   const weapon = utils.weapons.getCurrentEntry();
+            //   weapon.model.animationMixer.removeEventListener("finished", callbackFunction);
+            // },
+            // restart: function(animation) {
+            //   utils.weapons.animations.stop(animation);
+            //   utils.weapons.animations.start(animation);
+            // },
+          },
+          weapons: {
+            set: function(player, weapon) {
+              let type = "rifle";
+              if (sandbox.weapons[weapon].type == "pistol") {
+                type = "pistol";
+              }
+              utils.players.animations.stop(player, "rifle_walk");
+              utils.players.animations.stop(player, "pistol_walk");
+              utils.players.animations.stop(player, "rifle_idle");
+              utils.players.animations.stop(player, "pistol_idle");
+              scene.remove(player.weapon);
+              const model = utils.models.get("propweapon." + weapon).model.scene;
+              model.scale.set(6.5, 6.5, 6.5);
+              model.position.set(2, 20, 5);
+              model.rotation.set(0, Math.PI / 2, 0);
+              model.rotateX(-.2);
+              model.rotateZ(-.1);
+              player.weapon = model;
+              player.weapon.type = type;
+              player.scene.getObjectByName("mixamorigRightHand").add(player.weapon);
+              utils.players.animations.start(player, type + "_idle");
+              if (player.isWalking) utils.players.animations.start(player, type + "_walk");
+            },
+          }
         },
         models: {
           get: function(id) {
@@ -884,7 +990,6 @@ function renderRadar(enemies) {
               const weapon = utils.weapons.getCurrentEntry();
               const ammo = weapon.ammo;
               weapon.ammo = Math.max(weapon.ammo - (weapon.maxAmmo - weapon.currentAmmo), 0);
-              console.log(144, ammo)
               weapon.currentAmmo = Math.min(weapon.maxAmmo, ammo);
               utils.options.set("Reloading", false);
               utils.weapons.animations.start("idle");
@@ -1066,6 +1171,12 @@ function renderRadar(enemies) {
           utils.players.add(player);
         }
       };
+
+      gametime.on("jump", function(player) {
+        if (player != gametime.player.uuid) {
+          utils.players.animations.start(utils.players.objects[player], "rifle_jump", { loop: THREE.LoopOnce, reset: true });
+        }
+      });
     </script>
   </bodfy>
 </html>
