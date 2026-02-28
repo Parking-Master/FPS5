@@ -378,7 +378,7 @@ function renderRadar(enemies) {
           fps = (frameCount * 1000) / diff;
           frameCount = 0;
           lastTime = now;
-          console.log('FPS:', fps.toFixed(1));
+          // console.log('FPS:', fps.toFixed(1));
         }
 
         renderer.render(scene, camera);
@@ -729,7 +729,7 @@ function renderRadar(enemies) {
             start: function(player, animation, options = {}) {
               let clip = player.animationMixer.clipAction(player.animations[player.animationStructure[animation][0]]);
               clip.timeScale = options.timeScale || player.animationStructure[animation][1];
-              clip.weight = player.animationStructure[animation][2];
+              clip.weight = options.weight || player.animationStructure[animation][2];
 
               if (animation == "rifle_idle" || animation == "pistol_idle") clip.loop = THREE.LoopRepeat;
               if (animation == "rifle_walk" || animation == "pistol_walk") {
@@ -782,10 +782,27 @@ function renderRadar(enemies) {
               }
               player.weapon = model;
               player.weapon.type = type;
+              player.weapon.name = weapon;
               player.scene.getObjectByName("mixamorigRightHand").add(player.weapon);
               utils.players.animations.start(player, type + "_idle");
               if (player.isWalking) utils.players.animations.start(player, type + "_walk");
             },
+            fire: function(player, point, spreadX, spreadY) {
+              utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
+              if (sandbox.weapons[player.weapon.name].muzzleFlash) {
+                utils.effects.muzzleFlash(player.weapon);
+              }
+              utils.players.effects.bulletHole(point, spreadX, spreadY);
+            }
+          },
+          effects: {
+            bulletHole: function(point, spreadX, spreadY) {
+              const camera = utils.options.get("playerCamera");
+              camera.position.set(point[0], point[1], point[2]);
+              camera.rotation.set(point[3], point[4], point[5]);
+              camera.updateMatrixWorld();
+              utils.effects.bulletHole(spreadX, spreadY, camera);
+            }
           },
           startWalking: function(player) {
             if (player.isWalking) return;
@@ -940,12 +957,16 @@ function renderRadar(enemies) {
                 if (Date.now() - lastFire >= rate) {
                   lastFire = Date.now();
                   utils.weapons.animations.start("shoot", { loop: THREE.LoopOnce, reset: true });
-                  utils.effects.bulletHole(spreads[roundsFired], spreads[roundsFired + 1]);
+
+                  const spreadX = spreads[roundsFired];
+                  const spreadY = spreads[roundsFired + 1];
+                  utils.effects.bulletHole(spreadX, spreadY);
                   if (weapon.muzzleFlash) utils.effects.muzzleFlash();
 
                   roundsFired++;
                   weapon.currentAmmo--;
                   utils.weapons.update();
+                  gametime.run("fireWeapon", [gametime.player.uuid, [camera.position.x, camera.position.y, camera.position.z, camera.rotation.x, camera.rotation.y, camera.rotation.z], spreadX, spreadY]);
                 }
               } else {
                 clearInterval(interval);
@@ -1041,9 +1062,9 @@ function renderRadar(enemies) {
           }
         },
         effects: {
-          bulletHole: function(spreadX, spreadY) {
+          bulletHole: function(spreadX, spreadY, point = camera) {
             let raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera({ x: spreadX, y: spreadY }, camera);
+            raycaster.setFromCamera({ x: spreadX, y: spreadY }, point);
             const intersects = raycaster.intersectObjects(map.children);
 
             if (intersects.length > 0) {
@@ -1067,8 +1088,8 @@ function renderRadar(enemies) {
               }, 20000);
             }
           },
-          muzzleFlash: function() {
-            let flash = sandbox.currentWeapon.getObjectByName("muzzleFlash");
+          muzzleFlash: function(model = null) {
+            let flash = (model || sandbox.currentWeapon).getObjectByName("muzzleFlash");
             flash.rotateZ(Math.random());
             flash.material.color.setHex(0xff6604);
             flash.material.emissive.setHex(0xff2211);
@@ -1193,7 +1214,10 @@ function renderRadar(enemies) {
       utils.options.set("Switching", false);
       utils.options.set("ReloadCallbackFunction", () => {});
       utils.options.set("bulletHoleMaterial", new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }));
+      utils.options.set("playerCamera", camera.clone());
       utils.options.set("globalZoomTween", null);
+
+      scene.add(utils.options.get("playerCamera"));
 
       gametime.onupdate = function(player) {
         if (player.uuid == gametime.player.uuid) return;
@@ -1204,7 +1228,7 @@ function renderRadar(enemies) {
 
       gametime.on("jump", function(player) {
         if (player != gametime.player.uuid) {
-          utils.players.animations.start(utils.players.objects[player], "rifle_jump", { loop: THREE.LoopOnce, reset: true });
+          utils.players.animations.start(utils.players.objects[player], utils.players.objects[player].weapon.type + "_jump", { loop: THREE.LoopOnce, reset: true });
         }
       });
       gametime.on("switchWeapon", function(player, weapon) {
@@ -1220,6 +1244,11 @@ function renderRadar(enemies) {
       gametime.on("stopWalking", function(player) {
         if (player != gametime.player.uuid) {
           utils.players.stopWalking(utils.players.objects[player]);
+        }
+      });
+      gametime.on("fireWeapon", function(player, point, spreadX, spreadY) {
+        if (player != gametime.player.uuid) {
+          utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY);
         }
       });
     </script>
