@@ -273,22 +273,16 @@ function renderRadar(enemies) {
       let playerOnFloor = false;
 
       let vector3 = new THREE.Vector3();
-      let playerDefaultPosition = {
-        x: 13.5,
-        y: .35,
-        z: -18.5
-      };
+      let playerDefaultPosition = [13.5, 0.35, -18.5];
 
       let STEPS_PER_FRAME = 4;
       let GRAVITY = 10;
       const grenades = [];
 
-      const playerCollider = new THREE.Capsule(new THREE.Vector3(0, .35, 0), new THREE.Vector3(0, 1, 0), .35);
+      const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
       const playerVelocity = vector3.clone();
       const playerDirection = vector3.clone();
 
-      renderer.setClearAlpha();
-      renderer.setClearColor(0x000000, 0);
       renderer.shadowMap.autoUpdate = false;
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.VSMShadowMap;
@@ -296,8 +290,8 @@ function renderRadar(enemies) {
       renderer.toneMapping = THREE.ReinhardToneMapping;
 
       camera.rotation.order = "YXZ";
-      playerCollider.start.set(playerDefaultPosition.x, playerDefaultPosition.y, playerDefaultPosition.z);
-      playerCollider.end.set(playerDefaultPosition.x, playerDefaultPosition.y + .65, playerDefaultPosition.z);
+      playerCollider.start.set(playerDefaultPosition[0], playerDefaultPosition[1], playerDefaultPosition[2]);
+      playerCollider.end.set(playerDefaultPosition[0], playerDefaultPosition[1] + .65, playerDefaultPosition[2]);
       directionalLight.position.set(20, 25, -10);
       directionalLight.castShadow = true;
       directionalLight.shadow.camera.near = .01;
@@ -351,24 +345,31 @@ function renderRadar(enemies) {
           }
         }
         for (player in utils.players.objects) {
-          if (utils.players.objects[player]) {
-            if (utils.players.objects[player].animationMixer) {
-              const playerObject = utils.players.objects[player];
+          const playerObject = utils.players.objects[player];
+          if (playerObject) {
+            if (playerObject.animationMixer) {
               playerObject.animationMixer.update(clockDelta);
               const offset = playerObject.weapon.type == "pistol" ? 1.3 : 0.9;
               const weaponRotation = Math.min(Math.max(-playerObject.weaponRotation + offset, 0.1), 1.7);
-              if (playerObject.isWalking) {
-                if (playerObject.weapon.type == "rifle") {
-                  playerObject.scene.getObjectByName("mixamorigRightShoulder").rotation.x = weaponRotation + .7;
-                  playerObject.scene.getObjectByName("mixamorigLeftShoulder").rotation.x = weaponRotation + .2;
-                }
-                playerObject.scene.getObjectByName("mixamorigHead").rotation.x = weaponRotation - offset - .4;
-              } else {
-                playerObject.scene.getObjectByName("mixamorigRightShoulder").rotation.x = weaponRotation;
-                playerObject.scene.getObjectByName("mixamorigLeftShoulder").rotation.x = weaponRotation;
-                playerObject.scene.getObjectByName("mixamorigHead").rotation.x = weaponRotation - offset;
+              const rightShoulder = playerObject.scene.getObjectByName("mixamorigRightShoulder");
+              const leftShoulder = playerObject.scene.getObjectByName("mixamorigLeftShoulder");
+              const head = playerObject.scene.getObjectByName("mixamorigHead");
+              rightShoulder.rotation.x = weaponRotation;
+              leftShoulder.rotation.x = weaponRotation;
+              head.rotation.x = weaponRotation - offset;
+              if (playerObject.isWalking && playerObject.weapon.type == "rifle") {
+                rightShoulder.rotation.x += 7;
+                leftShoulder.rotation.x += .2;
+                head.rotation.x -= offset - .4;
               }
             }
+          }
+        }
+
+        if (utils.options.get("muzzleFlashes").length > 0) {
+          const flashes = utils.options.get("muzzleFlashes");
+          for (let i = 0; i < flashes.length; i++) {
+            if (Date.now() - flashes[i].timestamp > 20) flashes[i].opacity = 0;
           }
         }
 
@@ -378,7 +379,7 @@ function renderRadar(enemies) {
           fps = (frameCount * 1000) / diff;
           frameCount = 0;
           lastTime = now;
-          // console.log('FPS:', fps.toFixed(1));
+          console.log('FPS:', fps.toFixed(1));
         }
 
         renderer.render(scene, camera);
@@ -460,7 +461,7 @@ function renderRadar(enemies) {
             grenade.hits++;
             grenade.velocity.addScaledVector(result.normal, -result.normal.dot(grenade.velocity) * 1.5);
 
-            const rotationAxis = new THREE.Vector3().crossVectors(result.normal, grenade.velocity).normalize();
+            const rotationAxis = vector3.crossVectors(result.normal, grenade.velocity).normalize();
             const rotationSpeed = grenade.velocity.length() * 0.5;
             grenade.angularVelocity.addScaledVector(rotationAxis, rotationSpeed);
 
@@ -699,10 +700,12 @@ function renderRadar(enemies) {
                 "pistol_jump": [3, 1, 1],
                 "pistol_shoot": [9, 1, 1],
                 "pistol_walk": [4, 1, 1],
+                "pistol_reload": [11, 0.6, 1],
                 "rifle_idle": [5, 1, 1],
                 "rifle_jump": [6, 1, 1],
                 "rifle_shoot": [7, 1, 1],
                 "rifle_walk": [8, 1, 1],
+                "rifle_reload": [10, 0.6, 1],
               };
               playerObject.isWalking = false;
               playerObject.weapon = null;
@@ -785,16 +788,22 @@ function renderRadar(enemies) {
               player.weapon.type = type;
               player.weapon.name = weapon;
               player.scene.getObjectByName("mixamorigRightHand").add(player.weapon);
-              utils.players.animations.start(player, type + "_idle");
-              if (player.isWalking) utils.players.animations.start(player, type + "_walk");
+              if (player.isWalking) {
+                utils.players.animations.start(player, type + "_walk");
+              } else {
+                utils.players.animations.start(player, type + "_idle");
+              }
             },
             fire: function(player, point, spreadX, spreadY) {
-              utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
+              if (!player.isWalking) utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
               if (sandbox.weapons[player.weapon.name].muzzleFlash) {
                 utils.effects.muzzleFlash(player.weapon);
               }
               utils.players.effects.bulletHole(point, spreadX, spreadY);
-            }
+            },
+            reload: function(player) {
+              utils.players.animations.start(player, player.weapon.type + "_reload", { loop: THREE.LoopOnce, reset: true, weight: 10 });
+            },
           },
           effects: {
             bulletHole: function(point, spreadX, spreadY) {
@@ -1040,12 +1049,13 @@ function renderRadar(enemies) {
               const weapon = utils.weapons.getCurrentEntry();
               const ammo = weapon.ammo;
               weapon.ammo = Math.max(weapon.ammo - (weapon.maxAmmo - weapon.currentAmmo), 0);
-              weapon.currentAmmo = Math.min(weapon.maxAmmo, ammo);
+              weapon.currentAmmo = Math.min(weapon.currentAmmo + Math.min(weapon.maxAmmo, ammo), weapon.maxAmmo);
               utils.options.set("Reloading", false);
               utils.weapons.animations.start("idle");
               if (utils.options.get("Walking")) utils.weapons.animations.start("walk");
             });
             utils.options.set("ReloadCallbackFunction", callbackFunction);
+            gametime.run("reloadWeapon", [gametime.player.uuid]);
           },
           stopReload: function() {
             if (utils.options.get("Reloading")) {
@@ -1064,14 +1074,13 @@ function renderRadar(enemies) {
         },
         effects: {
           bulletHole: function(spreadX, spreadY, point = camera) {
-            let raycaster = new THREE.Raycaster();
+            const raycaster = utils.options.get("effectsRaycaster");
             raycaster.setFromCamera({ x: spreadX, y: spreadY }, point);
             const intersects = raycaster.intersectObjects(map.children);
 
             if (intersects.length > 0) {
               const intersect = intersects[0];
-              const scale = 0.05;
-              const size = new THREE.Vector3(scale, scale, scale);
+              const size = utils.options.get("bulletHoleSize");
               const normal = intersect.face.normal.clone();
               normal.transformDirection(intersect.object.matrixWorld);
               const rotation = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal));
@@ -1082,20 +1091,23 @@ function renderRadar(enemies) {
 
               THREE.particles.dust(intersect.point);
 
-              setTimeout(async function() {
+              setTimeout(function() {
                 scene.remove(decalMesh);
                 decalGeometry.dispose();
-                raycaster = null;
               }, 20000);
             }
           },
           muzzleFlash: function(model = null) {
-            let flash = (model || sandbox.currentWeapon).getObjectByName("muzzleFlash");
+            const flash = (model || sandbox.currentWeapon).getObjectByName("muzzleFlash");
             flash.rotateZ(Math.random());
             flash.material.color.setHex(0xff6604);
             flash.material.emissive.setHex(0xff2211);
             flash.material.opacity = 1;
             setTimeout(() => flash.material.opacity = 0, 20);
+            const flashes = utils.options.get("muzzleFlashes");
+            flash.timestamp = Date.now();
+            flashes.push(flash.material);
+            utils.options.set("muzzleFlashes", flashes);
           }
         },
         precompileShaders: function(object) {
@@ -1215,8 +1227,11 @@ function renderRadar(enemies) {
       utils.options.set("Switching", false);
       utils.options.set("ReloadCallbackFunction", () => {});
       utils.options.set("bulletHoleMaterial", new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }));
+      utils.options.set("bulletHoleSize", new THREE.Vector3(0.05, 0.05, 0.05));
       utils.options.set("playerCamera", camera.clone());
+      utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("globalZoomTween", null);
+      utils.options.set("muzzleFlashes", []);
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -1252,6 +1267,11 @@ function renderRadar(enemies) {
           utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY);
         }
       });
+      gametime.on("reloadWeapon", function(player) {
+        if (player != gametime.player.uuid) {
+          utils.players.weapons.reload(utils.players.objects[player]);
+        }
+      });
     </script>
-  </bodfy>
+  </body>
 </html>
