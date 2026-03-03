@@ -267,16 +267,14 @@ function renderRadar(enemies) {
 // e=new THREE.Mesh(new THREE.BoxGeometry(1,1,1));e.position.y=1;scene.add(e);
 // setInterval(()=>renderRadar([e]),200);
 
-      let keyStates = {};
       let playerOnFloor = false;
-
       let vector3 = new THREE.Vector3();
-      let playerDefaultPosition = [13.5, 0.35, -18.5];
-
       let STEPS_PER_FRAME = 4;
       let GRAVITY = 10;
-      const grenades = [];
 
+      const playerDefaultPosition = [13.5, 0.35, -18.5];
+      const keyStates = {};
+      const grenades = [];
       const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
       const playerVelocity = vector3.clone();
       const playerDirection = vector3.clone();
@@ -573,6 +571,12 @@ function renderRadar(enemies) {
           {
             id: "weapon.FN-502",
             path: "/models/weapons/FN-502.glb",
+            model: null,
+            loaded: false
+          },
+          {
+            id: "grenade.MK2",
+            path: "/models/weapons/grenades/MK2.glb",
             model: null,
             loaded: false
           },
@@ -916,6 +920,8 @@ function renderRadar(enemies) {
           switch: function(slot = null) {
             utils.options.set("Switching", true);
             utils.weapons.stopReload();
+            const weapon = utils.weapons.getCurrentEntry();
+            if (weapon.fireMode == "auto" && utils.options.get("Firing")) utils.weapons.stopFire();
             if (!slot) slot = sandbox.currentWeapon == sandbox.secondaryWeapon ? "primary" : "secondary";
             if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
             if (utils.options.get("Walking")) utils.weapons.animations.stop("walk");
