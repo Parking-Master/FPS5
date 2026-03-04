@@ -15,10 +15,6 @@ graphics = {
     this.blurPass.renderToScreen = true;
     this.composer.addPass(this.blurPass);
 
-  
-    this.outlinePass = new THREE.OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera, grenades.map(x => x.mesh));
-    this.composer.addPass(this.outlinePass);
-
     this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 1, 0.8);
     this.composer.addPass(this.bloomPass);
 
