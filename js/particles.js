@@ -35,8 +35,8 @@ let dustMaterial = new THREE.ShaderMaterial({
       vec2 noiseCoord = gl_PointCoord * 4.0 + fract(vLife * 10.0);
       float noise = texture2D(noiseTexture, noiseCoord).r * 0.5 + 0.5;
       
-      float alpha = 0.1 * vLife * noise * (1.0 - dist * 2.0);
-      vec3 dustColor = vec3(0.1, 0.1, 0.1);
+      float alpha = 0.2 * vLife * noise * (1.0 - dist * 2.0);
+      vec3 dustColor = vec3(0.14, 0.14, 0.14);
       gl_FragColor = vec4(dustColor, alpha);
     }`,
   transparent: true,
@@ -131,9 +131,9 @@ THREE.particles = {
         vx: (Math.random() - 0.5) * 0.08,
         vy: (Math.random() - 0.4) * 0.05,
         vz: (Math.random() - 0.4) * 0.06,
-        life: 2.0,
-        maxLife: 2.0,
-        size: 0.01 + Math.random() * 0.02
+        life: 4.0,
+        maxLife: 4.0,
+        size: 0.01 + Math.random() * 0.015
       };
       burst.particles.push(particle);
     }
@@ -148,7 +148,7 @@ THREE.particles = {
       const particle = {
         x: position.x + (Math.random() - 0.5) * 0.2,
         y: position.y + (Math.random() - 0.5) * 0.2,
-        z: position.z + Math.random() * 0.15,
+        z: (position.z + Math.random() * 0.15) - 1,
         vx: (Math.random() - 0.5) * 0.15,
         vy: (Math.random() - 0.5) * 0.15,
         vz: 0.15 + Math.random() * 0.2,

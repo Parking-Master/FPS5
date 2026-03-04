@@ -205,109 +205,23 @@
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
       const clock = new THREE.Clock();
       const worldOctree = new THREE.Octree();
-      const directionalLight = new THREE.DirectionalLight(0xfcc394, 0.9);
-      const hemisphereLight = new THREE.AmbientLight(0xfcc394, 0.35);
-
-      // For the radar
-let radarCanvas = document.querySelector(".ui-radar canvas");
-let ctx = radarCanvas.getContext("2d");
-let radarRadiusPx = 75;
-let radarRange = 18;
-
-const worldUp = new THREE.Vector3(0, 1, 0);
-const forward = new THREE.Vector3();
-const forwardH = new THREE.Vector3();
-const right = new THREE.Vector3();
-const tmpVec3 = new THREE.Vector3();
-function updatePlayerBasis() {
-  camera.getWorldDirection(forward);
-  forward.negate();
-  forwardH.copy(forward).addScaledVector(worldUp, -forward.dot(worldUp)).normalize();
-  right.crossVectors(worldUp, forwardH).normalize();
-}
-function computeRadarBlipForEnemy(enemy) {
-  const playerPos = tmpVec3.setFromMatrixPosition(camera.matrixWorld);
-  const enemyPos = new THREE.Vector3().setFromMatrixPosition(enemy.matrixWorld);
-  const V = enemyPos.sub(playerPos);
-  const dotVy = V.dot(worldUp);
-  const Vh = V.addScaledVector(worldUp, -dotVy);
-  if (Vh.lengthSq() === 0) return null;
-  const xLocal = Vh.dot(right);
-  const yLocal = -Vh.dot(forwardH);
-  const d = Math.sqrt(xLocal * xLocal + yLocal * yLocal);
-  if (d === 0) return { x: radarRadiusPx, y: radarRadiusPx };
-  const dClamped = Math.min(d, radarRange);
-  const scale = dClamped / radarRange;
-  const nx = xLocal / d;
-  const ny = yLocal / d;
-  const xOffset = nx * scale * radarRadiusPx;
-  const yOffset = ny * scale * radarRadiusPx;
-  const screenX = radarRadiusPx + xOffset;
-  const screenY = radarRadiusPx - yOffset;
-  return { x: screenX, y: screenY };
-}
-function renderRadar(enemies) {
-  updatePlayerBasis();
-  ctx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
-  ctx.beginPath();
-  ctx.fillStyle = "rgba(180, 180, 255, 0.7)";
-  ctx.arc(radarRadiusPx, radarRadiusPx, 5, 0, 2 * Math.PI);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(230, 20, 20, 0.5)';
-  for (const enemy of enemies) {
-    if (camera.position.distanceTo(enemy.position) > radarRange + 3) continue;
-    const blip = computeRadarBlipForEnemy(enemy);
-    if (!blip) continue;
-    ctx.beginPath();
-    ctx.arc(blip.x, blip.y, 5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-// e=new THREE.Mesh(new THREE.BoxGeometry(1,1,1));e.position.y=1;scene.add(e);
-// setInterval(()=>renderRadar([e]),200);
 
       let playerOnFloor = false;
-      let vector3 = new THREE.Vector3();
       let STEPS_PER_FRAME = 4;
       let GRAVITY = 10;
 
+      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
       const playerDefaultPosition = [13.5, 0.35, -18.5];
       const keyStates = {};
       const grenades = [];
       const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
-      const playerVelocity = vector3.clone();
-      const playerDirection = vector3.clone();
-
-      renderer.shadowMap.autoUpdate = false;
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.VSMShadowMap;
-      renderer.outputEncoding = THREE.sRGBEncoding;
-      // renderer.toneMapping = THREE.ReinhardToneMapping;
+      const playerVelocity = vectors[0].clone();
+      const playerDirection = vectors[0].clone();
 
       camera.rotation.order = "YXZ";
       playerCollider.start.set(playerDefaultPosition[0], playerDefaultPosition[1], playerDefaultPosition[2]);
       playerCollider.end.set(playerDefaultPosition[0], playerDefaultPosition[1] + .65, playerDefaultPosition[2]);
-      directionalLight.position.set(20, 25, -10);
-      directionalLight.castShadow = true;
-      directionalLight.shadow.camera.near = .01;
-      directionalLight.shadow.camera.far = 500;
-      directionalLight.shadow.camera.right = 30;
-      directionalLight.shadow.camera.left = -30;
-      directionalLight.shadow.camera.top = 30;
-      directionalLight.shadow.camera.bottom = -30;
-      directionalLight.shadow.mapSize.width = 1024;
-      directionalLight.shadow.mapSize.height = 1024;
-      directionalLight.shadow.radius = 4;
-      directionalLight.shadow.bias = -0.00006;
-      hemisphereLight.position.set(2, 1, 1);
       document.body.appendChild(renderer.domElement);
-
-      scene.add(hemisphereLight);
-      scene.add(directionalLight);
-
-      renderer.shadowMap.needsUpdate = true;
-
       graphics.activate();
 
       let frameCount = 0;
@@ -316,20 +230,20 @@ function renderRadar(enemies) {
       function animate(now) {
         const clockDelta = clock.getDelta();
         const deltaTime = Math.min(0.05, clockDelta) / STEPS_PER_FRAME;
+        const time = Date.now();
         const weapon = utils.weapons.getCurrentEntry();
 
         teleportPlayerIfOob();
 
-        TWEEN.update();
-        THREE.particles.update();
-        utils.ui.update(weapon.currentAmmo, weapon.ammo);
-
         for (let i = 0; i < STEPS_PER_FRAME; i++) {
           controls(deltaTime);
           updatePlayer(deltaTime);
-          updateGrenades(deltaTime);
+          updateGrenades(deltaTime, time);
         }
 
+        TWEEN.update();
+        THREE.particles.update();
+        utils.ui.update(weapon.currentAmmo, weapon.ammo);
         utils.weapons.position();
         utils.players.update();
 
@@ -365,7 +279,7 @@ function renderRadar(enemies) {
         if (utils.options.get("muzzleFlashes").length > 0) {
           const flashes = utils.options.get("muzzleFlashes");
           for (let i = 0; i < flashes.length; i++) {
-            if (Date.now() - flashes[i].timestamp > 20) flashes[i].opacity = 0;
+            if (time - flashes[i].timestamp > 30) flashes[i].opacity = 0;
           }
         }
 
@@ -443,9 +357,15 @@ function renderRadar(enemies) {
         playerCollisions();
         camera.position.copy(playerCollider.end);
       }
-      function updateGrenades(deltaTime) {
+      function updateGrenades(deltaTime, time) {
         for (let i = 0; i < grenades.length; i++) {
           let grenade = grenades[i];
+
+          if (!grenade.available && grenade.hits > 0) {
+            if (time - grenade.timestamp > 1000) {
+              utils.grenades.explode(grenade);
+            }
+          }
 
           grenade.mesh.rotation.x += grenade.angularVelocity.x * deltaTime;
           grenade.mesh.rotation.y += grenade.angularVelocity.y * deltaTime;
@@ -456,16 +376,19 @@ function renderRadar(enemies) {
           if (result) {
             grenade.hits++;
             grenade.velocity.addScaledVector(result.normal, -result.normal.dot(grenade.velocity) * 1.5);
+            if (grenade.timestamp == null) {
+              grenade.timestamp = Date.now();
+            }
 
-            const rotationAxis = vector3.crossVectors(result.normal, grenade.velocity).normalize();
-            const rotationSpeed = grenade.velocity.length() * 0.5;
+            const rotationAxis = vectors[0].crossVectors(result.normal, grenade.velocity).normalize();
+            const rotationSpeed = grenade.velocity.length() * 0.2;
             grenade.angularVelocity.addScaledVector(rotationAxis, rotationSpeed);
 
             grenade.collider.center.add(result.normal.multiplyScalar(result.depth));
           } else {
-            grenade.velocity.y -= (GRAVITY * deltaTime + .01);
+            grenade.velocity.y -= (GRAVITY * deltaTime + 0.01) * 1.2;
           }
-          const damping = Math.exp(deltaTime * -1.5) - 1.003;
+          const damping = (Math.exp(deltaTime * -1.5) - 1.003) / 1.2;
           grenade.velocity.addScaledVector(grenade.velocity, damping);
           grenade.angularVelocity.addScaledVector(grenade.angularVelocity, damping);
         }
@@ -483,12 +406,12 @@ function renderRadar(enemies) {
             const r = s1.collider.radius + s2.collider.radius;
             const r2 = r * r;
             if (d2 < r2) {
-              const normal = _vector1.subVectors(s1.collider.center, s2.collider.center).normalize();
-              const v1 = _vector2.copy(normal).multiplyScalar(normal.dot(s1.velocity));
-              const v2 = _vector3.copy(normal).multiplyScalar(normal.dot(s2.velocity));
+              const normal = vectors[1].subVectors(s1.collider.center, s2.collider.center).normalize();
+              const v1 = vectors[2].copy(normal).multiplyScalar(normal.dot(s1.velocity));
+              const v2 = vectors[3].copy(normal).multiplyScalar(normal.dot(s2.velocity));
               s1.velocity.add(v2).sub(v1);
               s2.velocity.add(v1).sub(v2);
-              const d = (r - Math.sqrt(d2)) / 2;
+              const d = (r - Math.sqrt(d2)) / 20;
               s1.collider.center.addScaledVector(normal, d);
               s2.collider.center.addScaledVector(normal, - d);
             }
@@ -515,6 +438,7 @@ function renderRadar(enemies) {
           "zoom": ["KeyI"],
           "reload": ["KeyR"],
           "switch": ["KeyY", "Tab"],
+          "grenade": ["KeyG"],
         },
         initialize: function() {
           gametime.set("player", {
@@ -576,7 +500,23 @@ function renderRadar(enemies) {
             id: "grenade.MK2",
             path: "/models/weapons/grenades/MK2.glb",
             model: null,
-            loaded: false
+            loaded: false,
+            callback: function(model) {
+              for (let i = 0; i < 6; i++) {
+                const grenade = model.scene.clone();
+                scene.add(grenade);
+                grenades.push({
+                  mesh: grenade,
+                  collider: new THREE.Sphere(new THREE.Vector3(0, -100, 0), 0.1),
+                  velocity: new THREE.Vector3(),
+                  angularVelocity: new THREE.Vector3(),
+                  available: true,
+                  hits: 0,
+                  timestamp: null,
+                  id: i
+                });
+              }
+            }
           },
           {
             id: "propweapon.AK-74",
@@ -671,6 +611,8 @@ function renderRadar(enemies) {
             ammoRemainingValue: null
           },
           elements: {
+            crosshair: document.querySelector(".ui .crosshair"),
+            radarCanvas: document.querySelector(".ui-radar canvas"),
             ammoCurrentValue: document.querySelector(".ui .ui-weapon .ui-ammo .current-value"),
             ammoRemainingValue: document.querySelector(".ui .ui-weapon .ui-ammo .remaining-value"),
           },
@@ -683,6 +625,69 @@ function renderRadar(enemies) {
               utils.ui.elements.ammoRemainingValue.textContent = "/ " + remainingAmmo;
               utils.ui.cache.ammoRemainingValue = remainingAmmo;
             }
+          },
+          hideCrosshair: function() {
+            utils.ui.elements.crosshair.style.opacity = "0";
+          },
+          showCrosshair: function() {
+            utils.ui.elements.crosshair.style.opacity = "1";
+          },
+          radar: {
+            init: function(radarRange = 18) {
+              const ctx = utils.ui.elements.radarCanvas.getContext("2d");
+              const radarRadiusPx = 75;
+              const worldUp = new THREE.Vector3(0, 1, 0);
+              const forward = new THREE.Vector3();
+              const forwardH = new THREE.Vector3();
+              const right = new THREE.Vector3();
+              const tmpVec3 = new THREE.Vector3();
+              function updatePlayerBasis() {
+                camera.getWorldDirection(forward);
+                forward.negate();
+                forwardH.copy(forward).addScaledVector(worldUp, -forward.dot(worldUp)).normalize();
+                right.crossVectors(worldUp, forwardH).normalize();
+              }
+              function computeRadarBlipForEnemy(enemy) {
+                const playerPos = tmpVec3.setFromMatrixPosition(camera.matrixWorld);
+                const enemyPos = new THREE.Vector3().setFromMatrixPosition(enemy.matrixWorld);
+                const V = enemyPos.sub(playerPos);
+                const dotVy = V.dot(worldUp);
+                const Vh = V.addScaledVector(worldUp, -dotVy);
+                if (Vh.lengthSq() === 0) return null;
+                const xLocal = Vh.dot(right);
+                const yLocal = -Vh.dot(forwardH);
+                const d = Math.sqrt(xLocal * xLocal + yLocal * yLocal);
+                if (d === 0) return { x: radarRadiusPx, y: radarRadiusPx };
+                const dClamped = Math.min(d, radarRange);
+                const scale = dClamped / radarRange;
+                const nx = xLocal / d;
+                const ny = yLocal / d;
+                const xOffset = nx * scale * radarRadiusPx;
+                const yOffset = ny * scale * radarRadiusPx;
+                const screenX = radarRadiusPx + xOffset;
+                const screenY = radarRadiusPx - yOffset;
+                return { x: screenX, y: screenY };
+              }
+              utils.ui.radar.update = function(enemies) {
+                updatePlayerBasis();
+                ctx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
+                ctx.beginPath();
+                ctx.fillStyle = "rgba(180, 180, 255, 0.7)";
+                ctx.arc(radarRadiusPx, radarRadiusPx, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(230, 20, 20, 0.5)';
+                for (const enemy of enemies) {
+                  if (camera.position.distanceTo(enemy.position) > radarRange + 3) continue;
+                  const blip = computeRadarBlipForEnemy(enemy);
+                  if (!blip) continue;
+                  ctx.beginPath();
+                  ctx.arc(blip.x, blip.y, 5, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                ctx.restore();
+              };
+            },
+            update: null
           }
         },
         players: {
@@ -996,6 +1001,7 @@ function renderRadar(enemies) {
           zoom: function(force = false) {
             if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
             if (utils.options.get("Zoomed")) {
+              utils.ui.showCrosshair();
               const weapon = utils.weapons.getCurrentEntry();
               if (utils.options.get("globalZoomTween")) {
                 utils.options.get("globalZoomTween").in.position.stop();
@@ -1013,6 +1019,7 @@ function renderRadar(enemies) {
               if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
               utils.options.set("Zoomed", false);
             } else {
+              utils.ui.hideCrosshair();
               const weapon = utils.weapons.getCurrentEntry();
               if (utils.options.get("globalZoomTween")) {
                 utils.options.get("globalZoomTween").out.position.stop();
@@ -1074,6 +1081,27 @@ function renderRadar(enemies) {
             }
           }
         },
+        grenades: {
+          throw: function() {
+            const grenade = grenades[utils.grenades.getAvailable()];
+            grenade.available = false;
+            camera.getWorldDirection(playerDirection);
+            grenade.collider.center.copy(playerCollider.end).addScaledVector(playerDirection, playerCollider.radius * 1.5);
+            grenade.velocity.copy(playerDirection).multiplyScalar(25);
+            grenade.angularVelocity.set(0, 0, 0);
+            grenade.velocity.addScaledVector(playerVelocity, 2);
+          },
+          explode: function(grenade) {
+            THREE.particles.explosion(grenade.collider.center);
+            grenade.collider.center.set(0, -100, 0);
+            grenade.available = true;
+            grenade.hits = 0;
+            grenade.timestamp = null;
+          },
+          getAvailable: function() {
+            return grenades.filter(grenade => grenade.available)[0].id;
+          }
+        },
         effects: {
           bulletHole: function(spreadX, spreadY, point = camera) {
             const raycaster = utils.options.get("effectsRaycaster");
@@ -1105,9 +1133,8 @@ function renderRadar(enemies) {
             flash.material.color.setHex(0xff1111);
             flash.material.emissive.setHex(0xff1c11);
             flash.material.opacity = 1;
-            setTimeout(() => flash.material.opacity = 0, 20);
             const flashes = utils.options.get("muzzleFlashes");
-            flash.timestamp = Date.now();
+            flash.material.timestamp = Date.now();
             flashes.push(flash.material);
             utils.options.set("muzzleFlashes", flashes);
           }
@@ -1183,6 +1210,7 @@ function renderRadar(enemies) {
           if (sandbox.controls.zoom.includes(event.code)) utils.weapons.zoom();
           if (sandbox.controls.reload.includes(event.code)) utils.weapons.reload();
           if (sandbox.controls.switch.includes(event.code)) utils.weapons.switch();
+          if (sandbox.controls.grenade.includes(event.code)) utils.grenades.throw();
         }
         globalRepeat = true;
       });

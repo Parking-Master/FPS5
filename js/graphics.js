@@ -13,16 +13,47 @@ graphics = {
 
     this.blurPass = new THREE.ShaderPass(radialBlurShader);
     this.blurPass.renderToScreen = true;
+    graphics.blurPass.uniforms.strength.value = 0.06;
     this.composer.addPass(this.blurPass);
 
-    this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 1, 0.8);
+    this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.2, 1, 0.8);
     this.composer.addPass(this.bloomPass);
 
     this.gammaPass = new THREE.ShaderPass(GammaCorrectionShader);
     this.composer.addPass(this.gammaPass);
+
+    directionalLight = new THREE.DirectionalLight(0xfcc394, 0.9);
+    ambientLight = new THREE.AmbientLight(0xfcc394, 0.4);
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.VSMShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    directionalLight.position.set(40, 50, -30);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.camera.near = 0.01;
+    directionalLight.shadow.camera.far = 500;
+    directionalLight.shadow.camera.right = 30;
+    directionalLight.shadow.camera.left = -30;
+    directionalLight.shadow.camera.top = 30;
+    directionalLight.shadow.camera.bottom = -30;
+    directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.shadow.radius = 2;
+    directionalLight.shadow.bias = -0.00006;
+    ambientLight.position.set(2, 1, 1);
+    scene.add(directionalLight);
+    scene.add(ambientLight);
+
+    const textureLoader = new THREE.TextureLoader();
+    const lensflare = new THREE.Lensflare();
+    lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/flare0.png"), 700, 0.0));
+    lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/flare1.png"), 200, 0.25));
+    lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/flare3.png"), 60, 0.6));
+    lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/hexangle.png"), 70, 1.0));
+    directionalLight.add(lensflare);
   },
   resize: function() {
-    const antialias = 1.3;
+    const antialias = 1.5;
     const size = renderer.getSize(new THREE.Vector2());
     this.composer.setSize(size.x * antialias, size.y * antialias);
   }
@@ -50,3 +81,5 @@ const{Color:Color}=THREE,LuminosityHighPassShader={shaderID:"luminosityHighPass"
 const radialBlurShader={uniforms:{tDiffuse:{value:null},center:{value:new THREE.Vector2(.5,.5)},strength:{value:.04},samples:{value:12}},vertexShader:"\n    varying vec2 vUv;\n    void main() {\n      vUv = uv;\n      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n    }\n  ",fragmentShader:"\n    uniform sampler2D tDiffuse;\n    uniform vec2 center;\n    uniform float strength;\n    uniform float samples;\n    varying vec2 vUv;\n    \n    void main() {\n      vec4 color = vec4(0.0);\n      vec2 dir = vUv - center;\n      float dist = length(dir);\n      \n      for(float i = 0.0; i < samples; i++) {\n        float scale = 1.0 + strength * (i / samples) * dist;\n        vec2 offset = dir * (scale - 1.0);\n        color += texture2D(tDiffuse, vUv + offset);\n      }\n      \n      gl_FragColor = color / samples;\n    }\n  "};
 // GammaCorrectionShader.js
 const GammaCorrectionShader={uniforms:{tDiffuse:{value:null}},vertexShader:"\n\n\t\tvarying vec2 vUv;\n\n\t\tvoid main() {\n\n\t\t\tvUv = uv;\n\t\t\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\n\t\t}",fragmentShader:"\n\n\t\tuniform sampler2D tDiffuse;\n\n\t\tvarying vec2 vUv;\n\n\t\tvoid main() {\n\n\t\t\tvec4 tex = texture2D( tDiffuse, vUv );\n\n\t\t\tgl_FragColor = LinearTosRGB( tex );\n\n\t\t}"};
+// Lensflare.js
+!function(){class t extends THREE.Mesh{constructor(){super(t.Geometry,new THREE.MeshBasicMaterial({opacity:0,transparent:!0})),this.type="Lensflare",this.frustumCulled=!1,this.renderOrder=1/0;const n=new THREE.Vector3,i=new THREE.Vector3,r=new THREE.FramebufferTexture(16,16,THREE.RGBAFormat),o=new THREE.FramebufferTexture(16,16,THREE.RGBAFormat),s=t.Geometry,a=new THREE.RawShaderMaterial({uniforms:{scale:{value:null},screenPosition:{value:null}},vertexShader:"\n\n\t\t\t\tprecision highp float;\n\n\t\t\t\tuniform vec3 screenPosition;\n\t\t\t\tuniform vec2 scale;\n\n\t\t\t\tattribute vec3 position;\n\n\t\t\t\tvoid main() {\n\n\t\t\t\t\tgl_Position = vec4( position.xy * scale + screenPosition.xy, screenPosition.z, 1.0 );\n\n\t\t\t\t}",fragmentShader:"\n\n\t\t\t\tprecision highp float;\n\n\t\t\t\tvoid main() {\n\n\t\t\t\t\tgl_FragColor = vec4( 1.0, 0.0, 1.0, 1.0 );\n\n\t\t\t\t}",depthTest:!0,depthWrite:!1,transparent:!1}),l=new THREE.RawShaderMaterial({uniforms:{map:{value:r},scale:{value:null},screenPosition:{value:null}},vertexShader:"\n\n\t\t\t\tprecision highp float;\n\n\t\t\t\tuniform vec3 screenPosition;\n\t\t\t\tuniform vec2 scale;\n\n\t\t\t\tattribute vec3 position;\n\t\t\t\tattribute vec2 uv;\n\n\t\t\t\tvarying vec2 vUV;\n\n\t\t\t\tvoid main() {\n\n\t\t\t\t\tvUV = uv;\n\n\t\t\t\t\tgl_Position = vec4( position.xy * scale + screenPosition.xy, screenPosition.z, 1.0 );\n\n\t\t\t\t}",fragmentShader:"\n\n\t\t\t\tprecision highp float;\n\n\t\t\t\tuniform sampler2D map;\n\n\t\t\t\tvarying vec2 vUV;\n\n\t\t\t\tvoid main() {\n\n\t\t\t\t\tgl_FragColor = texture2D( map, vUV );\n\n\t\t\t\t}",depthTest:!1,depthWrite:!1,transparent:!1}),c=new THREE.Mesh(s,a),u=[],v=e.Shader,p=new THREE.RawShaderMaterial({uniforms:{map:{value:null},occlusionMap:{value:o},color:{value:new THREE.Color(16777215)},scale:{value:new THREE.Vector2},screenPosition:{value:new THREE.Vector3}},vertexShader:v.vertexShader,fragmentShader:v.fragmentShader,blending:THREE.AdditiveBlending,transparent:!0,depthWrite:!1}),f=new THREE.Mesh(s,p);this.addElement=function(t){u.push(t)};const d=new THREE.Vector2,m=new THREE.Vector2,E=new THREE.Box2,y=new THREE.Vector4;this.onBeforeRender=function(t,e,v){t.getCurrentViewport(y);const x=y.w/y.z,h=y.z/2,T=y.w/2;let g=16/y.w;if(d.set(g*x,g),E.min.set(y.x,y.y),E.max.set(y.x+(y.z-16),y.y+(y.w-16)),i.setFromMatrixPosition(this.matrixWorld),i.applyMatrix4(v.matrixWorldInverse),!(i.z>0)&&(n.copy(i).applyMatrix4(v.projectionMatrix),m.x=y.x+n.x*h+h-8,m.y=y.y+n.y*T+T-8,E.containsPoint(m))){t.copyFramebufferToTexture(m,r);let e=a.uniforms;e.scale.value=d,e.screenPosition.value=n,t.renderBufferDirect(v,null,s,a,c,null),t.copyFramebufferToTexture(m,o),e=l.uniforms,e.scale.value=d,e.screenPosition.value=n,t.renderBufferDirect(v,null,s,l,c,null);const i=2*-n.x,E=2*-n.y;for(let e=0,r=u.length;e<r;e++){const r=u[e],o=p.uniforms;o.color.value.copy(r.color),o.map.value=r.texture,o.screenPosition.value.x=n.x+i*r.distance,o.screenPosition.value.y=n.y+E*r.distance,g=r.size/y.w;const a=y.w/y.z;o.scale.value.set(g*a,g),p.uniformsNeedUpdate=!0,t.renderBufferDirect(v,null,s,p,f,null)}}},this.dispose=function(){a.dispose(),l.dispose(),p.dispose(),r.dispose(),o.dispose();for(let t=0,e=u.length;t<e;t++)u[t].texture.dispose()}}}t.prototype.isLensflare=!0;class e{constructor(t,e=1,n=0,i=new THREE.Color(16777215)){this.texture=t,this.size=e,this.distance=n,this.color=i}}e.Shader={uniforms:{map:{value:null},occlusionMap:{value:null},color:{value:null},scale:{value:null},screenPosition:{value:null}},vertexShader:"\n\n\t\tprecision highp float;\n\n\t\tuniform vec3 screenPosition;\n\t\tuniform vec2 scale;\n\n\t\tuniform sampler2D occlusionMap;\n\n\t\tattribute vec3 position;\n\t\tattribute vec2 uv;\n\n\t\tvarying vec2 vUV;\n\t\tvarying float vVisibility;\n\n\t\tvoid main() {\n\n\t\t\tvUV = uv;\n\n\t\t\tvec2 pos = position.xy;\n\n\t\t\tvec4 visibility = texture2D( occlusionMap, vec2( 0.1, 0.1 ) );\n\t\t\tvisibility += texture2D( occlusionMap, vec2( 0.5, 0.1 ) );\n\t\t\tvisibility += texture2D( occlusionMap, vec2( 0.9, 0.1 ) );\n\t\t\tvisibility += texture2D( occlusionMap, vec2( 0.9, 0.5 ) );\n\t\t\tvisibility += texture2D( occlusionMap, vec2( 0.9, 0.9 ) );\n\t\t\tvisibility += texture2D( occlusionMap, vec2( 0.5, 0.9 ) );\n\t\t\tvisibility += texture2D( occlusionMap, vec2( 0.1, 0.9 ) );\n\t\t\tvisibility += texture2D( occlusionMap, vec2( 0.1, 0.5 ) );\n\t\t\tvisibility += texture2D( occlusionMap, vec2( 0.5, 0.5 ) );\n\n\t\t\tvVisibility =        visibility.r / 9.0;\n\t\t\tvVisibility *= 1.0 - visibility.g / 9.0;\n\t\t\tvVisibility *=       visibility.b / 9.0;\n\n\t\t\tgl_Position = vec4( ( pos * scale + screenPosition.xy ).xy, screenPosition.z, 1.0 );\n\n\t\t}",fragmentShader:"\n\n\t\tprecision highp float;\n\n\t\tuniform sampler2D map;\n\t\tuniform vec3 color;\n\n\t\tvarying vec2 vUV;\n\t\tvarying float vVisibility;\n\n\t\tvoid main() {\n\n\t\t\tvec4 texture = texture2D( map, vUV );\n\t\t\ttexture.a *= vVisibility;\n\t\t\tgl_FragColor = texture;\n\t\t\tgl_FragColor.rgb *= color;\n\n\t\t}"},t.Geometry=function(){const t=new THREE.BufferGeometry,e=new Float32Array([-1,-1,0,0,0,1,-1,0,1,0,1,1,0,1,1,-1,1,0,0,1]),n=new THREE.InterleavedBuffer(e,5);return t.setIndex([0,1,2,0,2,3]),t.setAttribute("position",new THREE.InterleavedBufferAttribute(n,3,0,!1)),t.setAttribute("uv",new THREE.InterleavedBufferAttribute(n,2,3,!1)),t}(),THREE.Lensflare=t,THREE.LensflareElement=e}();
