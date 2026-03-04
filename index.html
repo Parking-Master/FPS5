@@ -171,7 +171,7 @@
     <script src="/js/Capsule.js"></script>
     <script src="/js/Octree.js"></script>
     <script src="/js/DecalGeometry.js"></script>
-    <script src="/js/bloom.js"></script>
+    <script src="/js/graphics.js"></script>
     <script src="/js/particles.js"></script>
     <script src="/js/Tween.js"></script>
     <script src="/js/PointerLockControls.js"></script>
@@ -205,7 +205,7 @@
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
       const clock = new THREE.Clock();
       const worldOctree = new THREE.Octree();
-      const directionalLight = new THREE.DirectionalLight(0xfcc394, 0.8);
+      const directionalLight = new THREE.DirectionalLight(0xfcc394, 0.9);
       const hemisphereLight = new THREE.AmbientLight(0xfcc394, 0.35);
 
       // For the radar
@@ -283,7 +283,7 @@ function renderRadar(enemies) {
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.VSMShadowMap;
       renderer.outputEncoding = THREE.sRGBEncoding;
-      renderer.toneMapping = THREE.ReinhardToneMapping;
+      // renderer.toneMapping = THREE.ReinhardToneMapping;
 
       camera.rotation.order = "YXZ";
       playerCollider.start.set(playerDefaultPosition[0], playerDefaultPosition[1], playerDefaultPosition[2]);
@@ -308,7 +308,7 @@ function renderRadar(enemies) {
 
       renderer.shadowMap.needsUpdate = true;
 
-      THREE.activateBloom(0.6);
+      graphics.activate();
 
       let frameCount = 0;
       let lastTime = performance.now();
@@ -551,14 +551,12 @@ function renderRadar(enemies) {
                   }
                 }
               });
-              sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshStandardMaterial({
-                emissive: 0xf2a76a,
+              sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
+                color: 0xf9c886,
                 map: new THREE.TextureLoader().load("/images/assets/skies/0.png"),
-                side: THREE.BackSide,
-                emissiveIntensity: .4,
-                roughness: 0,
-                metalness: 0
+                side: THREE.BackSide
               }));
+              sky.position.y = 2;
               scene.add(sky);
             }
           },
@@ -1104,8 +1102,8 @@ function renderRadar(enemies) {
           muzzleFlash: function(model = null) {
             const flash = (model || sandbox.currentWeapon).getObjectByName("muzzleFlash");
             flash.rotateZ(Math.random());
-            flash.material.color.setHex(0xff6604);
-            flash.material.emissive.setHex(0xff2211);
+            flash.material.color.setHex(0xff1111);
+            flash.material.emissive.setHex(0xff1c11);
             flash.material.opacity = 1;
             setTimeout(() => flash.material.opacity = 0, 20);
             const flashes = utils.options.get("muzzleFlashes");
@@ -1162,7 +1160,7 @@ function renderRadar(enemies) {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth * 0.5, window.innerHeight * 0.5, false);
-        THREE.bloomPass.resize();
+        graphics.resize();
       }
       window.addEventListener("resize", onWindowResize);
       onWindowResize();
