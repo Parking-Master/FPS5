@@ -35,8 +35,8 @@ let dustMaterial = new THREE.ShaderMaterial({
       vec2 noiseCoord = gl_PointCoord * 4.0 + fract(vLife * 10.0);
       float noise = texture2D(noiseTexture, noiseCoord).r * 0.5 + 0.5;
       
-      float alpha = 0.2 * vLife * noise * (1.0 - dist * 2.0);
-      vec3 dustColor = vec3(0.14, 0.14, 0.14);
+      float alpha = 0.15 * vLife * noise * (1.0 - dist * 2.0);
+      vec3 dustColor = vec3(0.4, 0.4, 0.4);
       gl_FragColor = vec4(dustColor, alpha);
     }`,
   transparent: true,
@@ -102,6 +102,82 @@ let explosionMaterial = new THREE.ShaderMaterial({
       vec3 fireCore = vec3(1.2, 0.3, 0.1);
       vec3 fireEdge = vec3(1.0, 0.3, 0.05);
       vec3 smoke = vec3(0.2, 0.2, 0.25);
+      
+      vec3 color = mix(fireCore, fireEdge, dist);
+      color = mix(color, smoke, fadePhase);
+      
+      vec2 noiseCoord = gl_PointCoord * 5.0 + vAge * 12.0;
+      float noise = texture2D(noiseTexture, noiseCoord).r * 0.3 + 0.7;
+      
+      float alpha = vLife * (1.0 - dist * 1.8) * noise;
+      alpha *= 1.0 - fadePhase * 0.3;
+      
+      gl_FragColor = vec4(color, alpha);
+    }
+  `,
+  transparent: true,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false
+});
+
+let plasmaExplosionMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    time: { value: 0.0 },
+    noiseTexture: { value: noiseTexture }
+  },
+  vertexShader: `
+    attribute float size;
+    attribute vec3 customPosition;
+    attribute float life;
+    uniform float time;
+    varying float vLife;
+    varying float vAge;
+    
+    void main() {
+      vLife = life;
+      vAge = 1.0 - life;
+      
+      vec3 pos = customPosition;
+      
+      float risePhase = smoothstep(0.0, 0.1, vAge);
+      float peakPhase = smoothstep(0.1, 0.15, vAge);
+      float fadePhase = smoothstep(0.15, 1.0, vAge);
+      
+      pos.y += risePhase * 0.8;
+      pos.z += risePhase * 0.6;
+      
+      float turbulence = sin(vAge * 8.0 + pos.x * 5.0 + pos.y * 3.0) * 0.1;
+      pos.x += turbulence * risePhase;
+      
+      vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+      
+      float sizeCurve = 0.0;
+      sizeCurve += risePhase * 2.0;
+      sizeCurve -= peakPhase * 1.5;
+      sizeCurve *= (1.0 - fadePhase * 0.5);
+      
+      gl_PointSize = size * 80.0 * (300.0 / -mvPosition.z) * sizeCurve;
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D noiseTexture;
+    uniform float time;
+    varying float vLife;
+    varying float vAge;
+    
+    void main() {
+      vec2 coord = gl_PointCoord - 0.5;
+      float dist = length(coord);
+      if (dist > 0.45) discard;
+      
+      float risePhase = smoothstep(0.0, 0.3, vAge);
+      float peakPhase = smoothstep(0.3, 0.6, vAge);
+      float fadePhase = smoothstep(0.6, 1.0, vAge);
+      
+      vec3 fireCore = vec3(0.1, 0.3, 1);
+      vec3 fireEdge = vec3(0.05, 0.3, 1);
+      vec3 smoke = vec3(0.5, 0.2, 0.7);
       
       vec3 color = mix(fireCore, fireEdge, dist);
       color = mix(color, smoke, fadePhase);

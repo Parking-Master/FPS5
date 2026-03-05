@@ -276,11 +276,9 @@
           }
         }
 
-        if (utils.options.get("muzzleFlashes").length > 0) {
-          const flashes = utils.options.get("muzzleFlashes");
-          for (let i = 0; i < flashes.length; i++) {
-            if (time - flashes[i].timestamp > 30) flashes[i].opacity = 0;
-          }
+        const flashes = utils.options.get("muzzleFlashes");
+        for (let i = 0; i < flashes.length; i++) {
+          if (time - flashes[i].timestamp > 30) flashes[i].opacity = 0;
         }
 
         frameCount++;
@@ -362,7 +360,7 @@
           let grenade = grenades[i];
 
           if (!grenade.available && grenade.hits > 0) {
-            if (time - grenade.timestamp > 1000) {
+            if (time - grenade.timestamp > grenade.explodeTime) {
               utils.grenades.explode(grenade);
             }
           }
@@ -370,12 +368,14 @@
           grenade.mesh.rotation.x += grenade.angularVelocity.x * deltaTime;
           grenade.mesh.rotation.y += grenade.angularVelocity.y * deltaTime;
           grenade.mesh.rotation.z += grenade.angularVelocity.z * deltaTime;
-
           grenade.collider.center.addScaledVector(grenade.velocity, deltaTime);
+
           const result = worldOctree.sphereIntersect(grenade.collider);
           if (result) {
             grenade.hits++;
-            grenade.velocity.addScaledVector(result.normal, -result.normal.dot(grenade.velocity) * 1.5);
+
+            grenade.velocity.addScaledVector(result.normal, -result.normal.dot(grenade.velocity) * 1.8);
+
             if (grenade.timestamp == null) {
               grenade.timestamp = Date.now();
             }
@@ -383,39 +383,31 @@
             const rotationAxis = vectors[0].crossVectors(result.normal, grenade.velocity).normalize();
             const rotationSpeed = grenade.velocity.length() * 0.2;
             grenade.angularVelocity.addScaledVector(rotationAxis, rotationSpeed);
-
             grenade.collider.center.add(result.normal.multiplyScalar(result.depth));
           } else {
-            grenade.velocity.y -= (GRAVITY * deltaTime + 0.01) * 1.2;
+            grenade.velocity.y -= (GRAVITY * deltaTime + 0.01) * 1.8;
           }
-          const damping = (Math.exp(deltaTime * -1.5) - 1.003) / 1.2;
+          const damping = (Math.exp(deltaTime * -2.3) - 1.003) / 1.2;
           grenade.velocity.addScaledVector(grenade.velocity, damping);
           grenade.angularVelocity.addScaledVector(grenade.angularVelocity, damping);
-        }
-        grenadeCollisions();
-        for (let grenade of grenades) {
+          grenadeCollisions(grenades[i], grenades[i + 1]);
           grenade.mesh.position.copy(grenade.collider.center);
         }
       }
-      function grenadeCollisions() {
-        for (let i = 0, length = grenades.length; i < length; i++) {
-          const s1 = grenades[i];
-          for (let j = i + 1; j < length; j++) {
-            const s2 = grenades[j];
-            const d2 = s1.collider.center.distanceToSquared(s2.collider.center);
-            const r = s1.collider.radius + s2.collider.radius;
-            const r2 = r * r;
-            if (d2 < r2) {
-              const normal = vectors[1].subVectors(s1.collider.center, s2.collider.center).normalize();
-              const v1 = vectors[2].copy(normal).multiplyScalar(normal.dot(s1.velocity));
-              const v2 = vectors[3].copy(normal).multiplyScalar(normal.dot(s2.velocity));
-              s1.velocity.add(v2).sub(v1);
-              s2.velocity.add(v1).sub(v2);
-              const d = (r - Math.sqrt(d2)) / 20;
-              s1.collider.center.addScaledVector(normal, d);
-              s2.collider.center.addScaledVector(normal, - d);
-            }
-          }
+      function grenadeCollisions(grenade1, grenade2) {
+        if (!grenade2) return;
+        const d2 = grenade1.collider.center.distanceToSquared(grenade2.collider.center);
+        const r = grenade1.collider.radius + grenade2.collider.radius;
+        const r2 = r * r;
+        if (d2 < r2) {
+          const normal = vectors[1].subVectors(grenade1.collider.center, grenade2.collider.center).normalize();
+          const v1 = vectors[2].copy(normal).multiplyScalar(normal.dot(grenade1.velocity));
+          const v2 = vectors[3].copy(normal).multiplyScalar(normal.dot(grenade2.velocity));
+          grenade1.velocity.add(v2).sub(v1);
+          grenade2.velocity.add(v1).sub(v2);
+          const d = (r - Math.sqrt(d2)) / 20;
+          grenade1.collider.center.addScaledVector(normal, d);
+          grenade2.collider.center.addScaledVector(normal, - d);
         }
       }
       function teleportPlayerIfOob() {
@@ -502,10 +494,14 @@
             model: null,
             loaded: false,
             callback: function(model) {
+              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xff8888, opacity: 0.6, map: new THREE.TextureLoader().load("/images/assets/glow/0.png"), sizeAttenuation: true }));
+              glow.scale.set(0.3, 0.3, 0.3);
+              model.scene.add(glow);
               for (let i = 0; i < 6; i++) {
                 const grenade = model.scene.clone();
                 scene.add(grenade);
                 grenades.push({
+                  type: "mk2",
                   mesh: grenade,
                   collider: new THREE.Sphere(new THREE.Vector3(0, -100, 0), 0.1),
                   velocity: new THREE.Vector3(),
@@ -513,7 +509,35 @@
                   available: true,
                   hits: 0,
                   timestamp: null,
-                  id: i
+                  explodeTime: 1500,
+                  id: grenades.length
+                });
+              }
+            }
+          },
+          {
+            id: "grenade.Plasma",
+            path: "/models/weapons/grenades/Plasma.glb",
+            model: null,
+            loaded: false,
+            callback: function(model) {
+              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x1551ff, opacity: 1, map: new THREE.TextureLoader().load("/images/assets/glow/0.png"), sizeAttenuation: true }));
+              glow.scale.set(0.6, 0.6, 0.6);
+              model.scene.add(glow);
+              for (let i = 0; i < 6; i++) {
+                const grenade = model.scene.clone();
+                scene.add(grenade);
+                grenades.push({
+                  type: "plasma",
+                  mesh: grenade,
+                  collider: new THREE.Sphere(new THREE.Vector3(0, -100, 0), 0.1),
+                  velocity: new THREE.Vector3(),
+                  angularVelocity: new THREE.Vector3(),
+                  available: true,
+                  hits: 0,
+                  timestamp: null,
+                  explodeTime: 2000,
+                  id: grenades.length
                 });
               }
             }
@@ -540,7 +564,7 @@
             currentAmmo: 36,
             damage: 4,
             headshotDamage: 5,
-            spread: 1,
+            spread: 0.8,
             muzzleFlash: true,
             zoomPosition: [.0395, 0.0132, -.05, .045, -.025, 0.12],
             zoomFov: 35,
@@ -569,7 +593,7 @@
             currentAmmo: 12,
             damage: 6,
             headshotDamage: 9,
-            spread: 1.3,
+            spread: 0.3,
             muzzleFlash: true,
             zoomPosition: [0.0325, 0.013, -0.016, 0.04991641660703782, -0.0778416846389471, 0.09494591130849153],
             zoomFov: 30,
@@ -634,7 +658,8 @@
           },
           radar: {
             init: function(radarRange = 18) {
-              const ctx = utils.ui.elements.radarCanvas.getContext("2d");
+              const radarCanvas = utils.ui.elements.radarCanvas;
+              const ctx = radarCanvas.getContext("2d");
               const radarRadiusPx = 75;
               const worldUp = new THREE.Vector3(0, 1, 0);
               const forward = new THREE.Vector3();
@@ -669,6 +694,7 @@
                 return { x: screenX, y: screenY };
               }
               utils.ui.radar.update = function(enemies) {
+                const radarCanvas = utils.ui.elements.radarCanvas;
                 updatePlayerBasis();
                 ctx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
                 ctx.beginPath();
@@ -1082,24 +1108,24 @@
           }
         },
         grenades: {
-          throw: function() {
-            const grenade = grenades[utils.grenades.getAvailable()];
+          throw: function(type = "mk2") {
+            const grenade = grenades[utils.grenades.getAvailable(type)];
             grenade.available = false;
             camera.getWorldDirection(playerDirection);
             grenade.collider.center.copy(playerCollider.end).addScaledVector(playerDirection, playerCollider.radius * 1.5);
-            grenade.velocity.copy(playerDirection).multiplyScalar(25);
+            grenade.velocity.copy(playerDirection).multiplyScalar(35);
             grenade.angularVelocity.set(0, 0, 0);
             grenade.velocity.addScaledVector(playerVelocity, 2);
           },
           explode: function(grenade) {
-            THREE.particles.explosion(grenade.collider.center);
+            THREE.particles.explosion(grenade.collider.center, grenade.type);
             grenade.collider.center.set(0, -100, 0);
             grenade.available = true;
             grenade.hits = 0;
             grenade.timestamp = null;
           },
-          getAvailable: function() {
-            return grenades.filter(grenade => grenade.available)[0].id;
+          getAvailable: function(type) {
+            return grenades.filter(grenade => grenade.type == type && grenade.available)[0].id;
           }
         },
         effects: {
@@ -1187,7 +1213,6 @@
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth * 0.5, window.innerHeight * 0.5, false);
-        graphics.resize();
       }
       window.addEventListener("resize", onWindowResize);
       onWindowResize();
