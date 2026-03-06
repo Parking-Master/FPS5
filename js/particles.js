@@ -1,6 +1,6 @@
 let bursts = [];
 let MAX_BURSTS = 20;
-let dustGeometry, dustPoints;
+let dustGeometry, dustPoints, explosionGeometry, explosionPoints, plasmaGeometry, plasmaPoints;
 
 const noiseSize = 64;
 const noiseData = new Uint8Array(noiseSize * noiseSize);
@@ -120,7 +120,7 @@ let explosionMaterial = new THREE.ShaderMaterial({
   depthWrite: false
 });
 
-let plasmaExplosionMaterial = new THREE.ShaderMaterial({
+let plasmaMaterial = new THREE.ShaderMaterial({
   uniforms: {
     time: { value: 0.0 },
     noiseTexture: { value: noiseTexture }
@@ -239,8 +239,31 @@ THREE.particles = {
       bursts.shift();
     }
   },
+  plasma: function(position) {
+    const burst = { particles: [], material: plasmaMaterial };
+    for (let i = 0; i < 80; i++) {
+      const particle = {
+        x: position.x + (Math.random() - 0.5) * 0.2,
+        y: position.y + (Math.random() - 0.5) * 0.2,
+        z: (position.z + Math.random() * 0.15) - 1,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: (Math.random() - 0.5) * 0.15,
+        vz: 0.15 + Math.random() * 0.2,
+        life: 1.2,
+        maxLife: 1.2,
+        size: 0.02 + Math.random() * 0.04
+      };
+      burst.particles.push(particle);
+    }
+    bursts.push(burst);
+    if (bursts.length > MAX_BURSTS) {
+      bursts.shift();
+    }
+  },
   update: function() {
-    explosionMaterial.uniforms.time.value = performance.now() * 0.001;
+    const now = performance.now();
+    explosionMaterial.uniforms.time.value = now * 0.001;
+    plasmaMaterial.uniforms.time.value = now * 0.001;
     for (let b = bursts.length - 1; b >= 0; b--) {
       const particles = bursts[b].particles;
       for (let i = particles.length - 1; i >= 0; i--) {
@@ -264,11 +287,14 @@ THREE.particles = {
     }
     const dustParticles = [];
     const explosionParticles = [];
+    const plasmaParticles = [];
     for (let b = 0; b < bursts.length; b++) {
       if (bursts[b].material === dustMaterial) {
         dustParticles.push(...bursts[b].particles);
-      } else {
+      } else if (bursts[b].material === explosionMaterial) {
         explosionParticles.push(...bursts[b].particles);
+      } else if (bursts[b].material === plasmaMaterial) {
+        plasmaParticles.push(...bursts[b].particles);
       }
     }
     if (dustParticles.length > 0) {
@@ -338,7 +364,38 @@ THREE.particles = {
       explosionPoints = undefined;
       explosionGeometry = undefined;
     }
+    if (plasmaParticles.length > 0) {
+      if (!plasmaGeometry || plasmaPoints === undefined) {
+        plasmaGeometry = new THREE.BufferGeometry();
+        plasmaPoints = new THREE.Points(plasmaGeometry, plasmaMaterial);
+        plasmaPoints.frustumCulled = false;
+        scene.add(plasmaPoints);
+      }
+      const positions = new Float32Array(plasmaParticles.length * 3);
+      const sizes = new Float32Array(plasmaParticles.length);
+      const lifeAttr = new Float32Array(plasmaParticles.length);
+      for (let i = 0; i < plasmaParticles.length; i++) {
+        const p = plasmaParticles[i];
+        positions[i * 3] = p.x;
+        positions[i * 3 + 1] = p.y;
+        positions[i * 3 + 2] = p.z;
+        sizes[i] = p.size;
+        lifeAttr[i] = p.life / p.maxLife;
+      }
+      plasmaGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      plasmaGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+      plasmaGeometry.setAttribute('customPosition', new THREE.BufferAttribute(positions, 3));
+      plasmaGeometry.setAttribute('life', new THREE.BufferAttribute(lifeAttr, 1));
+      plasmaGeometry.attributes.position.needsUpdate = true;
+      plasmaGeometry.attributes.size.needsUpdate = true;
+      plasmaGeometry.attributes.customPosition.needsUpdate = true;
+      plasmaGeometry.attributes.life.needsUpdate = true;
+    } else if (plasmaPoints) {
+      scene.remove(plasmaPoints);
+      plasmaGeometry.dispose();
+      plasmaPoints.material.dispose();
+      plasmaPoints = undefined;
+      plasmaGeometry = undefined;
+    }
   }
 };
-
-let explosionGeometry, explosionPoints;
