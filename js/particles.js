@@ -7,7 +7,7 @@ const noiseData = new Uint8Array(noiseSize * noiseSize);
 for (let i = 0; i < noiseSize * noiseSize; i++) {
   noiseData[i] = Math.random() * 255;
 }
-const noiseTexture = new THREE.DataTexture(noiseData, noiseSize, noiseSize, THREE.LuminanceFormat);
+const noiseTexture = new THREE.DataTexture(noiseData, noiseSize, noiseSize, THREE.RedFormat);
 noiseTexture.needsUpdate = true;
 
 let dustMaterial = new THREE.ShaderMaterial({
