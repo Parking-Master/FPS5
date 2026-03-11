@@ -16,7 +16,7 @@ graphics = {
     directionalLight.shadow.camera.bottom = -30;
     directionalLight.shadow.mapSize.width = 1024;
     directionalLight.shadow.mapSize.height = 1024;
-    directionalLight.shadow.radius = 2;
+    directionalLight.shadow.radius = 1.5;
     directionalLight.shadow.bias = -0.00006;
     ambientLight.position.set(2, 1, 1);
     scene.add(directionalLight);

@@ -246,7 +246,7 @@
 
         TWEEN.update();
         THREE.particles.update();
-        utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades);
+        utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle);
         utils.weapons.position();
         utils.players.update();
 
@@ -625,7 +625,7 @@
             zoomDuration: 200,
             fireMode: "semi",
             fireRate: 200,
-            reticle: 0,
+            reticle: 1,
             type: "pistol",
             model: null,
             loaded: false,
@@ -662,7 +662,8 @@
             grenades: {
               mk2: null,
               plasma: null
-            }
+            },
+            reticle: 0
           },
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
@@ -672,7 +673,7 @@
             grenades_mk2: document.querySelector(".ui .ui-grenades-mk2 .value"),
             grenades_plasma: document.querySelector(".ui .ui-grenades-plasma .value")
           },
-          update: function(currentAmmo, remainingAmmo, grenades) {
+          update: function(currentAmmo, remainingAmmo, grenades, reticle) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
               utils.ui.elements.ammoCurrentValue.textContent = currentAmmo;
               utils.ui.cache.ammoCurrentValue = currentAmmo;
@@ -691,6 +692,10 @@
                 utils.ui.elements["grenades_" + grenade].textContent = grenades[grenade];
                 utils.ui.cache.grenades[grenade] = grenades[grenade];
               }
+            }
+            if (utils.ui.cache.reticle != reticle) {
+              utils.ui.elements.crosshair.src = "/images/crosshairs/" + reticle + ".png";
+              utils.ui.cache.reticle = reticle;
             }
           },
           hideCrosshair: function() {
@@ -928,6 +933,11 @@
             new THREE.GLTFLoader().load(path, function(model) {
               callback(model);
             });
+          }
+        },
+        images: {
+          preload: function(src) {
+            (new Image()).src = src;
           }
         },
         weapons: {
@@ -1316,6 +1326,7 @@
               sandbox.weapons[name].loaded = true;
               if (name == sandbox.loadout[0]) utils.weapons.setPrimary(model.scene);
               if (name == sandbox.loadout[1]) utils.weapons.setSecondary(model.scene);
+              utils.images.preload("/images/crosshairs/" + sandbox.weapons[name].reticle + ".png");
             }
           }
         });
