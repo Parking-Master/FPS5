@@ -247,8 +247,8 @@
         TWEEN.update();
         THREE.particles.update();
         utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle);
-        utils.weapons.position();
         utils.players.update();
+        utils.weapons.position();
 
         for (let i = 0; i < sandbox.models.length; i++) {
           if (sandbox.models[i].loaded) {
@@ -324,7 +324,7 @@
       }
       function controls(deltaTime) {
         const speedDelta = deltaTime;
-        const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1);
+        const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1) * (utils.options.get("Sprinting") ? 1.6 : 1);
         if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
           playerVelocity.add(getForwardVector().multiplyScalar(walkSpeed));
         }
@@ -476,6 +476,8 @@
           "reload": ["KeyR"],
           "switch": ["KeyY", "Tab"],
           "grenade": ["KeyG"],
+          "melee": ["KeyB"],
+          "sprint": ["ShiftLeft"],
         },
         initialize: function() {
           gametime.set("player", {
@@ -604,7 +606,7 @@
               idle: [1, 1, 1],
               reload: [2, 1, 1],
               reload_full: [3, 1, 1],
-              run: [5, 1, 1],
+              run: [8, 2, 1],
               shoot: [6, 1, 1],
               throw: [7, 0.5, 1],
               walk: [8, 1.3, 1]
@@ -634,7 +636,7 @@
               reload: [0, 1, 1],
               reload_full: [1, 1, 1],
               idle: [2, 0.5, 0.2],
-              run: [2, 1, 1],
+              run: [5, 2.5, 1],
               shoot: [3, 1, 1],
               throw: [4, 0.5, 1],
               walk: [5, 1.6, 1]
@@ -993,14 +995,31 @@
             },
           },
           position: function() {
-            if (sandbox.currentWeapon) {
-              sandbox.currentWeapon.position.copy(camera.position);
-              sandbox.currentWeapon.rotation.copy(camera.rotation);
-              sandbox.currentWeapon.rotateY(Math.PI);
-              sandbox.currentWeapon.rotateX(-0.05);
-              sandbox.currentWeapon.translateX(-0.02);
-              sandbox.currentWeapon.translateY(-0.068);
-              sandbox.currentWeapon.translateZ(0.032);
+            function position() {
+              if (sandbox.currentWeapon) {
+                sandbox.currentWeapon.position.copy(camera.position);
+                sandbox.currentWeapon.rotation.copy(camera.rotation);
+                sandbox.currentWeapon.rotateY(Math.PI);
+                sandbox.currentWeapon.rotateX(-0.05);
+                sandbox.currentWeapon.translateX(-0.02);
+                sandbox.currentWeapon.translateY(-0.068);
+                sandbox.currentWeapon.translateZ(0.032);
+              }
+            }
+            const cameraShake = utils.options.get("CameraShake");
+            if (cameraShake) {
+              const randomX = (Math.random() / 200) * cameraShake;
+              const randomY = (Math.random() / 200) * cameraShake;
+              const randomZ = (Math.random() / 200) * cameraShake;
+              camera.position.x += randomX * 9.9;
+              camera.position.y += randomY * 9.9;
+              camera.position.z += randomZ * 9.9;
+              position();
+              camera.position.x += randomX;
+              camera.position.y += randomY;
+              camera.position.z += randomZ;
+            } else {
+              position();
             }
           },
           setCurrent: function(model) {
@@ -1047,7 +1066,7 @@
           },
           fire: function(rounds = 1) {
             const weapon = utils.weapons.getCurrentEntry();
-            if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("ThrowingGrenade") || weapon.currentAmmo <= 0) return;
+            if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || utils.options.get("Sprinting") || weapon.currentAmmo <= 0) return;
             utils.options.set("Firing", true);
             utils.options.set("ContinueFiring", true);
 
@@ -1099,6 +1118,7 @@
           },
           zoom: function(force = false) {
             if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
+            if (utils.options.get("Sprinting")) return utils.weapons.stopSprint();
             if (utils.options.get("Zoomed")) {
               utils.ui.showCrosshair();
               const weapon = utils.weapons.getCurrentEntry();
@@ -1143,6 +1163,7 @@
             utils.options.set("Reloading", true);
 
             if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
+            utils.weapons.stopSprint();
 
             let animation = null;
             if (full) {
@@ -1176,6 +1197,48 @@
               utils.options.set("Reloading", false);
             }
           },
+          melee: function() {
+            if (utils.options.get("Melee")) return;
+            utils.options.set("Melee", true);
+            const weapon = utils.weapons.getCurrentEntry();
+            if (utils.options.get("Firing") && weapon.fireMode == "auto") utils.weapons.stopFire();
+            new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.2, y: 0.3, z: 0 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start();
+            setTimeout(() => {
+              new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: 0.4 }, 200).easing(TWEEN.Easing.Quadratic.In).start();
+              setTimeout(() => {
+                new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.15, y: 0.2, z: 0.2 }, 150).easing(TWEEN.Easing.Quadratic.Out).start();
+                setTimeout(() => {
+                  new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 300).easing(TWEEN.Easing.Quadratic.Out).start();
+                  setTimeout(() => {
+                    utils.options.set("Melee", false);
+                  }, 300);
+                }, 150);
+              }, 200);
+            }, 100);
+          },
+          sprint: function() {
+            if (utils.options.get("Sprinting")) return;
+            utils.options.set("Sprinting", true);
+            utils.ui.hideCrosshair();
+            utils.weapons.stopReload();
+            new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start();
+            new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start();
+            utils.weapons.animations.stop("idle");
+            utils.weapons.animations.restart("run");
+          },
+          stopSprint: function() {
+            if (!utils.options.get("Sprinting")) return;
+            utils.options.set("Sprinting", false);
+            utils.ui.showCrosshair();
+            new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+            new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+            utils.weapons.animations.stop("run");
+            if (utils.options.get("Walking")) {
+              utils.weapons.animations.start("walk");
+            } else {
+              utils.weapons.animations.start("idle");
+            }
+          },
           update: function() {
             const weapon = utils.weapons.getCurrentEntry();
             if (weapon.currentAmmo <= 0) {
@@ -1197,7 +1260,8 @@
             if (isMultiplayer) {
               grenade.explode = false;
             } else {
-              if (utils.options.get("ThrowingGrenade")) return;
+              if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
+              if (utils.options.get("ThrowingGrenade") || utils.options.get("Melee")) return;
               utils.options.set("ThrowingGrenade", true);
               const weapon = utils.weapons.getCurrentEntry();
               if (utils.options.get("Firing") && weapon.fireMode == "auto") utils.weapons.stopFire();
@@ -1232,6 +1296,8 @@
             } else {
               THREE.particles.explosion(worldPosition);
             }
+            const shakeIntensity = 2 / (Math.max(camera.position.distanceTo(worldPosition), 1) / 2);
+            utils.effects.shake(shakeIntensity);
             if (grenade.stuck) scene.add(grenade.mesh);
             if (!isMultiplayer) gametime.run("explodeGrenade", [gametime.player.uuid, grenade.id, [worldPosition.x, worldPosition.y, worldPosition.z]]);
             grenade.collider.center.set(0, -100, 0);
@@ -1302,6 +1368,16 @@
             flash.material.disposeTime = 30;
             tmpObjects.push(flash.material);
             utils.options.set("tmpObjects", tmpObjects);
+          },
+          shake: function(intensity = 2, startDuration = 200, endDuration = 250) {
+            new TWEEN.Tween({ intensity: 0 }).to({ intensity: intensity }, startDuration).easing(TWEEN.Easing.Quadratic.InOut).start().onUpdate(function(value) {
+              utils.options.set("CameraShake", value.intensity);
+              if (value.intensity >= intensity - 0.05) {
+                new TWEEN.Tween({ intensity: intensity }).to({ intensity: 0 }, endDuration).easing(TWEEN.Easing.Quadratic.InOut).start().onUpdate(function(value) {
+                  utils.options.set("CameraShake", value.intensity);
+                });
+              }
+            });
           }
         }
       };
@@ -1356,7 +1432,7 @@
         if (!PointerControls.isLocked) return;
         keyStates[event.code] = true;
 
-        if (!event.repeat && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) {
+        if (!event.repeat && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) {
           utils.options.set("Walking", true);
           if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
             utils.weapons.animations.stop("idle");
@@ -1370,6 +1446,8 @@
           if (sandbox.controls.reload.includes(event.code)) utils.weapons.reload();
           if (sandbox.controls.switch.includes(event.code)) utils.weapons.switch();
           if (sandbox.controls.grenade.includes(event.code)) utils.grenades.throw();
+          if (sandbox.controls.melee.includes(event.code)) utils.weapons.melee();
+          if (sandbox.controls.sprint.includes(event.code) && (keyStates["KeyW"] || keyStates["ArrowUp"])) utils.weapons.sprint();
         }
         globalRepeat = true;
       });
@@ -1381,6 +1459,7 @@
         const weapon = utils.weapons.getCurrentEntry();
         if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) {
           utils.options.set("Walking", false);
+          utils.weapons.stopSprint();
           if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
             utils.weapons.animations.stop("walk");
             utils.weapons.animations.start("idle");
@@ -1390,6 +1469,7 @@
         if (weapon.fireMode == "auto" && sandbox.controls.fire.includes(event.code)) {
           utils.weapons.stopFire();
         }
+        if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint();
       });
 
       document.addEventListener("mousedown", (event) => {
@@ -1414,6 +1494,8 @@
       utils.options.set("Zoomed", false);
       utils.options.set("Reloading", false);
       utils.options.set("Switching", false);
+      utils.options.set("ThrowingGrenade", false);
+      utils.options.set("Sprinting", false);
       utils.options.set("ReloadCallbackFunction", () => {});
       utils.options.set("bulletHoleMaterial", new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }));
       utils.options.set("bulletHoleSize", new THREE.Vector3(0.04, 0.04, 0.04));
@@ -1421,6 +1503,7 @@
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("globalZoomTween", null);
       utils.options.set("tmpObjects", []);
+      utils.options.set("CameraShake", 0);
 
       scene.add(utils.options.get("playerCamera"));
 
