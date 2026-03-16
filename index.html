@@ -1041,6 +1041,7 @@
           switch: function(slot = null) {
             utils.options.set("Switching", true);
             utils.weapons.stopReload();
+            utils.weapons.stopMelee();
             const weapon = utils.weapons.getCurrentEntry();
             if (weapon.fireMode == "auto" && utils.options.get("Firing")) utils.weapons.stopFire();
             if (!slot) slot = sandbox.currentWeapon == sandbox.secondaryWeapon ? "primary" : "secondary";
@@ -1066,7 +1067,8 @@
           },
           fire: function(rounds = 1) {
             const weapon = utils.weapons.getCurrentEntry();
-            if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || utils.options.get("Sprinting") || weapon.currentAmmo <= 0) return;
+            if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || weapon.currentAmmo <= 0) return;
+            utils.weapons.stopSprint();
             utils.options.set("Firing", true);
             utils.options.set("ContinueFiring", true);
 
@@ -1118,7 +1120,6 @@
           },
           zoom: function(force = false) {
             if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
-            if (utils.options.get("Sprinting")) return utils.weapons.stopSprint();
             if (utils.options.get("Zoomed")) {
               utils.ui.showCrosshair();
               const weapon = utils.weapons.getCurrentEntry();
@@ -1138,6 +1139,7 @@
               if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
               utils.options.set("Zoomed", false);
             } else {
+              utils.weapons.stopSprint(false);
               utils.ui.hideCrosshair();
               const weapon = utils.weapons.getCurrentEntry();
               if (utils.options.get("globalZoomTween")) {
@@ -1163,7 +1165,7 @@
             utils.options.set("Reloading", true);
 
             if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
-            utils.weapons.stopSprint();
+            utils.weapons.stopSprint(false);
 
             let animation = null;
             if (full) {
@@ -1200,15 +1202,24 @@
           melee: function() {
             if (utils.options.get("Melee")) return;
             utils.options.set("Melee", true);
+            utils.weapons.stopSprint();
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Firing") && weapon.fireMode == "auto") utils.weapons.stopFire();
-            new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.2, y: 0.3, z: 0 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start();
+            utils.effects.bob();
+            utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.2, y: 0.3, z: 0 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start());
+            function reset() {
+              utils.options.set("CancelMelee", false);
+              utils.options.set("Melee", false);
+            }
             setTimeout(() => {
-              new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: 0.4 }, 200).easing(TWEEN.Easing.Quadratic.In).start();
+              if (utils.options.get("CancelMelee")) return reset();
+              utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: 0.4 }, 200).easing(TWEEN.Easing.Quadratic.In).start());
               setTimeout(() => {
-                new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.15, y: 0.2, z: 0.2 }, 150).easing(TWEEN.Easing.Quadratic.Out).start();
+                if (utils.options.get("CancelMelee")) return reset();
+                utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.15, y: 0.2, z: 0.2 }, 150).easing(TWEEN.Easing.Quadratic.Out).start());
                 setTimeout(() => {
-                  new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 300).easing(TWEEN.Easing.Quadratic.Out).start();
+                if (utils.options.get("CancelMelee")) return reset();
+                  utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 300).easing(TWEEN.Easing.Quadratic.Out).start());
                   setTimeout(() => {
                     utils.options.set("Melee", false);
                   }, 300);
@@ -1216,28 +1227,39 @@
               }, 200);
             }, 100);
           },
+          stopMelee: function() {
+            if (utils.options.get("Melee")) {
+              utils.options.set("CancelMelee", true);
+              utils.options.get("globalMeleeTween").stop();
+              sandbox.currentWeapon.children[0].rotation.set(0, 0, 0);
+            }
+          },
           sprint: function() {
             if (utils.options.get("Sprinting")) return;
             utils.options.set("Sprinting", true);
-            utils.ui.hideCrosshair();
+            if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
             utils.weapons.stopReload();
+            utils.ui.hideCrosshair();
             new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start();
             new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start();
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.restart("run");
           },
-          stopSprint: function() {
+          stopSprint: function(animation = true) {
             if (!utils.options.get("Sprinting")) return;
             utils.options.set("Sprinting", false);
             utils.ui.showCrosshair();
-            new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
-            new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+            if (animation) {
+              new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+              new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+            }
             utils.weapons.animations.stop("run");
             if (utils.options.get("Walking")) {
               utils.weapons.animations.start("walk");
             } else {
               utils.weapons.animations.start("idle");
             }
+            utils.weapons.update();
           },
           update: function() {
             const weapon = utils.weapons.getCurrentEntry();
@@ -1369,7 +1391,7 @@
             tmpObjects.push(flash.material);
             utils.options.set("tmpObjects", tmpObjects);
           },
-          shake: function(intensity = 2, startDuration = 200, endDuration = 250) {
+          shake: function(intensity = 2, startDuration = 200, endDuration = 700) {
             new TWEEN.Tween({ intensity: 0 }).to({ intensity: intensity }, startDuration).easing(TWEEN.Easing.Quadratic.InOut).start().onUpdate(function(value) {
               utils.options.set("CameraShake", value.intensity);
               if (value.intensity >= intensity - 0.05) {
@@ -1378,6 +1400,23 @@
                 });
               }
             });
+          },
+          bob: function(intensity = 0.001) {
+            let step = 0;
+            function next(strength = intensity){
+              const interval = setInterval(() => {
+                if (step > 10) {
+                  clearInterval(interval);
+                  step = 0;
+                  if (strength > 0) next(-strength);
+                  return;
+                }
+                step++;
+                camera.rotateZ(strength);
+                camera.rotateX(strength / 3);
+              });
+            }
+            next();
           }
         }
       };
@@ -1502,6 +1541,7 @@
       utils.options.set("playerCamera", camera.clone());
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("globalZoomTween", null);
+      utils.options.set("globalMeleeTween", null);
       utils.options.set("tmpObjects", []);
       utils.options.set("CameraShake", 0);
 
