@@ -263,18 +263,20 @@
             if (frameCount % 4 == 0) utils.ui.radar.update(playerObject.scene);
             if (playerObject.animationMixer) {
               playerObject.animationMixer.update(clockDelta);
-              const offset = playerObject.weapon.type == "pistol" ? 1.3 : 0.9;
-              const weaponRotation = Math.min(Math.max(-playerObject.weaponRotation + offset, 0.1), 1.7);
-              const rightShoulder = playerObject.scene.getObjectByName("mixamorigRightShoulder");
-              const leftShoulder = playerObject.scene.getObjectByName("mixamorigLeftShoulder");
-              const head = playerObject.scene.getObjectByName("mixamorigHead");
-              rightShoulder.rotation.x = weaponRotation;
-              leftShoulder.rotation.x = weaponRotation;
-              head.rotation.x = weaponRotation - offset;
-              if (playerObject.isWalking && playerObject.weapon.type == "rifle") {
-                rightShoulder.rotation.x += 7;
-                leftShoulder.rotation.x += .2;
-                head.rotation.x -= offset - .4;
+              if (!playerObject.isRunning) {
+                const offset = playerObject.weapon.type == "pistol" ? 1.3 : 0.9;
+                const weaponRotation = Math.min(Math.max(-playerObject.weaponRotation + offset, 0.1), 1.7);
+                const rightShoulder = playerObject.scene.getObjectByName("mixamorigRightShoulder");
+                const leftShoulder = playerObject.scene.getObjectByName("mixamorigLeftShoulder");
+                const head = playerObject.scene.getObjectByName("mixamorigHead");
+                rightShoulder.rotation.x = weaponRotation;
+                leftShoulder.rotation.x = weaponRotation;
+                head.rotation.x = weaponRotation - offset;
+                if (playerObject.isWalking && playerObject.weapon.type == "rifle") {
+                  rightShoulder.rotation.x += 7;
+                  leftShoulder.rotation.x += .2;
+                  head.rotation.x -= offset - .4;
+                }
               }
             }
           }
@@ -324,7 +326,7 @@
       }
       function controls(deltaTime) {
         const speedDelta = deltaTime;
-        const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1) * (utils.options.get("Sprinting") ? 1.6 : 1);
+        const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1.5) * (utils.options.get("Sprinting") ? 1.7 : 1);
         if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
           playerVelocity.add(getForwardVector().multiplyScalar(walkSpeed));
         }
@@ -594,7 +596,7 @@
             muzzleFlash: true,
             zoomPosition: [.0395, 0.0132, -.05, .045, -.025, 0.12],
             zoomFov: 35,
-            zoomDuration: 300,
+            zoomDuration: 250,
             fireMode: "auto",
             fireRate: 100,
             reticle: 0,
@@ -770,7 +772,7 @@
           objects: {},
           add: function(player) {
             utils.players.objects[player.uuid] = null;
-            utils.models.reload(`/models/characters/${player.data.character}.glb`, function(playerObject) {
+            utils.models.reload(`/models/characters/${player.data.character}1.glb`, function(playerObject) {
               playerObject.scene.traverse(child => child.frustumCulled = false);
               scene.add(playerObject.scene);
               playerObject.animationMixer = new THREE.AnimationMixer(playerObject.scene);
@@ -781,14 +783,17 @@
                 "pistol_jump": [3, 1, 1],
                 "pistol_shoot": [9, 1, 1],
                 "pistol_walk": [4, 1, 1],
+                "pistol_run": [13, 1.5, 1],
                 "pistol_reload": [11, 0.6, 1],
                 "rifle_idle": [5, 1, 1],
                 "rifle_jump": [6, 1, 1],
                 "rifle_shoot": [7, 1, 1],
                 "rifle_walk": [8, 1, 1],
+                "rifle_run": [12, 1.5, 1],
                 "rifle_reload": [10, 0.6, 1],
               };
               playerObject.isWalking = false;
+              playerObject.isRunning = false;
               playerObject.weapon = null;
               playerObject.weaponRotation = 0;
               utils.players.objects[player.uuid] = playerObject;
@@ -926,6 +931,22 @@
             utils.players.animations.stop(player, player.weapon.type + "_walk");
             utils.players.animations.start(player, player.weapon.type + "_idle");
           },
+          startRunning: function(player) {
+            if (player.isRunning) return;
+            player.isRunning = true;
+            utils.players.animations.stop(player, player.weapon.type + "_idle");
+            utils.players.animations.stop(player, player.weapon.type + "_walk");
+            utils.players.animations.start(player, player.weapon.type + "_run");
+          },
+          stopRunning: function(player) {
+            player.isRunning = false;
+            utils.players.animations.stop(player, player.weapon.type + "_run");
+            if (player.isWalking) {
+              utils.players.animations.start(player, player.weapon.type + "_walk");
+            } else {
+              utils.players.animations.start(player, player.weapon.type + "_idle");
+            }
+          },
         },
         models: {
           get: function(id) {
@@ -1007,17 +1028,25 @@
               }
             }
             const cameraShake = utils.options.get("CameraShake");
-            if (cameraShake) {
-              const randomX = (Math.random() / 200) * cameraShake;
-              const randomY = (Math.random() / 200) * cameraShake;
-              const randomZ = (Math.random() / 200) * cameraShake;
-              camera.position.x += randomX * 9.9;
-              camera.position.y += randomY * 9.9;
-              camera.position.z += randomZ * 9.9;
-              position();
-              camera.position.x += randomX;
-              camera.position.y += randomY;
-              camera.position.z += randomZ;
+            const cameraBob = utils.options.get("CameraBob");
+            if (cameraShake || cameraBob) {
+              if (cameraShake) {
+                const randomX = (Math.random() / 200) * cameraShake;
+                const randomY = (Math.random() / 200) * cameraShake;
+                const randomZ = (Math.random() / 200) * cameraShake;
+                camera.position.x += randomX * 9.9;
+                camera.position.y += randomY * 9.9;
+                camera.position.z += randomZ * 9.9;
+                position();
+                camera.position.x += randomX;
+                camera.position.y += randomY;
+                camera.position.z += randomZ;
+              }
+              if (cameraBob) {
+                camera.translateX(cameraBob * 9.9);
+                position();
+                camera.translateX(cameraBob);
+              }
             } else {
               position();
             }
@@ -1040,12 +1069,12 @@
           },
           switch: function(slot = null) {
             utils.options.set("Switching", true);
+            utils.weapons.stopFire();
+            utils.weapons.stopZoom();
             utils.weapons.stopReload();
             utils.weapons.stopMelee();
-            const weapon = utils.weapons.getCurrentEntry();
-            if (weapon.fireMode == "auto" && utils.options.get("Firing")) utils.weapons.stopFire();
+            utils.weapons.stopSprint(false);
             if (!slot) slot = sandbox.currentWeapon == sandbox.secondaryWeapon ? "primary" : "secondary";
-            if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
             if (utils.options.get("Walking")) utils.weapons.animations.stop("walk");
             if (slot == "primary") {
               utils.weapons.animations.stop("idle");
@@ -1068,9 +1097,9 @@
           fire: function(rounds = 1) {
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || weapon.currentAmmo <= 0) return;
-            utils.weapons.stopSprint();
             utils.options.set("Firing", true);
             utils.options.set("ContinueFiring", true);
+            utils.weapons.stopSprint();
 
             const rate = weapon.fireRate;
             if (weapon.fireMode == "auto") {
@@ -1116,7 +1145,8 @@
             });
           },
           stopFire: function() {
-            utils.options.set("ContinueFiring", false);
+            const weapon = utils.weapons.getCurrentEntry();
+            if (utils.options.get("Firing") && weapon.fireMode == "auto") utils.options.set("ContinueFiring", false);
           },
           zoom: function(force = false) {
             if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
@@ -1139,6 +1169,7 @@
               if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
               utils.options.set("Zoomed", false);
             } else {
+              utils.weapons.stopMelee();
               utils.weapons.stopSprint(false);
               utils.ui.hideCrosshair();
               const weapon = utils.weapons.getCurrentEntry();
@@ -1158,13 +1189,18 @@
               if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
               utils.options.set("Zoomed", true);
             }
+            utils.weapons.update();
+          },
+          stopZoom: function() {
+            if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
           },
           reload: function(full = false) {
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Reloading") || weapon.ammo <= 0 || weapon.currentAmmo >= weapon.maxAmmo) return;
             utils.options.set("Reloading", true);
 
-            if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
+            utils.weapons.stopZoom();
+            utils.weapons.stopMelee();
             utils.weapons.stopSprint(false);
 
             let animation = null;
@@ -1202,28 +1238,27 @@
           melee: function() {
             if (utils.options.get("Melee")) return;
             utils.options.set("Melee", true);
-            utils.weapons.stopSprint();
-            const weapon = utils.weapons.getCurrentEntry();
-            if (utils.options.get("Firing") && weapon.fireMode == "auto") utils.weapons.stopFire();
-            utils.effects.bob();
-            utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.2, y: 0.3, z: 0 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start());
+            utils.options.set("CancelMelee", false);
+            utils.weapons.stopFire();
+            utils.weapons.stopZoom();
+            utils.weapons.stopReload();
+            utils.weapons.stopSprint(false);
             function reset() {
               utils.options.set("CancelMelee", false);
               utils.options.set("Melee", false);
             }
+            utils.effects.meleeBob();
+            utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.8, y: .1, z: -.2 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start());
             setTimeout(() => {
               if (utils.options.get("CancelMelee")) return reset();
-              utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: 0.4 }, 200).easing(TWEEN.Easing.Quadratic.In).start());
+              utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: .5, y: .1, z: -.2 }, 200).easing(TWEEN.Easing.Quadratic.Out).start());
               setTimeout(() => {
-                if (utils.options.get("CancelMelee")) return reset();
-                utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.15, y: 0.2, z: 0.2 }, 150).easing(TWEEN.Easing.Quadratic.Out).start());
+              if (utils.options.get("CancelMelee")) return reset();
+                utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 300).easing(TWEEN.Easing.Quadratic.Out).start());
                 setTimeout(() => {
-                if (utils.options.get("CancelMelee")) return reset();
-                  utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 300).easing(TWEEN.Easing.Quadratic.Out).start());
-                  setTimeout(() => {
-                    utils.options.set("Melee", false);
-                  }, 300);
-                }, 150);
+                  utils.options.set("Melee", false);
+                  utils.weapons.update();
+                }, 300);
               }, 200);
             }, 100);
           },
@@ -1237,21 +1272,35 @@
           sprint: function() {
             if (utils.options.get("Sprinting")) return;
             utils.options.set("Sprinting", true);
-            if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
+            utils.weapons.stopFire();
+            utils.weapons.stopZoom();
             utils.weapons.stopReload();
+            utils.weapons.stopMelee();
             utils.ui.hideCrosshair();
-            new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start();
-            new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start();
+            utils.effects.sprintBob();
+            utils.options.set("globalSprintTween", {
+              position: new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start(),
+              rotation: new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start()
+            });
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.restart("run");
+            gametime.run("startRunning", [gametime.player.uuid]);
           },
-          stopSprint: function(animation = true) {
-            if (!utils.options.get("Sprinting")) return;
+          stopSprint: function(animation = true, force = false) {
+            if (!utils.options.get("Sprinting") && !force) return;
             utils.options.set("Sprinting", false);
             utils.ui.showCrosshair();
+            utils.effects.stopSprintBob();
+            if (utils.options.get("globalSprintTween")) {
+              utils.options.get("globalSprintTween").position.stop();
+              utils.options.get("globalSprintTween").rotation.stop();
+            }
             if (animation) {
-              new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
               new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+              new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+            } else {
+              sandbox.currentWeapon.children[0].position.set(0, 0, 0);
+              sandbox.currentWeapon.children[0].rotation.set(0, 0, 0);
             }
             utils.weapons.animations.stop("run");
             if (utils.options.get("Walking")) {
@@ -1260,6 +1309,7 @@
               utils.weapons.animations.start("idle");
             }
             utils.weapons.update();
+            gametime.run("stopRunning", [gametime.player.uuid]);
           },
           update: function() {
             const weapon = utils.weapons.getCurrentEntry();
@@ -1282,11 +1332,13 @@
             if (isMultiplayer) {
               grenade.explode = false;
             } else {
-              if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
-              if (utils.options.get("ThrowingGrenade") || utils.options.get("Melee")) return;
+              utils.weapons.stopFire();
+              utils.weapons.stopZoom();
+              utils.weapons.stopReload();
+              utils.weapons.stopMelee();
+              utils.weapons.stopSprint(false, true);
+              if (utils.options.get("ThrowingGrenade")) return;
               utils.options.set("ThrowingGrenade", true);
-              const weapon = utils.weapons.getCurrentEntry();
-              if (utils.options.get("Firing") && weapon.fireMode == "auto") utils.weapons.stopFire();
               if (sandbox.grenades[type] <= 0) return;
               sandbox.grenades[type]--;
               utils.weapons.animations.stop("walk");
@@ -1298,6 +1350,7 @@
                 } else {
                   utils.weapons.animations.start("idle");
                 }
+                utils.weapons.update();
               });
               gametime.run("throwGrenade", [gametime.player.uuid, type, [direction.x, direction.y, direction.z, camera.rotation.x, camera.rotation.y, camera.rotation.z, camera.position.x, camera.position.y, camera.position.z], grenade.id]);
             }
@@ -1401,9 +1454,9 @@
               }
             });
           },
-          bob: function(intensity = 0.001) {
+          meleeBob: function() {
             let step = 0;
-            function next(strength = intensity){
+            function next(strength = 0.001) {
               const interval = setInterval(() => {
                 if (step > 10) {
                   clearInterval(interval);
@@ -1412,11 +1465,31 @@
                   return;
                 }
                 step++;
-                camera.rotateZ(strength);
                 camera.rotateX(strength / 3);
+                camera.rotateZ(strength);
               });
             }
             next();
+          },
+          sprintBob: function() {
+            function next() {
+              const intensity = 0.003;
+              new TWEEN.Tween({ intensity: 0 }).to({ intensity: intensity }, 200).easing(TWEEN.Easing.Quadratic.In).start().onUpdate(function(value) {
+                utils.options.set("CameraBob", value.intensity);
+              }).onComplete(function() {
+                new TWEEN.Tween({ intensity: intensity }).to({ intensity: -intensity }, 200).easing(TWEEN.Easing.Quadratic.InOut).start().onUpdate(function(value) {
+                  utils.options.set("CameraBob", value.intensity);
+                }).onComplete(function() {
+                  new TWEEN.Tween({ intensity: -intensity }).to({ intensity: 0 }, 200).easing(TWEEN.Easing.Quadratic.Out).start().onUpdate(function(value) {
+                    utils.options.set("CameraBob", value.intensity);
+                  });
+                });
+              });
+            }
+            utils.options.set("sprintBobInterval", setInterval(next, 800));
+          },
+          stopSprintBob: function() {
+            clearInterval(utils.options.get("sprintBobInterval"));
           }
         }
       };
@@ -1495,7 +1568,6 @@
         globalRepeat = false;
         keyStates[event.code] = false;
 
-        const weapon = utils.weapons.getCurrentEntry();
         if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) {
           utils.options.set("Walking", false);
           utils.weapons.stopSprint();
@@ -1505,9 +1577,7 @@
           }
           gametime.run("stopWalking", [gametime.player.uuid]);
         }
-        if (weapon.fireMode == "auto" && sandbox.controls.fire.includes(event.code)) {
-          utils.weapons.stopFire();
-        }
+        if (sandbox.controls.fire.includes(event.code)) utils.weapons.stopFire();
         if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint();
       });
 
@@ -1542,8 +1612,11 @@
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("globalZoomTween", null);
       utils.options.set("globalMeleeTween", null);
+      utils.options.set("globalSprintTween", null);
       utils.options.set("tmpObjects", []);
       utils.options.set("CameraShake", 0);
+      utils.options.set("CameraBob", 0);
+      utils.options.set("sprintBobInterval", 0);
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -1572,6 +1645,16 @@
       gametime.on("stopWalking", function(player) {
         if (player != gametime.player.uuid) {
           utils.players.stopWalking(utils.players.objects[player]);
+        }
+      });
+      gametime.on("startRunning", function(player) {
+        if (player != gametime.player.uuid) {
+          utils.players.startRunning(utils.players.objects[player]);
+        }
+      });
+      gametime.on("stopRunning", function(player) {
+        if (player != gametime.player.uuid) {
+          utils.players.stopRunning(utils.players.objects[player]);
         }
       });
       gametime.on("fireWeapon", function(player, point, spreadX, spreadY) {
