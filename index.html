@@ -201,6 +201,7 @@
       </div>
     </div>
     <script>
+      gametime.serverURL="wss://gametime-js-4.loca.lt";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -260,7 +261,7 @@
         for (player in utils.players.objects) {
           const playerObject = utils.players.objects[player];
           if (playerObject) {
-            if (frameCount % 4 == 0) utils.ui.radar.update(playerObject.scene);
+            if (frameCount % 4 == 0) utils.ui.radar.update(playerObject);
             if (playerObject.animationMixer) {
               playerObject.animationMixer.update(clockDelta);
               if (!playerObject.isRunning) {
@@ -326,7 +327,7 @@
       }
       function controls(deltaTime) {
         const speedDelta = deltaTime;
-        const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1.5) * (utils.options.get("Sprinting") ? 1.7 : 1);
+        const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1.5) * (utils.options.get("Sprinting") ? 1.7 : utils.options.get("Crouching") ? 0.5 : 1);
         if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
           playerVelocity.add(getForwardVector().multiplyScalar(walkSpeed));
         }
@@ -341,6 +342,7 @@
         }
         if (playerOnFloor && keyStates["Space"]) {
           playerVelocity.y = 4;
+          utils.weapons.stopCrouch();
           gametime.run("jump", [gametime.player.uuid]);
         }
       }
@@ -480,6 +482,7 @@
           "grenade": ["KeyG"],
           "melee": ["KeyB"],
           "sprint": ["ShiftLeft"],
+          "crouch": ["KeyC"],
         },
         initialize: function() {
           gametime.set("player", {
@@ -749,16 +752,18 @@
                 const radarCanvas = utils.ui.elements.radarCanvas;
                 updatePlayerBasis();
                 ctx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
-                ctx.beginPath();
-                ctx.fillStyle = "rgba(180, 180, 255, 0.7)";
-                ctx.arc(radarRadiusPx, radarRadiusPx, 5, 0, 2 * Math.PI);
-                ctx.fill();
+                if (utils.options.get("Walking") && !utils.options.get("Crouching")) {
+                  ctx.beginPath();
+                  ctx.fillStyle = "rgba(180, 180, 255, 0.7)";
+                  ctx.arc(radarRadiusPx, radarRadiusPx, 5, 0, 2 * Math.PI);
+                  ctx.fill();
+                }
                 if (!enemy) return;
-                ctx.fillStyle = 'rgba(255, 20, 20, 0.8)';
-                if (camera.position.distanceTo(enemy.position) > radarRange + 3) return;
-                const blip = computeRadarBlipForEnemy(enemy);
+                if (!enemy.isWalking || enemy.isCrouching || camera.position.distanceTo(enemy.scene.position) > radarRange + 3) return;
+                const blip = computeRadarBlipForEnemy(enemy.scene);
                 if (!blip) return;
                 ctx.beginPath();
+                ctx.fillStyle = 'rgba(255, 20, 20, 0.8)';
                 ctx.arc(blip.x, blip.y, 5, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
@@ -772,7 +777,7 @@
           objects: {},
           add: function(player) {
             utils.players.objects[player.uuid] = null;
-            utils.models.reload(`/models/characters/${player.data.character}1.glb`, function(playerObject) {
+            utils.models.reload(`/models/characters/${player.data.character}.glb`, function(playerObject) {
               playerObject.scene.traverse(child => child.frustumCulled = false);
               scene.add(playerObject.scene);
               playerObject.animationMixer = new THREE.AnimationMixer(playerObject.scene);
@@ -791,9 +796,11 @@
                 "rifle_walk": [8, 1, 1],
                 "rifle_run": [12, 1.5, 1],
                 "rifle_reload": [10, 0.6, 1],
+                "crouch_idle": [14, 1, 1],
               };
               playerObject.isWalking = false;
               playerObject.isRunning = false;
+              playerObject.isCrouching = false;
               playerObject.weapon = null;
               playerObject.weaponRotation = 0;
               utils.players.objects[player.uuid] = playerObject;
@@ -881,7 +888,7 @@
               }
             },
             fire: function(player, point, spreadX, spreadY) {
-              if (!player.isWalking) utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
+              if (!player.isWalking && !player.isCrouching) utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
               if (sandbox.weapons[player.weapon.name].muzzleFlash) {
                 utils.effects.muzzleFlash(player.weapon);
               }
@@ -929,7 +936,27 @@
           stopWalking: function(player) {
             player.isWalking = false;
             utils.players.animations.stop(player, player.weapon.type + "_walk");
-            utils.players.animations.start(player, player.weapon.type + "_idle");
+            if (!player.isCrouching) {
+              utils.players.animations.start(player, player.weapon.type + "_idle");
+            }
+          },
+          startCrouching: function(player) {
+            if (player.isCrouching) return;
+            player.isCrouching = true;
+            utils.players.animations.stop(player, player.weapon.type + "_walk");
+            utils.players.animations.stop(player, player.weapon.type + "_idle");
+            utils.players.animations.start(player, "crouch_idle");
+            player.scene.children[0].position.y += 0.3;
+          },
+          stopCrouching: function(player) {
+            player.isCrouching = false;
+            utils.players.animations.stop(player, "crouch_idle");
+            if (player.isWalking) {
+              utils.players.animations.start(player, player.weapon.type + "_walk");
+            } else {
+              utils.players.animations.start(player, player.weapon.type + "_idle");
+            }
+            player.scene.children[0].position.y -= 0.3;
           },
           startRunning: function(player) {
             if (player.isRunning) return;
@@ -1028,25 +1055,17 @@
               }
             }
             const cameraShake = utils.options.get("CameraShake");
-            const cameraBob = utils.options.get("CameraBob");
-            if (cameraShake || cameraBob) {
-              if (cameraShake) {
-                const randomX = (Math.random() / 200) * cameraShake;
-                const randomY = (Math.random() / 200) * cameraShake;
-                const randomZ = (Math.random() / 200) * cameraShake;
-                camera.position.x += randomX * 9.9;
-                camera.position.y += randomY * 9.9;
-                camera.position.z += randomZ * 9.9;
-                position();
-                camera.position.x += randomX;
-                camera.position.y += randomY;
-                camera.position.z += randomZ;
-              }
-              if (cameraBob) {
-                camera.translateX(cameraBob * 9.9);
-                position();
-                camera.translateX(cameraBob);
-              }
+            if (cameraShake) {
+              const randomX = (Math.random() / 200) * cameraShake;
+              const randomY = (Math.random() / 200) * cameraShake;
+              const randomZ = (Math.random() / 200) * cameraShake;
+              camera.position.x += randomX * 9.9;
+              camera.position.y += randomY * 9.9;
+              camera.position.z += randomZ * 9.9;
+              position();
+              camera.position.x += randomX;
+              camera.position.y += randomY;
+              camera.position.z += randomZ;
             } else {
               position();
             }
@@ -1198,18 +1217,15 @@
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Reloading") || weapon.ammo <= 0 || weapon.currentAmmo >= weapon.maxAmmo) return;
             utils.options.set("Reloading", true);
-
             utils.weapons.stopZoom();
             utils.weapons.stopMelee();
             utils.weapons.stopSprint(false);
-
             let animation = null;
             if (full) {
               animation = "reload_full";
             } else {
               animation = "reload";
             }
-
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.stop("walk");
             const callbackFunction = utils.weapons.animations.start(animation, { loop: THREE.LoopOnce, reset: true }, function() {
@@ -1243,11 +1259,11 @@
             utils.weapons.stopZoom();
             utils.weapons.stopReload();
             utils.weapons.stopSprint(false);
+            utils.effects.bob();
             function reset() {
               utils.options.set("CancelMelee", false);
               utils.options.set("Melee", false);
             }
-            utils.effects.meleeBob();
             utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.8, y: .1, z: -.2 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start());
             setTimeout(() => {
               if (utils.options.get("CancelMelee")) return reset();
@@ -1276,8 +1292,8 @@
             utils.weapons.stopZoom();
             utils.weapons.stopReload();
             utils.weapons.stopMelee();
+            utils.weapons.stopCrouch();
             utils.ui.hideCrosshair();
-            utils.effects.sprintBob();
             utils.options.set("globalSprintTween", {
               position: new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start(),
               rotation: new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start()
@@ -1290,7 +1306,6 @@
             if (!utils.options.get("Sprinting") && !force) return;
             utils.options.set("Sprinting", false);
             utils.ui.showCrosshair();
-            utils.effects.stopSprintBob();
             if (utils.options.get("globalSprintTween")) {
               utils.options.get("globalSprintTween").position.stop();
               utils.options.get("globalSprintTween").rotation.stop();
@@ -1310,6 +1325,31 @@
             }
             utils.weapons.update();
             gametime.run("stopRunning", [gametime.player.uuid]);
+          },
+          crouch: function() {
+            function animation(amount) {
+              let step = 0;
+              function next() {
+                if (step >= 9) return;
+                step++;
+                playerCollider.end.y += amount;
+                requestAnimationFrame(next);
+              }
+              next();
+            }
+            if (utils.options.get("Crouching")) {
+              utils.options.set("Crouching", false);
+              animation(0.03);
+              gametime.run("stopCrouching", [gametime.player.uuid]);
+            } else {
+              utils.weapons.stopSprint();
+              utils.options.set("Crouching", true);
+              animation(-0.03);
+              gametime.run("startCrouching", [gametime.player.uuid]);
+            }
+          },
+          stopCrouch: function() {
+            if (utils.options.get("Crouching")) utils.weapons.crouch();
           },
           update: function() {
             const weapon = utils.weapons.getCurrentEntry();
@@ -1454,7 +1494,7 @@
               }
             });
           },
-          meleeBob: function() {
+          bob: function() {
             let step = 0;
             function next(strength = 0.001) {
               const interval = setInterval(() => {
@@ -1470,26 +1510,6 @@
               });
             }
             next();
-          },
-          sprintBob: function() {
-            function next() {
-              const intensity = 0.003;
-              new TWEEN.Tween({ intensity: 0 }).to({ intensity: intensity }, 200).easing(TWEEN.Easing.Quadratic.In).start().onUpdate(function(value) {
-                utils.options.set("CameraBob", value.intensity);
-              }).onComplete(function() {
-                new TWEEN.Tween({ intensity: intensity }).to({ intensity: -intensity }, 200).easing(TWEEN.Easing.Quadratic.InOut).start().onUpdate(function(value) {
-                  utils.options.set("CameraBob", value.intensity);
-                }).onComplete(function() {
-                  new TWEEN.Tween({ intensity: -intensity }).to({ intensity: 0 }, 200).easing(TWEEN.Easing.Quadratic.Out).start().onUpdate(function(value) {
-                    utils.options.set("CameraBob", value.intensity);
-                  });
-                });
-              });
-            }
-            utils.options.set("sprintBobInterval", setInterval(next, 800));
-          },
-          stopSprintBob: function() {
-            clearInterval(utils.options.get("sprintBobInterval"));
           }
         }
       };
@@ -1560,6 +1580,7 @@
           if (sandbox.controls.grenade.includes(event.code)) utils.grenades.throw();
           if (sandbox.controls.melee.includes(event.code)) utils.weapons.melee();
           if (sandbox.controls.sprint.includes(event.code) && (keyStates["KeyW"] || keyStates["ArrowUp"])) utils.weapons.sprint();
+          if (sandbox.controls.crouch.includes(event.code)) utils.weapons.crouch();
         }
         globalRepeat = true;
       });
@@ -1615,8 +1636,6 @@
       utils.options.set("globalSprintTween", null);
       utils.options.set("tmpObjects", []);
       utils.options.set("CameraShake", 0);
-      utils.options.set("CameraBob", 0);
-      utils.options.set("sprintBobInterval", 0);
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -1675,6 +1694,16 @@
       gametime.on("explodeGrenade", function(player, grenadeId, grenadePosition) {
         if (player != gametime.player.uuid) {
           utils.players.grenades.explode(grenadeId, grenadePosition);
+        }
+      });
+      gametime.on("startCrouching", function(player) {
+        if (player != gametime.player.uuid) {
+          utils.players.startCrouching(utils.players.objects[player]);
+        }
+      });
+      gametime.on("stopCrouching", function(player) {
+        if (player != gametime.player.uuid) {
+          utils.players.stopCrouching(utils.players.objects[player]);
         }
       });
     </script>
