@@ -201,7 +201,6 @@
       </div>
     </div>
     <script>
-      gametime.serverURL="wss://gametime-js-4.loca.lt";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -258,10 +257,13 @@
             }
           }
         }
+
+        let playersIterated = false;
         for (player in utils.players.objects) {
+          playersIterated = true;
           const playerObject = utils.players.objects[player];
           if (playerObject) {
-            if (frameCount % 4 == 0) utils.ui.radar.update(playerObject);
+            if (frameCount % 4 == 0) utils.ui.radar.update(playerObject, time);
             if (playerObject.animationMixer) {
               playerObject.animationMixer.update(clockDelta);
               if (!playerObject.isRunning) {
@@ -274,7 +276,11 @@
                 leftShoulder.rotation.x = weaponRotation;
                 head.rotation.x = weaponRotation - offset;
                 if (playerObject.isWalking && playerObject.weapon.type == "rifle") {
-                  rightShoulder.rotation.x += 7;
+                  if (playerObject.isCrouching) {
+                    rightShoulder.rotation.x += 0.4;
+                  } else {
+                    rightShoulder.rotation.x += 7;
+                  }
                   leftShoulder.rotation.x += .2;
                   head.rotation.x -= offset - .4;
                 }
@@ -282,6 +288,7 @@
             }
           }
         }
+        if (!playersIterated) utils.ui.radar.update(null, time);
 
         const tmpObjects = utils.options.get("tmpObjects");
         for (let i = 0; i < tmpObjects.length; i++) {
@@ -496,7 +503,7 @@
             utils.ui.radar.init();
             animate();
             update();
-            utils.weapons.switch("primary");
+            utils.weapons.switch("primary", true);
           };
         },
         loadingManager: new THREE.LoadingManager(),
@@ -748,25 +755,25 @@
                 const screenY = radarRadiusPx - yOffset;
                 return { x: screenX, y: screenY };
               }
-              utils.ui.radar.update = function(enemy = null) {
+              utils.ui.radar.update = function(enemy = null, time) {
                 const radarCanvas = utils.ui.elements.radarCanvas;
                 updatePlayerBasis();
                 ctx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
-                if (utils.options.get("Walking") && !utils.options.get("Crouching")) {
+                if ((utils.options.get("Walking") || time - utils.options.get("StopWalkingTimestamp") < 1000) && !utils.options.get("Crouching")) {
                   ctx.beginPath();
                   ctx.fillStyle = "rgba(180, 180, 255, 0.7)";
                   ctx.arc(radarRadiusPx, radarRadiusPx, 5, 0, 2 * Math.PI);
                   ctx.fill();
                 }
-                if (!enemy) return;
-                if (!enemy.isWalking || enemy.isCrouching || camera.position.distanceTo(enemy.scene.position) > radarRange + 3) return;
-                const blip = computeRadarBlipForEnemy(enemy.scene);
-                if (!blip) return;
-                ctx.beginPath();
-                ctx.fillStyle = 'rgba(255, 20, 20, 0.8)';
-                ctx.arc(blip.x, blip.y, 5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
+                if (enemy && ((enemy.isWalking || time - enemy.stopWalkingTimestamp < 1000) && !enemy.isCrouching) && camera.position.distanceTo(enemy.scene.position) < radarRange + 3) {
+                  const blip = computeRadarBlipForEnemy(enemy.scene);
+                  if (!blip) return;
+                  ctx.beginPath();
+                  ctx.fillStyle = 'rgba(255, 20, 20, 0.8)';
+                  ctx.arc(blip.x, blip.y, 5, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.restore();
+                }
               };
               utils.ui.radar.update();
             },
@@ -801,6 +808,7 @@
               playerObject.isWalking = false;
               playerObject.isRunning = false;
               playerObject.isCrouching = false;
+              playerObject.stopWalkingTimestamp = null;
               playerObject.weapon = null;
               playerObject.weaponRotation = 0;
               utils.players.objects[player.uuid] = playerObject;
@@ -884,7 +892,9 @@
               if (player.isWalking) {
                 utils.players.animations.start(player, type + "_walk");
               } else {
-                utils.players.animations.start(player, type + "_idle");
+                if (!player.isCrouching) {
+                  utils.players.animations.start(player, type + "_idle");
+                }
               }
             },
             fire: function(player, point, spreadX, spreadY) {
@@ -935,6 +945,7 @@
           },
           stopWalking: function(player) {
             player.isWalking = false;
+            player.stopWalkingTimestamp = Date.now();
             utils.players.animations.stop(player, player.weapon.type + "_walk");
             if (!player.isCrouching) {
               utils.players.animations.start(player, player.weapon.type + "_idle");
@@ -946,7 +957,11 @@
             utils.players.animations.stop(player, player.weapon.type + "_walk");
             utils.players.animations.stop(player, player.weapon.type + "_idle");
             utils.players.animations.start(player, "crouch_idle");
+            if (player.isWalking) {
+              utils.players.animations.start(player, player.weapon.type + "_walk");
+            }
             player.scene.children[0].position.y += 0.3;
+            player.stopWalkingTimestamp = Date.now();
           },
           stopCrouching: function(player) {
             player.isCrouching = false;
@@ -1086,31 +1101,61 @@
               return sandbox.weapons[sandbox.loadout[1]];
             }
           },
-          switch: function(slot = null) {
+          getChild: function() {
+            if (sandbox.currentWeapon) {
+              return sandbox.currentWeapon.children[0];
+            }
+          },
+          switch: function(slot = null, instant = false) {
             utils.options.set("Switching", true);
             utils.weapons.stopFire();
             utils.weapons.stopZoom();
             utils.weapons.stopReload();
             utils.weapons.stopMelee();
             utils.weapons.stopSprint(false);
-            if (!slot) slot = sandbox.currentWeapon == sandbox.secondaryWeapon ? "primary" : "secondary";
-            if (utils.options.get("Walking")) utils.weapons.animations.stop("walk");
-            if (slot == "primary") {
-              utils.weapons.animations.stop("idle");
-              scene.remove(sandbox.currentWeapon);
-              utils.weapons.setCurrent(sandbox.primaryWeapon);
-              utils.weapons.animations.start("idle");
-              scene.add(sandbox.currentWeapon);
-            } else if (slot == "secondary") {
-              utils.weapons.animations.stop("idle");
-              scene.remove(sandbox.currentWeapon);
-              utils.weapons.setCurrent(sandbox.secondaryWeapon);
-              utils.weapons.animations.start("idle");
-              scene.add(sandbox.currentWeapon);
+            if (!slot) {
+              if (sandbox.currentWeapon == sandbox.secondaryWeapon) {
+                slot = "primary";
+              } else {
+                slot = "secondary";
+              }
             }
-            setTimeout(() => utils.options.set("Switching", false), 200);
-            if (utils.options.get("Walking")) utils.weapons.animations.start("walk");
-            utils.weapons.update();
+            if (utils.options.get("Walking")) {
+              utils.weapons.animations.stop("walk");
+            }
+            function next() {
+              utils.weapons.animations.stop("idle");
+              scene.remove(sandbox.currentWeapon);
+              if (slot == "primary") {
+                utils.weapons.setCurrent(sandbox.primaryWeapon);
+              } else if (slot == "secondary") {
+                utils.weapons.setCurrent(sandbox.secondaryWeapon);
+              }
+              utils.weapons.animations.start("idle");
+              scene.add(sandbox.currentWeapon);
+              if (instant) {
+                utils.options.set("Switching", false);
+              } else {
+                utils.weapons.getChild().position.set(0, -0.03, 0);
+                utils.weapons.getChild().rotation.set(0.5, 0, 0);
+                new TWEEN.Tween(utils.weapons.getChild().position).to({ x: 0, y: 0, z: 0 }, 200).easing(TWEEN.Easing.Quadratic.InOut).start();
+                new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0, y: 0, z: 0 }, 200).easing(TWEEN.Easing.Quadratic.InOut).start().onComplete(function() {
+                  utils.options.set("Switching", false);
+                });
+              }
+              if (utils.options.get("Walking")) {
+                utils.weapons.animations.start("walk");
+              }
+              utils.weapons.update();
+            }
+            if (instant) {
+              next();
+            } else {
+              new TWEEN.Tween(utils.weapons.getChild().position).to({ x: 0, y: -0.03, z: 0 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start();
+              new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0.5, y: 0, z: 0 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start().onComplete(function() {
+                next();
+              });
+            }
             gametime.run("switchWeapon", [gametime.player.uuid, utils.weapons.getCurrentEntry().name]);
           },
           fire: function(rounds = 1) {
@@ -1119,24 +1164,19 @@
             utils.options.set("Firing", true);
             utils.options.set("ContinueFiring", true);
             utils.weapons.stopSprint();
-
-            const rate = weapon.fireRate;
+            utils.weapons.animations.stop("walk");
+            utils.weapons.animations.stop("idle");
             if (weapon.fireMode == "auto") {
               rounds = 200;
             } else if (weapon.fireMode == "burst") {
               rounds = 3;
             }
-
-            let lastFire = Date.now() - rate;
+            let lastFire = Date.now() - weapon.fireRate;
+            let spreads = Array(rounds * 2).fill(0).map(x => { const spread = Math.random() / (utils.options.get("Zoomed") ? 90 : 60) * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
             let roundsFired = 0;
-            let spreads = Array(rounds *  2).fill(0).map(x => { const spread = Math.random() / (utils.options.get("Zoomed") ? 90 : 60) * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
-
-            utils.weapons.animations.stop("walk");
-            utils.weapons.animations.stop("idle");
-
-            let interval = setInterval(function() {
+            const interval = setInterval(function() {
               if (roundsFired < rounds && weapon.currentAmmo > 0 && utils.options.get("ContinueFiring")) {
-                if (Date.now() - lastFire >= rate) {
+                if (Date.now() - lastFire >= weapon.fireRate) {
                   lastFire = Date.now();
                   utils.weapons.animations.start("shoot", { loop: THREE.LoopOnce, reset: true });
 
@@ -1159,19 +1199,22 @@
                     utils.weapons.animations.start("idle");
                   }
                 }
+                spreads = undefined;
                 utils.options.set("Firing", false);
               }
             });
           },
           stopFire: function() {
             const weapon = utils.weapons.getCurrentEntry();
-            if (utils.options.get("Firing") && weapon.fireMode == "auto") utils.options.set("ContinueFiring", false);
+            if (utils.options.get("Firing") && weapon.fireMode == "auto") {
+              utils.options.set("ContinueFiring", false);
+            }
           },
           zoom: function(force = false) {
             if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
+            const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Zoomed")) {
               utils.ui.showCrosshair();
-              const weapon = utils.weapons.getCurrentEntry();
               if (utils.options.get("globalZoomTween")) {
                 utils.options.get("globalZoomTween").in.position.stop();
                 utils.options.get("globalZoomTween").in.rotation.stop();
@@ -1185,13 +1228,11 @@
                 }
               });
               weapon.animationStructure["walk"][2] *= 5;
-              if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
               utils.options.set("Zoomed", false);
             } else {
               utils.weapons.stopMelee();
               utils.weapons.stopSprint(false);
               utils.ui.hideCrosshair();
-              const weapon = utils.weapons.getCurrentEntry();
               if (utils.options.get("globalZoomTween")) {
                 utils.options.get("globalZoomTween").out.position.stop();
                 utils.options.get("globalZoomTween").out.rotation.stop();
@@ -1205,9 +1246,9 @@
                 }
               });
               weapon.animationStructure["walk"][2] /= 5;
-              if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
               utils.options.set("Zoomed", true);
             }
+            if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
             utils.weapons.update();
           },
           stopZoom: function() {
@@ -1220,14 +1261,14 @@
             utils.weapons.stopZoom();
             utils.weapons.stopMelee();
             utils.weapons.stopSprint(false);
+            utils.weapons.animations.stop("idle");
+            utils.weapons.animations.stop("walk");
             let animation = null;
             if (full) {
               animation = "reload_full";
             } else {
               animation = "reload";
             }
-            utils.weapons.animations.stop("idle");
-            utils.weapons.animations.stop("walk");
             const callbackFunction = utils.weapons.animations.start(animation, { loop: THREE.LoopOnce, reset: true }, function() {
               const weapon = utils.weapons.getCurrentEntry();
               const ammo = weapon.ammo;
@@ -1264,25 +1305,23 @@
               utils.options.set("CancelMelee", false);
               utils.options.set("Melee", false);
             }
-            utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: -0.8, y: .1, z: -.2 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start());
-            setTimeout(() => {
+            utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: -0.8, y: 0.1, z: -0.2 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start().onComplete(function() {
               if (utils.options.get("CancelMelee")) return reset();
-              utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: .5, y: .1, z: -.2 }, 200).easing(TWEEN.Easing.Quadratic.Out).start());
-              setTimeout(() => {
-              if (utils.options.get("CancelMelee")) return reset();
-                utils.options.set("globalMeleeTween", new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 300).easing(TWEEN.Easing.Quadratic.Out).start());
-                setTimeout(() => {
+              utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0.5, y: 0.1, z: -0.2 }, 200).easing(TWEEN.Easing.Quadratic.Out).start().onComplete(function() {
+                if (utils.options.get("CancelMelee")) return reset();
+                utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0, y: 0, z: 0 }, 300).easing(TWEEN.Easing.Quadratic.Out).start().onComplete(function() {
                   utils.options.set("Melee", false);
                   utils.weapons.update();
-                }, 300);
-              }, 200);
-            }, 100);
+                }));
+              }));
+            }));
           },
           stopMelee: function() {
             if (utils.options.get("Melee")) {
               utils.options.set("CancelMelee", true);
+              utils.options.set("Melee", false);
               utils.options.get("globalMeleeTween").stop();
-              sandbox.currentWeapon.children[0].rotation.set(0, 0, 0);
+              utils.weapons.getChild().rotation.set(0, 0, 0);
             }
           },
           sprint: function() {
@@ -1294,30 +1333,30 @@
             utils.weapons.stopMelee();
             utils.weapons.stopCrouch();
             utils.ui.hideCrosshair();
-            utils.options.set("globalSprintTween", {
-              position: new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start(),
-              rotation: new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start()
-            });
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.restart("run");
+            utils.options.set("globalSprintTween", {
+              position: new TWEEN.Tween(utils.weapons.getChild().position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start(),
+              rotation: new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start()
+            });
             gametime.run("startRunning", [gametime.player.uuid]);
           },
           stopSprint: function(animation = true, force = false) {
             if (!utils.options.get("Sprinting") && !force) return;
             utils.options.set("Sprinting", false);
             utils.ui.showCrosshair();
+            utils.weapons.animations.stop("run");
             if (utils.options.get("globalSprintTween")) {
               utils.options.get("globalSprintTween").position.stop();
               utils.options.get("globalSprintTween").rotation.stop();
             }
             if (animation) {
-              new TWEEN.Tween(sandbox.currentWeapon.children[0].position).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
-              new TWEEN.Tween(sandbox.currentWeapon.children[0].rotation).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+              new TWEEN.Tween(utils.weapons.getChild().position).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+              new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
             } else {
-              sandbox.currentWeapon.children[0].position.set(0, 0, 0);
-              sandbox.currentWeapon.children[0].rotation.set(0, 0, 0);
+              utils.weapons.getChild().position.set(0, 0, 0);
+              utils.weapons.getChild().rotation.set(0, 0, 0);
             }
-            utils.weapons.animations.stop("run");
             if (utils.options.get("Walking")) {
               utils.weapons.animations.start("walk");
             } else {
@@ -1346,10 +1385,13 @@
               utils.options.set("Crouching", true);
               animation(-0.03);
               gametime.run("startCrouching", [gametime.player.uuid]);
+              utils.options.set("StopWalkingTimestamp", Date.now());
             }
           },
           stopCrouch: function() {
-            if (utils.options.get("Crouching")) utils.weapons.crouch();
+            if (utils.options.get("Crouching")) {
+              utils.weapons.crouch();
+            }
           },
           update: function() {
             const weapon = utils.weapons.getCurrentEntry();
@@ -1377,9 +1419,8 @@
               utils.weapons.stopReload();
               utils.weapons.stopMelee();
               utils.weapons.stopSprint(false, true);
-              if (utils.options.get("ThrowingGrenade")) return;
+              if (utils.options.get("ThrowingGrenade") || sandbox.grenades[type] <= 0) return;
               utils.options.set("ThrowingGrenade", true);
-              if (sandbox.grenades[type] <= 0) return;
               sandbox.grenades[type]--;
               utils.weapons.animations.stop("walk");
               utils.weapons.animations.stop("idle");
@@ -1519,7 +1560,6 @@
           sandbox.models[i].model = model;
           sandbox.models[i].loaded = true;
           scene.add(model.scene);
-          renderer.render(scene, camera);
           if (model.animations) {
             sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
           }
@@ -1535,8 +1575,10 @@
               if (name == sandbox.loadout[0]) utils.weapons.setPrimary(model.scene);
               if (name == sandbox.loadout[1]) utils.weapons.setSecondary(model.scene);
               utils.images.preload("/images/crosshairs/" + sandbox.weapons[name].reticle + ".png");
+              utils.effects.muzzleFlash(model.scene);
             }
           }
+          renderer.render(scene, camera);
         });
       }
 
@@ -1597,6 +1639,7 @@
             utils.weapons.animations.start("idle");
           }
           gametime.run("stopWalking", [gametime.player.uuid]);
+          utils.options.set("StopWalkingTimestamp", Date.now());
         }
         if (sandbox.controls.fire.includes(event.code)) utils.weapons.stopFire();
         if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint();
@@ -1614,9 +1657,9 @@
       });
 
       const PointerControls = new PointerLockControls(camera, renderer.domElement);
-      PointerControls.maxPolarAngle = Math.PI - .15;
-      PointerControls.minPolarAngle = .15;
-      PointerControls.pointerSpeed = .6;
+      PointerControls.maxPolarAngle = Math.PI - 0.15;
+      PointerControls.minPolarAngle = 0.15;
+      PointerControls.pointerSpeed = 0.6;
       PointerControls.isLocked = true;
 
       utils.options.set("Walking", false);
@@ -1636,6 +1679,7 @@
       utils.options.set("globalSprintTween", null);
       utils.options.set("tmpObjects", []);
       utils.options.set("CameraShake", 0);
+      utils.options.set("StopWalkingTimestamp", null);
 
       scene.add(utils.options.get("playerCamera"));
 
