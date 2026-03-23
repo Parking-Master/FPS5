@@ -196,7 +196,7 @@ let plasmaMaterial = new THREE.ShaderMaterial({
   depthWrite: false
 });
 
-THREE.particles = {
+particles = {
   dust: function(position) {
     const burst = { particles: [], material: dustMaterial };
     for (let i = 0; i < 20; i++) {

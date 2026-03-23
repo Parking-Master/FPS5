@@ -227,6 +227,8 @@
 
       let map = null;
       let playerOnFloor = false;
+      let playerAgainstWall = false;
+      let allowedToWalk = true;
       const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
       const playerDefaultPosition = [13.5, 0.35, -18.5];
       const keyStates = {};
@@ -261,7 +263,7 @@
         }
 
         TWEEN.update();
-        THREE.particles.update();
+        particles.update();
         utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle);
         utils.players.update();
         utils.weapons.position();
@@ -324,6 +326,20 @@
           utils.health.increment(clockDelta);
         }
 
+        const deathTime = utils.options.get("DeathTime");
+        if (deathTime) {
+          if (Date.now() - deathTime > sandbox.presets.respawnTime * 1000) {
+            utils.health.respawn();
+          }
+          const killer = utils.options.get("Killer");
+          if (killer) {
+            const targetQuaternion = new THREE.Quaternion();
+            const matrix = new THREE.Matrix4().lookAt(camera.position, utils.players.objects[killer].scene.position, camera.up);
+            targetQuaternion.setFromRotationMatrix(matrix);
+            camera.quaternion.slerp(targetQuaternion, 0.2);
+          }
+        }
+
         frameCount++;
         const diff = now - lastTime;
         if (diff >= 1000) {
@@ -377,10 +393,12 @@
       function playerCollisions() {
         const result = worldOctree.capsuleIntersect(playerCollider);
         playerOnFloor = false;
+        playerAgainstWall = false;
         if (result) {
           playerOnFloor = result.normal.y > 0;
+          playerAgainstWall = (result.normal.x > 0) || (result.normal.z > 0);
           if (!playerOnFloor) {
-            playerVelocity.addScaledVector(result.normal, - result.normal.dot(playerVelocity));
+            playerVelocity.addScaledVector(result.normal, -result.normal.dot(playerVelocity));
           }
           playerCollider.translate(result.normal.multiplyScalar(result.depth));
         }
@@ -494,6 +512,15 @@
       }
 
       sandbox = {
+        presets: {
+          map: "Cargo_Port",
+          respawnTime: 5,
+          loadout: ["AK-74", "FN-502"],
+          grenades: {
+            "mk2": 2,
+            "plasma": 0
+          }
+        },
         loadout: ["AK-74", "FN-502"],
         grenades: {
           "mk2": 2,
@@ -525,7 +552,7 @@
             utils.ui.radar.init();
             animate();
             update();
-            utils.weapons.switch("primary", true);
+            utils.health.respawn();
           };
         },
         loadingManager: new THREE.LoadingManager(),
@@ -536,6 +563,7 @@
             model: null,
             loaded: false,
             removeAfterLoaded: false,
+            requiredMaps: ["Cargo_Port"],
             callback: function(model) {
               map = model.scene;
               worldOctree.fromGraphNode(map);
@@ -562,19 +590,22 @@
             id: "weapon.AK-74",
             path: "/models/weapons/AK-74.glb",
             model: null,
-            loaded: false
+            loaded: false,
+            requiredMaps: ["Cargo_Port"]
           },
           {
             id: "weapon.FN-502",
             path: "/models/weapons/FN-502.glb",
             model: null,
-            loaded: false
+            loaded: false,
+            requiredMaps: ["Cargo_Port"]
           },
           {
             id: "grenade.MK2",
             path: "/models/weapons/grenades/MK2.glb",
             model: null,
             loaded: false,
+            requiredMaps: "all",
             callback: function(model) {
               const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xff8888, opacity: 0.6, map: new THREE.TextureLoader().load("/images/assets/glow/0.png"), sizeAttenuation: true }));
               glow.scale.set(0.3, 0.3, 0.3);
@@ -591,6 +622,7 @@
             path: "/models/weapons/grenades/Plasma.glb",
             model: null,
             loaded: false,
+            requiredMaps: "all",
             callback: function(model) {
               const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x1551ff, opacity: 1, map: new THREE.TextureLoader().load("/images/assets/glow/0.png"), sizeAttenuation: true }));
               glow.scale.set(0.6, 0.6, 0.6);
@@ -606,22 +638,43 @@
             id: "propweapon.AK-74",
             path: "/models/characters/weapons/AK-74.glb",
             model: null,
-            loaded: false
+            loaded: false,
+            requiredMaps: "all"
           },
           {
             id: "propweapon.FN-502",
             path: "/models/characters/weapons/FN-502.glb",
             model: null,
-            loaded: false
+            loaded: false,
+            requiredMaps: "all"
           },
         ],
+        maps: {
+          "Cargo_Port": {
+            spawnPoints: [
+              [13.5, 0, -18.5, 0, 3.141592653589793, 0],
+              [7.6, 0, -18.3, 0, 1.5707963267948966, 0],
+              [-8.9, 0, -16, 0, -1.5707963267948966, 0],
+              [17.5, 0, -9.6, 0, 1.5707963267948966, 0],
+              [16.9, 0, -2.2, 0, 1.5707963267948966, 0],
+              [10, 0, 1.2, 0, 6.283185307179586, 0],
+              [20, 0, 5.2, 0, 6.283185307179586, 0],
+              [17.1, 0, 14.6, 0, 6.283185307179586, 0],
+              [6.9, 0, 16.5, 0, 1.5707963267948966, 0],
+              [-5, 0, -9.3, 0, 3.141592653589793, 0],
+              [-9.1, 0, 2.7, 0, -1.5707963267948966, 0],
+              [8, 0, 3.2, 0, 3.141592653589793, 0]
+            ]
+          }
+        },
         weapons: {
           "AK-74": {
             name: "AK-74",
             displayName: "AK-74 Assault Rifle",
             ammo: 72,
-            maxAmmo: 36,
+            defaultAmmo: 72,
             currentAmmo: 36,
+            maxAmmo: 36,
             damage: 7,
             headshotDamage: 8,
             spread: 1.2,
@@ -633,6 +686,7 @@
             fireRate: 100,
             range: 12,
             reticle: 0,
+            bulletHole: 0,
             type: "rifle",
             model: null,
             loaded: false,
@@ -651,8 +705,9 @@
             name: "FN-502",
             displayName: "FN-502 Pistol",
             ammo: 24,
-            maxAmmo: 12,
+            defaultAmmo: 24,
             currentAmmo: 12,
+            maxAmmo: 12,
             damage: 10,
             headshotDamage: 16,
             spread: 0.4,
@@ -664,6 +719,7 @@
             fireRate: 200,
             range: 16,
             reticle: 1,
+            bulletHole: 0,
             type: "pistol",
             model: null,
             loaded: false,
@@ -715,7 +771,8 @@
             grenades_plasma: document.querySelector(".ui .ui-grenades-plasma .value"),
             healthBarValue: document.querySelector(".ui .ui-health-value"),
             healthBar: document.querySelector(".ui .ui-health-bar"),
-            hurtScreen: document.querySelector(".ui .hurt-screen")
+            hurtScreen: document.querySelector(".ui .hurt-screen"),
+            ui: document.querySelector(".ui")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -753,6 +810,12 @@
               utils.ui.cache.crosshairAimed = true;
               utils.ui.elements.crosshair.style.filter = "brightness(0) saturate(100%) invert(16%) sepia(56%) saturate(6249%) hue-rotate(356deg) brightness(99%) contrast(124%)";
             }
+          },
+          hide: function() {
+            utils.ui.elements.ui.style.visibility = "hidden";
+          },
+          show: function() {
+            utils.ui.elements.ui.style.visibility = "";
           },
           unaimCrosshair: function() {
             if (utils.ui.cache.crosshairAimed) {
@@ -815,7 +878,7 @@
                 const speedThreshold = (utils.options.get("Crouching") ? 1.3 : 0.03);
                 if (averageSpeed > speedThreshold || utils.options.get("Firing")) {
                   ctx.beginPath();
-                  ctx.fillStyle = "rgba(180, 180, 255, 0.7)";
+                  ctx.fillStyle = "rgba(242, 218, 60, 0.8)";
                   ctx.arc(radarRadiusPx, radarRadiusPx, 5, 0, 2 * Math.PI);
                   ctx.fill();
                   gametime.player.data.visibleOnRadar = true;
@@ -896,6 +959,7 @@
               playerObject.isWalking = false;
               playerObject.isRunning = false;
               playerObject.isCrouching = false;
+              playerObject.isDead = false;
               playerObject.weapon = null;
               playerObject.weaponRotation = 0;
               playerObject.visibleOnRadar = false;
@@ -916,7 +980,7 @@
           hit: function(player, shield, weapon) {
             if (typeof weapon.explode == "undefined") {
               const realDamage = (shield.shieldType == "head" ? weapon.headshotDamage : weapon.damage) / Math.max(camera.position.distanceTo(player.scene.position) / weapon.range, 1);
-              gametime.run("damage", [player.uuid, realDamage]);
+              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid]);
             }
           },
           update: function() {
@@ -925,13 +989,17 @@
             gametime.update();
             for (player in gametime.players) {
               if (player != gametime.player.uuid && typeof utils.players.objects[player] !== "undefined" && utils.players.objects[player] != null) {
-                const position = gametime.players[player].data.position;
-                const rotation = gametime.players[player].data.rotation;
-                const target = new THREE.Vector3(position[0], position[1], position[2]);
-                utils.players.objects[player].scene.position.lerp(target, 0.25);
-                utils.players.objects[player].scene.rotation.set(0, rotation[1], 0);
-                utils.players.objects[player].weaponRotation = rotation[0];
-                utils.players.objects[player].visibleOnRadar = gametime.players[player].data.visibleOnRadar;
+                if (utils.players.objects[player].isDead) {
+                  utils.players.objects[player].visibleOnRadar = false;
+                } else {
+                  const position = gametime.players[player].data.position;
+                  const rotation = gametime.players[player].data.rotation;
+                  const target = new THREE.Vector3(position[0], position[1], position[2]);
+                  utils.players.objects[player].scene.position.lerp(target, 0.25);
+                  utils.players.objects[player].scene.rotation.set(0, rotation[1], 0);
+                  utils.players.objects[player].weaponRotation = rotation[0];
+                  utils.players.objects[player].visibleOnRadar = gametime.players[player].data.visibleOnRadar;
+                }
               }
             }
           },
@@ -1002,12 +1070,12 @@
                 }
               }
             },
-            fire: function(player, point, spreadX, spreadY) {
+            fire: function(player, point, spreadX, spreadY, bulletHole) {
               if (!player.isWalking && !player.isCrouching) utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
               if (sandbox.weapons[player.weapon.name].muzzleFlash) {
                 utils.effects.muzzleFlash(player.weapon);
               }
-              utils.players.effects.bulletHole(point, spreadX, spreadY);
+              utils.players.effects.bulletHole(point, spreadX, spreadY, bulletHole);
             },
             reload: function(player) {
               utils.players.animations.start(player, player.weapon.type + "_reload", { loop: THREE.LoopOnce, reset: true, weight: 10 });
@@ -1034,12 +1102,12 @@
             }
           },
           effects: {
-            bulletHole: function(point, spreadX, spreadY) {
+            bulletHole: function(point, spreadX, spreadY, type) {
               const camera = utils.options.get("playerCamera");
               camera.position.set(point[0], point[1], point[2]);
               camera.rotation.set(point[3], point[4], point[5]);
               camera.updateMatrixWorld();
-              utils.effects.bulletHole(spreadX, spreadY, camera);
+              utils.effects.bulletHole(spreadX, spreadY, type, camera);
             }
           },
           startWalking: function(player) {
@@ -1092,6 +1160,17 @@
               utils.players.animations.start(player, player.weapon.type + "_idle");
             }
           },
+          health: {
+            die: function(player) {
+              player.isDead = true;
+              player.scene.position.set(0, -1000, 0);
+            },
+            respawn: function(player, spawnPoint) {
+              player.isDead = false;
+              player.scene.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2]);
+              player.scene.rotation.set(spawnPoint[3], spawnPoint[4], spawnPoint[5]);
+            }
+          }
         },
         models: {
           get: function(id) {
@@ -1204,6 +1283,12 @@
               return sandbox.weapons[sandbox.loadout[1]];
             }
           },
+          getPrimaryEntry: function() {
+            return sandbox.weapons[sandbox.loadout[0]];
+          },
+          getSecondaryEntry: function() {
+            return sandbox.weapons[sandbox.loadout[1]];
+          },
           getChild: function() {
             if (sandbox.currentWeapon) {
               return sandbox.currentWeapon.children[0];
@@ -1257,6 +1342,8 @@
             } else {
               new TWEEN.Tween(utils.weapons.getChild().position).to({ x: 0, y: -0.03, z: 0 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start();
               new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0.5, y: 0, z: 0 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start().onComplete(function() {
+                utils.weapons.getChild().position.set(0, 0, 0);
+                utils.weapons.getChild().rotation.set(0, 0, 0);
                 next();
               });
             }
@@ -1277,7 +1364,7 @@
             let lastFire = Date.now() - weapon.fireRate;
             let spreads = Array(rounds * 2).fill(0).map(x => { const spread = Math.random() / (utils.options.get("Zoomed") ? 90 : 60) * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
             let roundsFired = 0;
-            const interval = setInterval(function() {
+            function animation() {
               if (roundsFired < rounds && weapon.currentAmmo > 0 && utils.options.get("ContinueFiring")) {
                 if (Date.now() - lastFire >= weapon.fireRate) {
                   lastFire = Date.now();
@@ -1285,16 +1372,17 @@
 
                   const spreadX = spreads[roundsFired];
                   const spreadY = spreads[roundsFired + 1];
-                  utils.effects.bulletHole(spreadX, spreadY, camera, weapon);
+                  utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
                   if (weapon.muzzleFlash) utils.effects.muzzleFlash();
+                  utils.effects.bob(1);
 
                   roundsFired++;
                   weapon.currentAmmo--;
                   utils.weapons.update();
-                  gametime.run("fireWeapon", [gametime.player.uuid, [camera.position.x, camera.position.y, camera.position.z, camera.rotation.x, camera.rotation.y, camera.rotation.z], spreadX, spreadY]);
+                  gametime.run("fireWeapon", [gametime.player.uuid, [camera.position.x, camera.position.y, camera.position.z, camera.rotation.x, camera.rotation.y, camera.rotation.z], spreadX, spreadY, weapon.bulletHole]);
                 }
+                requestAnimationFrame(animation);
               } else {
-                clearInterval(interval);
                 if (!utils.options.get("Reloading")) {
                   if (utils.options.get("Walking")) {
                     utils.weapons.animations.start("walk", { instant: true });
@@ -1305,7 +1393,8 @@
                 spreads = undefined;
                 utils.options.set("Firing", false);
               }
-            });
+            }
+            animation();
           },
           stopFire: function() {
             const weapon = utils.weapons.getCurrentEntry();
@@ -1410,6 +1499,9 @@
             }
             utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: -0.8, y: 0.1, z: -0.2 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start().onComplete(function() {
               if (utils.options.get("CancelMelee")) return reset();
+              if (playerAgainstWall) {
+                utils.effects.bulletHole(0, 0, 20, camera, null, true);
+              }
               utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0.5, y: 0.1, z: -0.2 }, 200).easing(TWEEN.Easing.Quadratic.Out).start().onComplete(function() {
                 if (utils.options.get("CancelMelee")) return reset();
                 utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0, y: 0, z: 0 }, 300).easing(TWEEN.Easing.Quadratic.Out).start().onComplete(function() {
@@ -1495,6 +1587,15 @@
               utils.weapons.crouch();
             }
           },
+          stopWalking: function() {
+            utils.options.set("Walking", false);
+            utils.weapons.stopSprint();
+            if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
+              utils.weapons.animations.stop("walk");
+              utils.weapons.animations.start("idle");
+            }
+            gametime.run("stopWalking", [gametime.player.uuid]);
+          },
           updateAim: function(weapon) {
             const raycaster = utils.options.get("aimRaycaster");
             raycaster.setFromCamera(vectors[4], camera);
@@ -1565,9 +1666,9 @@
           explode: function(grenade, isMultiplayer = false) {
             const worldPosition = grenade.mesh.getWorldPosition(new THREE.Vector3());
             if (grenade.type == "plasma") {
-              THREE.particles.plasma(worldPosition);
+              particles.plasma(worldPosition);
             } else {
-              THREE.particles.explosion(worldPosition);
+              particles.explosion(worldPosition);
             }
             const shakeIntensity = 2 / (Math.max(camera.position.distanceTo(worldPosition), 1) / 2);
             utils.effects.shake(shakeIntensity);
@@ -1603,7 +1704,7 @@
           }
         },
         effects: {
-          bulletHole: function(spreadX, spreadY, point = camera, weapon = null) {
+          bulletHole: function(spreadX, spreadY, type, point = camera, weapon = null, checkDistance = false) {
             const raycaster = utils.options.get("effectsRaycaster");
             raycaster.setFromCamera({ x: spreadX, y: spreadY }, point);
             const intersects = raycaster.intersectObjects(map.children.concat(utils.players.shields));
@@ -1613,14 +1714,18 @@
                 const shield = intersect.object;
                 utils.players.hit(utils.players.objects[shield.playerUUID], shield, weapon);
               } else {
-                const size = utils.options.get("bulletHoleSize");
+                if (checkDistance) {
+                  if (camera.position.distanceTo(intersect.point) > 1) return;
+                }
+                const bulletHole = utils.options.get("bulletHoles")[type];
+                const size = bulletHole.size;
                 const normal = intersect.face.normal.clone();
                 normal.transformDirection(intersect.object.matrixWorld);
                 const rotation = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal));
                 const decalGeometry = new THREE.DecalGeometry(intersect.object, intersect.point, rotation, size);
-                const decalMesh = new THREE.Mesh(decalGeometry, utils.options.get("bulletHoleMaterial"));
+                const decalMesh = new THREE.Mesh(decalGeometry, bulletHole.material);
                 scene.add(decalMesh);
-                THREE.particles.dust(intersect.point);
+                particles.dust(intersect.point);
                 const tmpObjects = utils.options.get("tmpObjects");
                 decalMesh.objectType = "bulletHole";
                 decalMesh.timestamp = Date.now();
@@ -1653,22 +1758,28 @@
               }
             });
           },
-          bob: function() {
+          bob: function(type = 0) {
             let step = 0;
-            function next(strength = 0.001) {
-              const interval = setInterval(() => {
-                if (step > 10) {
-                  clearInterval(interval);
-                  step = 0;
-                  if (strength > 0) next(-strength);
+            let strength = 0.001;
+            function animation() {
+              if (step > 10) {
+                step = 0;
+                if (strength > 0) {
+                  strength *= -1;
+                } else {
                   return;
                 }
-                step++;
+              }
+              step++;
+              if (type == 0) {
                 camera.rotateX(strength / 3);
                 camera.rotateZ(strength);
-              });
+              } else if (type == 1) {
+                camera.rotateX(strength / 2);
+              }
+              requestAnimationFrame(animation);
             }
-            next();
+            animation();
           }
         },
         health: {
@@ -1684,34 +1795,81 @@
             utils.health.current += 0.045 / deltaTime;
             if (utils.health.current >= utils.health.max) utils.health.current = utils.health.max;
           },
-          subtract: function(amount) {
+          add: function(amount) {
+            let newHealth = utils.health.current + amount;
+            if (newHealth > 100) {
+              newHealth = 100;
+            }
+            utils.health.current = newHealth;
+            utils.ui.setHealthBar(newHealth, "short");
+          },
+          subtract: function(amount, killer) {
             const newHealth = utils.health.current - Math.round(amount);
             if (newHealth <= -20) {
-              utils.health.die();
+              utils.health.die(killer || "self");
             }
             utils.health.current = newHealth;
             utils.ui.setHealthBar(Math.max(newHealth, 0), "short");
             utils.health.lastHitTimestamp = Date.now();
             utils.health.incremented = false;
             utils.ui.hurtScreen(amount / 28);
+          },
+          die: function(killer) {
+            if (utils.options.get("DeathTime")) return;
+            utils.options.set("DeathTime", Date.now());
+            utils.options.set("Killer", killer.uuid);
+            allowedToWalk = false;
+            utils.weapons.stopWalking();
+            scene.remove(sandbox.currentWeapon);
+            utils.ui.hide();
+            camera.fov = 60;
+            camera.updateProjectionMatrix();
+            PointerControls.isLocked = false;
+            gametime.run("playerDie", [gametime.player.uuid]);
+          },
+          respawn: function() {
+            utils.options.set("DeathTime", null);
+            utils.options.set("Killer", null);
+            allowedToWalk = true;
+            const spawnPoint = sandbox.maps[sandbox.presets.map].spawnPoints[Math.floor(Math.random() * sandbox.maps[sandbox.presets.map].spawnPoints.length)];
+            playerCollider.start.set(spawnPoint[0], spawnPoint[1] + 0.35, spawnPoint[2]);
+            playerCollider.end.set(spawnPoint[0], spawnPoint[1] + 1, spawnPoint[2]);
+            camera.rotation.set(spawnPoint[3], spawnPoint[4], spawnPoint[5]);
+            utils.ui.show();
+            camera.fov = 45;
+            camera.updateProjectionMatrix();
+            PointerControls.isLocked = true;
+            sandbox.loadout[0] = sandbox.presets.loadout[0];
+            sandbox.loadout[1] = sandbox.presets.loadout[1];
+            const primaryWeapon = utils.weapons.getPrimaryEntry();
+            const secondaryWeapon = utils.weapons.getSecondaryEntry();
+            primaryWeapon.ammo = primaryWeapon.defaultAmmo;
+            secondaryWeapon.ammo = secondaryWeapon.defaultAmmo;
+            primaryWeapon.currentAmmo = primaryWeapon.maxAmmo;
+            secondaryWeapon.currentAmmo = secondaryWeapon.maxAmmo;
+            utils.weapons.switch("primary", true);
+            sandbox.grenades["mk2"] = sandbox.presets.grenades["mk2"];
+            sandbox.grenades["plasma"] = sandbox.presets.grenades["plasma"];
+            utils.health.add(100);
+            gametime.run("playerRespawn", [gametime.player.uuid, spawnPoint]);
           }
         }
       };
 
       for (let i = 0; i < sandbox.models.length; i++) {
-        new THREE.GLTFLoader(sandbox.loadingManager).load(sandbox.models[i].path, async function(model) {
-          sandbox.models[i].model = model;
-          sandbox.models[i].loaded = true;
-          scene.add(model.scene);
-          if (model.animations) {
-            sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
-          }
-          if (typeof sandbox.models[i].callback == "function") sandbox.models[i].callback(model);
-          let idSplit = sandbox.models[i].id.split(".");
-          if (idSplit[0] == "weapon") {
-            let name = idSplit[1];
-            // todo: update with selected map name
-            if (sandbox.weapons[name].requiredMaps.includes("Cargo_Port") || sandbox.loadout.includes(name)) {
+        const idSplit = sandbox.models[i].id.split(".");
+        const isWeapon = idSplit[0] == "weapon";
+        if (sandbox.models[i].requiredMaps.includes(sandbox.presets.map) || sandbox.models[i].requiredMaps == "all" || (isWeapon && sandbox.loadout.includes(idSplit[1]))) {
+          new THREE.GLTFLoader(sandbox.loadingManager).load(sandbox.models[i].path, async function(model) {
+            sandbox.models[i].model = model;
+            sandbox.models[i].loaded = true;
+            scene.add(model.scene);
+            if (model.animations) {
+              sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
+            }
+            if (typeof sandbox.models[i].callback == "function") sandbox.models[i].callback(model);
+            if (isWeapon) {
+              const name = idSplit[1];
               model.scene.traverse(child => child.frustumCulled = false);
               sandbox.weapons[name].model = model;
               sandbox.weapons[name].loaded = true;
@@ -1720,9 +1878,9 @@
               utils.images.preload("/images/crosshairs/" + sandbox.weapons[name].reticle + ".png");
               utils.effects.muzzleFlash(model.scene);
             }
-          }
-          renderer.render(scene, camera);
-        });
+            renderer.render(scene, camera);
+          });
+        }
       }
 
       sandbox.loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
@@ -1749,7 +1907,7 @@
         if (!PointerControls.isLocked) return;
         keyStates[event.code] = true;
 
-        if (!event.repeat && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) {
+        if (!event.repeat && allowedToWalk && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) {
           utils.options.set("Walking", true);
           if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
             utils.weapons.animations.stop("idle");
@@ -1774,15 +1932,7 @@
         globalRepeat = false;
         keyStates[event.code] = false;
 
-        if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) {
-          utils.options.set("Walking", false);
-          utils.weapons.stopSprint();
-          if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
-            utils.weapons.animations.stop("walk");
-            utils.weapons.animations.start("idle");
-          }
-          gametime.run("stopWalking", [gametime.player.uuid]);
-        }
+        if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) utils.weapons.stopWalking();
         if (sandbox.controls.fire.includes(event.code)) utils.weapons.stopFire();
         if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint();
       });
@@ -1812,8 +1962,16 @@
       utils.options.set("ThrowingGrenade", false);
       utils.options.set("Sprinting", false);
       utils.options.set("ReloadCallbackFunction", () => {});
-      utils.options.set("bulletHoleMaterial", new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }));
-      utils.options.set("bulletHoleSize", new THREE.Vector3(0.04, 0.04, 0.04));
+      utils.options.set("bulletHoles", {
+        0: {
+          size: new THREE.Vector3(0.04, 0.04, 0.04),
+          material: new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
+        },
+        20: {
+          size: new THREE.Vector3(0.04, 0.04, 0.04),
+          material: new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/20.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
+        }
+      });
       utils.options.set("playerCamera", camera.clone());
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("aimRaycaster", new THREE.Raycaster());
@@ -1822,6 +1980,8 @@
       utils.options.set("globalSprintTween", null);
       utils.options.set("tmpObjects", []);
       utils.options.set("CameraShake", 0);
+      utils.options.set("DeathTime", null);
+      utils.options.set("Killer", null);
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -1862,9 +2022,9 @@
           utils.players.stopRunning(utils.players.objects[player]);
         }
       });
-      gametime.on("fireWeapon", function(player, point, spreadX, spreadY) {
+      gametime.on("fireWeapon", function(player, point, spreadX, spreadY, bulletHole) {
         if (player != gametime.player.uuid) {
-          utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY);
+          utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY, bulletHole);
         }
       });
       gametime.on("reloadWeapon", function(player) {
@@ -1892,9 +2052,19 @@
           utils.players.stopCrouching(utils.players.objects[player]);
         }
       });
-      gametime.on("damage", function(player, damage) {
+      gametime.on("damage", function(player, damage, killer) {
         if (player == gametime.player.uuid) {
-          utils.health.subtract(damage);
+          utils.health.subtract(damage, utils.players.objects[killer]);
+        }
+      });
+      gametime.on("playerDie", function(player) {
+        if (player != gametime.player.uuid) {
+          utils.players.health.die(utils.players.objects[player]);
+        }
+      });
+      gametime.on("playerRespawn", function(player, spawnPoint) {
+        if (player != gametime.player.uuid) {
+          utils.players.health.respawn(utils.players.objects[player], spawnPoint);
         }
       });
     </script>
