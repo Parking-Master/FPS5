@@ -38,6 +38,8 @@
         margin: 0;
         padding: 0;
         pointer-events: none !important;
+        opacity: 1;
+        transition: opacity 0.3s;
       }
       .hurt-screen {
         position: absolute;
@@ -161,6 +163,7 @@
         border-radius: 100%;
         background: rgba(100, 100, 150, 0.2);
         box-shadow: inset 0 0 50px rgba(210, 200, 200, 0.4);
+        border: 2px solid rgba(100, 200, 255, 0.2);
         transform: perspective(500px) rotateY(10deg) rotateX(10deg);
         overflow: hidden;
       }
@@ -228,7 +231,7 @@
       let map = null;
       let playerOnFloor = false;
       let playerAgainstWall = false;
-      let allowedToWalk = true;
+      let deathScreen = false;
       const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
       const playerDefaultPosition = [13.5, 0.35, -18.5];
       const keyStates = {};
@@ -253,8 +256,6 @@
         const deltaTime = Math.min(0.05, clockDelta) / STEPS_PER_FRAME;
         const time = Date.now();
         const weapon = utils.weapons.getCurrentEntry();
-
-        teleportPlayerIfOob();
 
         for (let i = 0; i < STEPS_PER_FRAME; i++) {
           controls(deltaTime);
@@ -370,6 +371,7 @@
         return playerDirection;
       }
       function controls(deltaTime) {
+        if (deathScreen) return;
         const speedDelta = deltaTime;
         const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1.5) * (utils.options.get("Sprinting") ? 1.7 : utils.options.get("Crouching") ? 0.5 : 1);
         if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
@@ -414,6 +416,9 @@
         playerCollider.translate(deltaPosition);
         playerCollisions();
         camera.position.copy(playerCollider.end);
+        if (camera.position.y <= -40) {
+          utils.health.die("self");
+        }
       }
       function updateGrenades(deltaTime, time) {
         for (let i = 0; i < grenades.length; i++) {
@@ -499,15 +504,6 @@
           const d = (r - Math.sqrt(d2)) / 20;
           grenade1.collider.center.addScaledVector(normal, d);
           grenade2.collider.center.addScaledVector(normal, - d);
-        }
-      }
-      function teleportPlayerIfOob() {
-        if (camera.position.y <= -25) {
-          playerCollider.start.set(13.5, 0.35, -18.5);
-          playerCollider.end.set(13.5, 1, -18.5);
-          playerCollider.radius = 0.35;
-          camera.position.copy(playerCollider.end);
-          camera.rotation.set(0, Math.PI, 0);
         }
       }
 
@@ -685,6 +681,7 @@
             fireMode: "auto",
             fireRate: 100,
             range: 12,
+            recoil: 0.5,
             reticle: 0,
             bulletHole: 0,
             type: "rifle",
@@ -718,6 +715,7 @@
             fireMode: "semi",
             fireRate: 200,
             range: 16,
+            recoil: 1,
             reticle: 1,
             bulletHole: 0,
             type: "pistol",
@@ -772,7 +770,8 @@
             healthBarValue: document.querySelector(".ui .ui-health-value"),
             healthBar: document.querySelector(".ui .ui-health-bar"),
             hurtScreen: document.querySelector(".ui .hurt-screen"),
-            ui: document.querySelector(".ui")
+            ui: document.querySelector(".ui"),
+            vignette: document.querySelector(".ui .vignette"),
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -810,6 +809,12 @@
               utils.ui.cache.crosshairAimed = true;
               utils.ui.elements.crosshair.style.filter = "brightness(0) saturate(100%) invert(16%) sepia(56%) saturate(6249%) hue-rotate(356deg) brightness(99%) contrast(124%)";
             }
+          },
+          hideVignette: function() {
+            utils.ui.elements.vignette.style.opacity = "0";
+          },
+          showVignette: function() {
+            utils.ui.elements.vignette.style.opacity = "";
           },
           hide: function() {
             utils.ui.elements.ui.style.visibility = "hidden";
@@ -909,6 +914,8 @@
                   utils.ui.elements.healthBarValue.style.transition = "width 0.1s";
                 } else if (transition == "long") {
                   utils.ui.elements.healthBarValue.style.transition = "";
+                } else if (transition == "instant") {
+                  utils.ui.elements.healthBarValue.style.transition = "none";
                 }
               }
               if (value < 1) {
@@ -978,7 +985,15 @@
             });
           },
           hit: function(player, shield, weapon) {
-            if (typeof weapon.explode == "undefined") {
+            if (typeof weapon.explode != "undefined") {
+              const distance = weapon.mesh.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
+              if (distance > 4) return;
+              const realDamage = Math.min(weapon.damage / (distance / 1.3), weapon.damage);
+              utils.health.subtract(realDamage, null);
+            } else if (weapon == "melee") {
+              const realDamage = 100;
+              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid]);
+            } else {
               const realDamage = (shield.shieldType == "head" ? weapon.headshotDamage : weapon.damage) / Math.max(camera.position.distanceTo(player.scene.position) / weapon.range, 1);
               gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid]);
             }
@@ -1374,7 +1389,7 @@
                   const spreadY = spreads[roundsFired + 1];
                   utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
                   if (weapon.muzzleFlash) utils.effects.muzzleFlash();
-                  utils.effects.bob(1);
+                  utils.effects.bob(1, weapon.recoil);
 
                   roundsFired++;
                   weapon.currentAmmo--;
@@ -1420,6 +1435,7 @@
                 }
               });
               weapon.animationStructure["walk"][2] *= 5;
+              utils.ui.showVignette();
               utils.options.set("Zoomed", false);
             } else {
               utils.weapons.stopMelee();
@@ -1438,6 +1454,7 @@
                 }
               });
               weapon.animationStructure["walk"][2] /= 5;
+              utils.ui.hideVignette();
               utils.options.set("Zoomed", true);
             }
             if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
@@ -1496,6 +1513,30 @@
             function reset() {
               utils.options.set("CancelMelee", false);
               utils.options.set("Melee", false);
+            }
+            for (player in utils.players.objects) {
+              const playerObject = utils.players.objects[player];
+              if (playerObject) {
+                const playerPosition = playerObject.scene.position.clone();
+                playerPosition.y += 0.8;
+                const distance = camera.position.distanceTo(playerPosition);
+                if (distance < 2 && utils.options.get("Aiming")) {
+                  const lungeDistance = Math.max(distance - 0.7, 0);
+                  const initialPosition = camera.position.clone();
+                  camera.lookAt(playerPosition);
+                  function animation() {
+                    playerVelocity.add(getForwardVector().multiplyScalar(10));
+                    const currentDistance = camera.position.distanceTo(initialPosition);
+                    if (currentDistance >= lungeDistance - 0.2) {
+                      playerVelocity.set(0, 0, 0);
+                      utils.players.hit(playerObject, null, "melee");
+                      return;
+                    }
+                    requestAnimationFrame(animation);
+                  }
+                  animation();
+                }
+              }
             }
             utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: -0.8, y: 0.1, z: -0.2 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start().onComplete(function() {
               if (utils.options.get("CancelMelee")) return reset();
@@ -1604,11 +1645,14 @@
               const intersect = intersects[0];
               if (camera.position.distanceTo(intersect.point) < weapon.range) {
                 utils.ui.aimCrosshair();
+                utils.options.set("Aiming", true);
               } else {
                 utils.ui.unaimCrosshair();
+                utils.options.set("Aiming", false);
               }
             } else {
               utils.ui.unaimCrosshair();
+              utils.options.set("Aiming", false);
             }
           },
           update: function() {
@@ -1670,6 +1714,7 @@
             } else {
               particles.explosion(worldPosition);
             }
+            utils.players.hit(null, null, grenade);
             const shakeIntensity = 2 / (Math.max(camera.position.distanceTo(worldPosition), 1) / 2);
             utils.effects.shake(shakeIntensity);
             if (grenade.stuck) scene.add(grenade.mesh);
@@ -1699,7 +1744,8 @@
               stuck: false,
               explode: true,
               id: grenades.length,
-              multiplayerId: null
+              multiplayerId: null,
+              damage: type == "mk2" ? 100 : 130
             });
           }
         },
@@ -1758,11 +1804,12 @@
               }
             });
           },
-          bob: function(type = 0) {
+          bob: function(type = 0, intensity = 1) {
+            let maxStep = 10;
             let step = 0;
             let strength = 0.001;
             function animation() {
-              if (step > 10) {
+              if (step > maxStep) {
                 step = 0;
                 if (strength > 0) {
                   strength *= -1;
@@ -1775,7 +1822,8 @@
                 camera.rotateX(strength / 3);
                 camera.rotateZ(strength);
               } else if (type == 1) {
-                camera.rotateX(strength / 2);
+                maxStep = 2;
+                camera.rotateX(strength * 2 * intensity);
               }
               requestAnimationFrame(animation);
             }
@@ -1805,7 +1853,7 @@
           },
           subtract: function(amount, killer) {
             const newHealth = utils.health.current - Math.round(amount);
-            if (newHealth <= -20) {
+            if (newHealth <= -25) {
               utils.health.die(killer || "self");
             }
             utils.health.current = newHealth;
@@ -1814,11 +1862,20 @@
             utils.health.incremented = false;
             utils.ui.hurtScreen(amount / 28);
           },
+          reset: function() {
+            utils.health.current = 100;
+            utils.ui.setHealthBar(100, "instant");
+          },
           die: function(killer) {
+            utils.weapons.stopFire();
+            utils.weapons.stopZoom();
+            utils.weapons.stopReload();
+            utils.weapons.stopMelee();
+            utils.weapons.stopCrouch(false);
             if (utils.options.get("DeathTime")) return;
             utils.options.set("DeathTime", Date.now());
             utils.options.set("Killer", killer.uuid);
-            allowedToWalk = false;
+            deathScreen = true;
             utils.weapons.stopWalking();
             scene.remove(sandbox.currentWeapon);
             utils.ui.hide();
@@ -1830,7 +1887,7 @@
           respawn: function() {
             utils.options.set("DeathTime", null);
             utils.options.set("Killer", null);
-            allowedToWalk = true;
+            deathScreen = false;
             const spawnPoint = sandbox.maps[sandbox.presets.map].spawnPoints[Math.floor(Math.random() * sandbox.maps[sandbox.presets.map].spawnPoints.length)];
             playerCollider.start.set(spawnPoint[0], spawnPoint[1] + 0.35, spawnPoint[2]);
             playerCollider.end.set(spawnPoint[0], spawnPoint[1] + 1, spawnPoint[2]);
@@ -1850,7 +1907,7 @@
             utils.weapons.switch("primary", true);
             sandbox.grenades["mk2"] = sandbox.presets.grenades["mk2"];
             sandbox.grenades["plasma"] = sandbox.presets.grenades["plasma"];
-            utils.health.add(100);
+            utils.health.reset();
             gametime.run("playerRespawn", [gametime.player.uuid, spawnPoint]);
           }
         }
@@ -1907,7 +1964,7 @@
         if (!PointerControls.isLocked) return;
         keyStates[event.code] = true;
 
-        if (!event.repeat && allowedToWalk && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) {
+        if (!event.repeat && !deathScreen && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) {
           utils.options.set("Walking", true);
           if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
             utils.weapons.animations.stop("idle");
@@ -1915,7 +1972,7 @@
           }
           gametime.run("startWalking", [gametime.player.uuid]);
         }
-        if (!event.repeat) {
+        if (!event.repeat && !deathScreen) {
           if (sandbox.controls.fire.includes(event.code)) utils.weapons.fire();
           if (sandbox.controls.zoom.includes(event.code)) utils.weapons.zoom();
           if (sandbox.controls.reload.includes(event.code)) utils.weapons.reload();
@@ -1961,6 +2018,7 @@
       utils.options.set("Switching", false);
       utils.options.set("ThrowingGrenade", false);
       utils.options.set("Sprinting", false);
+      utils.options.set("Aiming", false);
       utils.options.set("ReloadCallbackFunction", () => {});
       utils.options.set("bulletHoles", {
         0: {
