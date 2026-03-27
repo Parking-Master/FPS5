@@ -1,6 +1,6 @@
 let bursts = [];
 let MAX_BURSTS = 20;
-let dustGeometry, dustPoints, explosionGeometry, explosionPoints, plasmaGeometry, plasmaPoints;
+let dustGeometry, dustPoints, bloodGeometry, bloodPoints, explosionGeometry, explosionPoints, plasmaGeometry, plasmaPoints;
 
 const noiseSize = 64;
 const noiseData = new Uint8Array(noiseSize * noiseSize);
@@ -37,6 +37,40 @@ let dustMaterial = new THREE.ShaderMaterial({
       
       float alpha = 0.15 * vLife * noise * (1.0 - dist * 2.0);
       vec3 dustColor = vec3(0.4, 0.4, 0.4);
+      gl_FragColor = vec4(dustColor, alpha);
+    }`,
+  transparent: true,
+  blending: THREE.NormalBlending,
+  depthWrite: false
+});
+
+let bloodMaterial = new THREE.ShaderMaterial({
+  uniforms: {},
+  vertexShader: `
+    attribute float size;
+    attribute vec3 customPosition;
+    attribute float life;
+    varying float vLife;
+    
+    void main() {
+        vLife = life;
+        vec4 pos = modelViewMatrix * vec4(customPosition, 1.0);
+        gl_PointSize = size * 40.0 * (300.0 / -pos.z);
+        gl_Position = projectionMatrix * pos;
+    }`,
+  fragmentShader: `
+    varying float vLife;
+    uniform sampler2D noiseTexture;
+    
+    void main() {
+      float dist = distance(gl_PointCoord, vec2(0.5));
+      if (dist > 0.5) discard;
+      
+      vec2 noiseCoord = gl_PointCoord * 4.0 + fract(vLife * 10.0);
+      float noise = texture2D(noiseTexture, noiseCoord).r * 0.5 + 0.5;
+      
+      float alpha = 0.15 * vLife * noise * (1.0 - dist * 2.0) * 0.6;
+      vec3 dustColor = vec3(0.4, 0.1, 0.1);
       gl_FragColor = vec4(dustColor, alpha);
     }`,
   transparent: true,
@@ -218,6 +252,27 @@ particles = {
       bursts.shift();
     }
   },
+  blood: function(position) {
+    const burst = { particles: [], material: bloodMaterial };
+    for (let i = 0; i < 20; i++) {
+      const particle = {
+        x: position.x + (Math.random() - 0.5) * 0.12,
+        y: position.y + (Math.random() - 0.5) * 0.12,
+        z: position.z + Math.random() * 0.1,
+        vx: (Math.random() - 0.5) * 0.012,
+        vy: (Math.random() - 0.4) * 0.012,
+        vz: (Math.random() - 0.4) * 0.012,
+        life: 2.0,
+        maxLife: 2.0,
+        size: 0.001 + Math.random() * 0.015
+      };
+      burst.particles.push(particle);
+    }
+    bursts.push(burst);
+    if (bursts.length > MAX_BURSTS) {
+      bursts.shift();
+    }
+  },
   explosion: function(position) {
     const burst = { particles: [], material: explosionMaterial };
     for (let i = 0; i < 80; i++) {
@@ -286,11 +341,14 @@ particles = {
       }
     }
     const dustParticles = [];
+    const bloodParticles = [];
     const explosionParticles = [];
     const plasmaParticles = [];
     for (let b = 0; b < bursts.length; b++) {
       if (bursts[b].material === dustMaterial) {
         dustParticles.push(...bursts[b].particles);
+      } else if (bursts[b].material === bloodMaterial) {
+        bloodParticles.push(...bursts[b].particles);
       } else if (bursts[b].material === explosionMaterial) {
         explosionParticles.push(...bursts[b].particles);
       } else if (bursts[b].material === plasmaMaterial) {
@@ -330,6 +388,40 @@ particles = {
       dustPoints.material.dispose();
       dustPoints = undefined;
       dustGeometry = undefined;
+    }
+    if (bloodParticles.length > 0) {
+      if (!bloodGeometry || bloodPoints === undefined) {
+        bloodGeometry = new THREE.BufferGeometry();
+        bloodPoints = new THREE.Points(bloodGeometry, bloodMaterial);
+        bloodPoints.frustumCulled = false;
+        scene.add(bloodPoints);
+      }
+      const positions = new Float32Array(bloodParticles.length * 3);
+      const sizes = new Float32Array(bloodParticles.length);
+      const lifeAttr = new Float32Array(bloodParticles.length);
+      for (let i = 0; i < bloodParticles.length; i++) {
+        const p = bloodParticles[i];
+        positions[i * 3] = p.x;
+        positions[i * 3 + 1] = p.y;
+        positions[i * 3 + 2] = p.z;
+        sizes[i] = p.size;
+        lifeAttr[i] = p.life / p.maxLife;
+      }
+      bloodGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      bloodGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+      bloodGeometry.setAttribute('customPosition', new THREE.BufferAttribute(positions, 3));
+      bloodGeometry.setAttribute('life', new THREE.BufferAttribute(lifeAttr, 1));
+      bloodGeometry.attributes.position.needsUpdate = true;
+      bloodGeometry.attributes.size.needsUpdate = true;
+      bloodGeometry.attributes.customPosition.needsUpdate = true;
+      bloodGeometry.attributes.life.needsUpdate = true;
+      bloodGeometry.computeBoundingSphere();
+    } else if (bloodPoints) {
+      scene.remove(bloodPoints);
+      bloodGeometry.dispose();
+      bloodPoints.material.dispose();
+      bloodPoints = undefined;
+      bloodGeometry = undefined;
     }
     if (explosionParticles.length > 0) {
       if (!explosionGeometry || explosionPoints === undefined) {

@@ -319,6 +319,15 @@
             } else if (object.objectType == "bulletHole") {
               scene.remove(object);
               object.geometry.dispose();
+            } else if (object.objectType == "deathPose") {
+              scene.remove(object);
+            }
+          }
+          if (object.objectType == "deathPose" && object.parentType == "camera") {
+            object.position.copy(camera.position);
+            object.position.y += -0.9;
+            if (time - object.timestamp > sandbox.presets.respawnTime * 1000) {
+              object.parentType = "player";
             }
           }
         }
@@ -334,10 +343,16 @@
           }
           const killer = utils.options.get("Killer");
           if (killer) {
+            let target = null;
+            if (killer.killType == "self") {
+              target = killer.body;
+            } else {
+              target = utils.players.objects[killer].scene;
+            }
             const targetQuaternion = new THREE.Quaternion();
-            const matrix = new THREE.Matrix4().lookAt(camera.position, utils.players.objects[killer].scene.position, camera.up);
+            const matrix = new THREE.Matrix4().lookAt(camera.position, target.position, camera.up);
             targetQuaternion.setFromRotationMatrix(matrix);
-            camera.quaternion.slerp(targetQuaternion, 0.2);
+            camera.quaternion.slerp(targetQuaternion, 0.15);
           }
         }
 
@@ -510,6 +525,7 @@
       sandbox = {
         presets: {
           map: "Cargo_Port",
+          character: "SWAT",
           respawnTime: 5,
           loadout: ["AK-74", "FN-502"],
           grenades: {
@@ -537,7 +553,7 @@
         },
         initialize: function() {
           gametime.set("player", {
-            character: "SWAT",
+            character: sandbox.presets.character,
             position: [0, 0, 0],
             rotation: [0, 0, 0],
             loadout: sandbox.loadout,
@@ -580,6 +596,16 @@
               }));
               sky.position.y = 2;
               scene.add(sky);
+            }
+          },
+          {
+            id: "deathpose",
+            path: null,
+            model: null,
+            loaded: false,
+            requiredMaps: "all",
+            callback: function(model) {
+              model.scene.traverse(child => child.frustumCulled = false);
             }
           },
           {
@@ -970,9 +996,11 @@
               playerObject.weapon = null;
               playerObject.weaponRotation = 0;
               playerObject.visibleOnRadar = false;
+              playerObject.allowedToUpdate = true;
               playerObject.uuid = player.uuid;
               utils.players.objects[player.uuid] = playerObject;
               utils.players.weapons.set(playerObject, player.data.loadout[0]);
+              playerObject.scene.getObjectByName("Death_Pose").visible = false;
               const bodyShield = playerObject.scene.getObjectByName("PlayerShield_Body");
               const headShield = playerObject.scene.getObjectByName("PlayerShield_Head");
               bodyShield.playerUUID = player.uuid;
@@ -989,7 +1017,7 @@
               const distance = weapon.mesh.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
               if (distance > 4) return;
               const realDamage = Math.min(weapon.damage / (distance / 1.3), weapon.damage);
-              utils.health.subtract(realDamage, null);
+              utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null);
             } else if (weapon == "melee") {
               const realDamage = 100;
               gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid]);
@@ -1004,22 +1032,24 @@
             gametime.update();
             for (player in gametime.players) {
               if (player != gametime.player.uuid && typeof utils.players.objects[player] !== "undefined" && utils.players.objects[player] != null) {
-                if (utils.players.objects[player].isDead) {
-                  utils.players.objects[player].visibleOnRadar = false;
-                } else {
+                if (utils.players.objects[player].allowedToUpdate) {
                   const position = gametime.players[player].data.position;
                   const rotation = gametime.players[player].data.rotation;
                   const target = new THREE.Vector3(position[0], position[1], position[2]);
                   utils.players.objects[player].scene.position.lerp(target, 0.25);
-                  utils.players.objects[player].scene.rotation.set(0, rotation[1], 0);
                   utils.players.objects[player].weaponRotation = rotation[0];
                   utils.players.objects[player].visibleOnRadar = gametime.players[player].data.visibleOnRadar;
+                  if (utils.players.objects[player].isDead) {
+                    utils.players.objects[player].visibleOnRadar = false;
+                  } else {
+                    utils.players.objects[player].scene.rotation.set(0, rotation[1], 0);
+                  }
                 }
               }
             }
           },
           animations: {
-            start: function(player, animation, options = {}) {
+            start: function(player, animation, options = {}, onfinish = null) {
               const clip = player.animationMixer.clipAction(player.animations[player.animationStructure[animation][0]]);
               clip.timeScale = options.timeScale || player.animationStructure[animation][1];
               clip.weight = options.weight || player.animationStructure[animation][2];
@@ -1033,6 +1063,20 @@
               if (options.loop) clip.loop = options.loop;
               if (options.reset) clip.reset();
               clip.play();
+
+              if (typeof onfinish == "function") {
+                let finished = false;
+                let customCallback = function(event) {
+                  if (event.action === clip) {
+                    if (finished) return;
+                    finished = true;
+                    onfinish();
+                    player.animationMixer.removeEventListener("finished", customCallback);
+                  }
+                };
+                player.animationMixer.addEventListener("finished", customCallback);
+                return customCallback;
+              }
             },
             stop: function(player, animation, options = {}) {
               const clip = player.animationMixer.clipAction(player.animations[player.animationStructure[animation][0]]);
@@ -1106,6 +1150,7 @@
               camera.rotation.set(position[3], position[4], position[5]);
               const id = utils.grenades.throw(type, true, camera, playerDirection, point);
               grenades[id].multiplayerId = grenadeId;
+              grenades[id].playerUUID = player.uuid;
             },
             explode: function(grenadeId, grenadePosition) {
               const grenade = grenades.filter(grenade => grenade.multiplayerId == grenadeId)[0];
@@ -1178,13 +1223,44 @@
           health: {
             die: function(player) {
               player.isDead = true;
-              player.scene.position.set(0, -1000, 0);
+              utils.players.animations.stop(player, "rifle_idle");
+              utils.players.animations.stop(player, "pistol_idle");
+              utils.players.animations.start(player, "death", { loop: THREE.LoopOnce, reset: true }, function() {
+                if (player.isDead) {
+                  player.allowedToUpdate = false;
+                  utils.players.createDeathPose(player);
+                  player.scene.position.set(0, -1000, 0);
+                }
+              });
             },
             respawn: function(player, spawnPoint) {
               player.isDead = false;
+              player.allowedToUpdate = true;
               player.scene.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2]);
               player.scene.rotation.set(spawnPoint[3], spawnPoint[4], spawnPoint[5]);
+            },
+          },
+          createDeathPose: function(point) {
+            let deathPose = null;
+            if (point == camera) {
+              deathPose = utils.models.get("deathpose").model.scene;
+              deathPose.parentType = "camera";
+              deathPose.rotation.y = point.rotation.y;
+            } else {
+              deathPose = point.scene.getObjectByName("Death_Pose").clone();
+              deathPose.position.copy(point.scene.position);
+              deathPose.rotation.copy(point.scene.rotation);
+              deathPose.visible = true;
+              deathPose.parentType = "player";
             }
+            scene.add(deathPose);
+            const tmpObjects = utils.options.get("tmpObjects");
+            deathPose.objectType = "deathPose";
+            deathPose.timestamp = Date.now();
+            deathPose.disposeTime = 60000;
+            tmpObjects.push(deathPose);
+            utils.options.set("tmpObjects", tmpObjects);
+            return deathPose;
           }
         },
         models: {
@@ -1726,6 +1802,7 @@
             grenade.stuck = false;
             grenade.explode = true;
             grenade.multiplayerId = null;
+            grenade.playerUUID = null;
           },
           getAvailable: function(type) {
             return grenades.filter(grenade => grenade.type == type && grenade.available)[0].id;
@@ -1745,6 +1822,7 @@
               explode: true,
               id: grenades.length,
               multiplayerId: null,
+              playerUUID: null,
               damage: type == "mk2" ? 100 : 130
             });
           }
@@ -1759,6 +1837,7 @@
               if (intersect.object.isShield && weapon != null) {
                 const shield = intersect.object;
                 utils.players.hit(utils.players.objects[shield.playerUUID], shield, weapon);
+                particles.blood(intersect.point);
               } else {
                 if (checkDistance) {
                   if (camera.position.distanceTo(intersect.point) > 1) return;
@@ -1874,7 +1953,15 @@
             utils.weapons.stopCrouch(false);
             if (utils.options.get("DeathTime")) return;
             utils.options.set("DeathTime", Date.now());
-            utils.options.set("Killer", killer.uuid);
+            const deathPose = utils.players.createDeathPose(camera);
+            if (killer == "self") {
+              utils.options.set("Killer", {
+                killType: "self",
+                body: deathPose
+              });
+            } else {
+              utils.options.set("Killer", killer.uuid);
+            }
             deathScreen = true;
             utils.weapons.stopWalking();
             scene.remove(sandbox.currentWeapon);
@@ -1917,6 +2004,7 @@
         const idSplit = sandbox.models[i].id.split(".");
         const isWeapon = idSplit[0] == "weapon";
         if (sandbox.models[i].requiredMaps.includes(sandbox.presets.map) || sandbox.models[i].requiredMaps == "all" || (isWeapon && sandbox.loadout.includes(idSplit[1]))) {
+          if (sandbox.models[i].id == "deathpose") sandbox.models[i].path = `/models/characters/death-poses/${sandbox.presets.character}.glb`;
           new THREE.GLTFLoader(sandbox.loadingManager).load(sandbox.models[i].path, async function(model) {
             sandbox.models[i].model = model;
             sandbox.models[i].loaded = true;
