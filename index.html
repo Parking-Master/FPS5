@@ -191,6 +191,7 @@
     <script src="/js/DecalGeometry.js"></script>
     <script src="/js/graphics.js"></script>
     <script src="/js/particles.js"></script>
+    <script src="/js/audio.js"></script>
     <script src="/js/Tween.js"></script>
     <script src="/js/PointerLockControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
@@ -1460,6 +1461,7 @@
                 if (Date.now() - lastFire >= weapon.fireRate) {
                   lastFire = Date.now();
                   utils.weapons.animations.start("shoot", { loop: THREE.LoopOnce, reset: true });
+                  audio.fire(weapon, roundsFired);
 
                   const spreadX = spreads[roundsFired];
                   const spreadY = spreads[roundsFired + 1];
@@ -1551,8 +1553,10 @@
             let animation = null;
             if (full) {
               animation = "reload_full";
+              audio.reload(weapon, "full");
             } else {
               animation = "reload";
+              audio.reload(weapon, "normal");
             }
             const callbackFunction = utils.weapons.animations.start(animation, { loop: THREE.LoopOnce, reset: true }, function() {
               const weapon = utils.weapons.getCurrentEntry();
@@ -1596,7 +1600,7 @@
                 const playerPosition = playerObject.scene.position.clone();
                 playerPosition.y += 0.8;
                 const distance = camera.position.distanceTo(playerPosition);
-                if (distance < 2 && utils.options.get("Aiming")) {
+                if (distance < 2.5 && utils.options.get("Aiming")) {
                   const lungeDistance = Math.max(distance - 0.7, 0);
                   const initialPosition = camera.position.clone();
                   camera.lookAt(playerPosition);
@@ -1966,7 +1970,7 @@
             utils.weapons.stopWalking();
             scene.remove(sandbox.currentWeapon);
             utils.ui.hide();
-            camera.fov = 60;
+            camera.fov = 70;
             camera.updateProjectionMatrix();
             PointerControls.isLocked = false;
             gametime.run("playerDie", [gametime.player.uuid]);
