@@ -6,7 +6,7 @@ const AudioWrapper = function(src, alias = false) {
   let mainWrapper = null;
   let steps = 1;
   if (alias) steps = 2;
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < steps; i++) {
     const wrapper = {
       buffer: null,
       source: null,
@@ -92,6 +92,9 @@ audio.sounds = {
   "reload.AK-74.normal": AudioWrapper("/sounds/weapons/reloading/AK-74.mp3"),
   "reload.AK-74.full": AudioWrapper("/sounds/weapons/reloading/AK-74.full.mp3"),
   "fire.AK-74": AudioWrapper("/sounds/weapons/shooting/AK-74.mp3", true),
+  "reload.FN-502.normal": AudioWrapper("/sounds/weapons/reloading/FN-502.mp3"),
+  "reload.FN-502.full": AudioWrapper("/sounds/weapons/reloading/FN-502.full.mp3"),
+  "fire.FN-502": AudioWrapper("/sounds/weapons/shooting/FN-502.mp3"),
 };
 
 document.addEventListener("touchstart", () => {
