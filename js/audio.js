@@ -95,6 +95,9 @@ audio.sounds = {
   "reload.FN-502.normal": AudioWrapper("/sounds/weapons/reloading/FN-502.mp3"),
   "reload.FN-502.full": AudioWrapper("/sounds/weapons/reloading/FN-502.full.mp3"),
   "fire.FN-502": AudioWrapper("/sounds/weapons/shooting/FN-502.mp3"),
+  "reload.SCAR-H.normal": AudioWrapper("/sounds/weapons/reloading/SCAR-H.mp3"),
+  "reload.SCAR-H.full": AudioWrapper("/sounds/weapons/reloading/SCAR-H.full.mp3"),
+  "fire.SCAR-H": AudioWrapper("/sounds/weapons/shooting/SCAR-H.mp3", true),
 };
 
 document.addEventListener("touchstart", () => {
