@@ -525,7 +525,7 @@
 
       sandbox = {
         presets: {
-          map: "Cargo_Port",
+          map: "Lihid",
           character: "SWAT",
           respawnTime: 5,
           loadout: ["30-SST", "SCAR-H"],
@@ -600,6 +600,35 @@
             }
           },
           {
+            id: "map",
+            path: "/models/maps/Lihid.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            requiredMaps: ["Lihid"],
+            callback: function(model) {
+              map = model.scene;
+              worldOctree.fromGraphNode(map);
+              map.traverse(child => {
+                child.frustumCulled = false;
+                if (child.isMesh) {
+                  child.castShadow = true;
+                  child.receiveShadow = true;
+                  if (child.material.map) {
+                    child.material.map.anisotropy = 4;
+                  }
+                }
+              });
+              sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
+                color: 0xf9c886,
+                map: new THREE.TextureLoader().load("/images/assets/skies/1.png"),
+                side: THREE.BackSide
+              }));
+              sky.position.y = 2;
+              scene.add(sky);
+            }
+          },
+          {
             id: "deathpose",
             path: null,
             model: null,
@@ -614,28 +643,28 @@
             path: "/models/weapons/AK-74.glb",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"]
+            requiredMaps: []
           },
           {
             id: "weapon.FN-502",
             path: "/models/weapons/FN-502.glb",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"]
+            requiredMaps: []
           },
           {
             id: "weapon.SCAR-H",
             path: "/models/weapons/SCAR-H.glb",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"]
+            requiredMaps: []
           },
           {
             id: "weapon.30-SST",
             path: "/models/weapons/30-SST.glb",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"]
+            requiredMaps: []
           },
           {
             id: "grenade.MK2",
@@ -715,6 +744,31 @@
               [-5, 0, -9.3, 0, 3.141592653589793, 0],
               [-9.1, 0, 2.7, 0, -1.5707963267948966, 0],
               [8, 0, 3.2, 0, 3.141592653589793, 0]
+            ]
+          },
+          "Lihid": {
+            spawnPoints: [
+              [15.7, -0.2, -17.5, 0, 3.141592653589793, 0], 
+              [15.5, 0.2, -25.3, 0, 3.141592653589793, 0], 
+              [4.9, -0.2, -20.3, 0, -1.5707963267948966, 0], 
+              [5.9, -1.5, -6.1, 0, 1.5707963267948966, 0], 
+              [-4.2, -3.2, -3, 0, 1.5707963267948966, 0], 
+              [-14.9, -3, -4, 0, -1.5707963267948966, 0], 
+              [-28.5, -1.1, -1.3, 0, -1.5707963267948966, 0], 
+              [-22.5, -1.5, -7.5, 0, 0, 0], 
+              [-19.7, -1.5, -21.8, 0, 1.5707963267948966, 0], 
+              [-25.9, -1.1, -24.3, 0, 3.141592653589793, 0], 
+              [-5.8, -3.1, -17.1, 0, 3.141592653589793, 0], 
+              [3, -3.2, -17.4, 0, 3.141592653589793, 0], 
+              [23, -0.8, -12.1, 0, 1.5707963267948966, 0], 
+              [22.6, -0.6, 7.4, 0, 1.5707963267948966, 0], 
+              [13.6, -1.5, -0.2, 0, 3.141592653589793, 0], 
+              [8, -1.5, 2.2, 0, -1.5707963267948966, 0], 
+              [8.9, -1.5, 7.6, 0, 1.5707963267948966, 0], 
+              [-20.9, 0.2, 17.8, 0, 3.141592653589793, 0], 
+              [-20.9, 0.2, 26.6, 0, 0, 0], 
+              [-28.6, 0.2, 22.9, 0, -1.5707963267948966, 0], 
+              [-19.9, -1.1, 5.8, 0, 3.141592653589793, 0]
             ]
           }
         },
@@ -895,6 +949,8 @@
             hurtScreen: document.querySelector(".ui .hurt-screen"),
             ui: document.querySelector(".ui"),
             vignette: document.querySelector(".ui .vignette"),
+            primaryWeaponDisplay: document.querySelector(".ui .ui-primary-weapon-display"),
+            secondaryWeaponDisplay: document.querySelector(".ui .ui-secondary-weapon-display")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -950,6 +1006,12 @@
               utils.ui.cache.crosshairAimed = false;
               utils.ui.elements.crosshair.style.filter = "";
             }
+          },
+          setPrimaryDisplay: function(weapon) {
+            utils.ui.elements.primaryWeaponDisplay.src = "/images/weapons/" + weapon + ".png";
+          },
+          setSecondaryDisplay: function(weapon) {
+            utils.ui.elements.secondaryWeaponDisplay.src = "/images/weapons/" + weapon + ".png";
           },
           radar: {
             init: function(radarRange = 18) {
@@ -1379,7 +1441,8 @@
           animations: {
             start: function(animation, options = {}, onfinish = null) {
               const weapon = utils.weapons.getCurrentEntry();
-              const clip = weapon.model.animationMixer.clipAction(weapon.model.animations[weapon.animationStructure[animation][0]]);
+              const action = weapon.model.animations[weapon.animationStructure[animation][0]]
+              const clip = weapon.model.animationMixer.clipAction(action);
               clip.timeScale = options.timeScale || weapon.animationStructure[animation][1];
               clip.weight = weapon.animationStructure[animation][2];
 
@@ -1397,7 +1460,7 @@
               if (typeof onfinish == "function") {
                 let finished = false;
                 let customCallback = function(event) {
-                  if (event.action === clip) {
+                  if (typeof event == "undefined" || event.action === clip) {
                     if (finished) return;
                     finished = true;
                     onfinish();
@@ -1405,7 +1468,10 @@
                   }
                 };
                 weapon.model.animationMixer.addEventListener("finished", customCallback);
+                if (options.returnAnimationLength) return { _function: customCallback, animationLength: action.duration / clip.timeScale };
                 return customCallback;
+              } else {
+                if (options.returnAnimationLength) return action.duration / clip.timeScale;
               }
             },
             stop: function(animation, options = {}) {
@@ -1504,8 +1570,12 @@
               scene.remove(sandbox.currentWeapon);
               if (slot == "primary") {
                 utils.weapons.setCurrent(sandbox.primaryWeapon);
+                utils.ui.setPrimaryDisplay(utils.weapons.getPrimaryEntry().name);
+                utils.ui.setSecondaryDisplay(utils.weapons.getSecondaryEntry().name);
               } else if (slot == "secondary") {
                 utils.weapons.setCurrent(sandbox.secondaryWeapon);
+                utils.ui.setPrimaryDisplay(utils.weapons.getSecondaryEntry().name);
+                utils.ui.setSecondaryDisplay(utils.weapons.getPrimaryEntry().name);
               }
               utils.weapons.animations.start("idle");
               scene.add(sandbox.currentWeapon);
@@ -1654,7 +1724,7 @@
               animation = "reload";
               audio.reload(weapon, "normal");
             }
-            const callbackFunction = utils.weapons.animations.start(animation, { loop: THREE.LoopOnce, reset: true }, function() {
+            const callback = utils.weapons.animations.start(animation, { loop: THREE.LoopOnce, reset: true, returnAnimationLength: true }, function() {
               const weapon = utils.weapons.getCurrentEntry();
               const ammo = weapon.ammo;
               weapon.ammo = Math.max(weapon.ammo - (weapon.maxAmmo - weapon.currentAmmo), 0);
@@ -1666,12 +1736,18 @@
                 utils.weapons.animations.start("idle");
               }
             });
-            utils.options.set("ReloadCallbackFunction", callbackFunction);
+            utils.options.set("ReloadCallback", {
+              startTime: Date.now(),
+              totalTime: callback.animationLength * 1000,
+              _function: callback._function
+            });
             gametime.run("reloadWeapon", [gametime.player.uuid]);
           },
           stopReload: function() {
             if (utils.options.get("Reloading")) {
-              utils.weapons.animations.cancelCallback(utils.options.get("ReloadCallbackFunction"));
+              const reloadCallback = utils.options.get("ReloadCallback");
+              if (Date.now() - reloadCallback.startTime > reloadCallback.totalTime - 800) reloadCallback._function();
+              utils.weapons.animations.cancelCallback(reloadCallback._function);
               utils.weapons.animations.stop("reload");
               utils.weapons.animations.stop("reload_full");
               utils.options.set("Reloading", false);
@@ -2132,7 +2208,7 @@
         const progress = itemsLoaded / itemsTotal;
         if (progress >= 1) {
           sandbox.models.forEach(model => {
-            if (typeof model.removeAfterLoaded == "undefined") scene.remove(model.model.scene);
+            if (typeof model.removeAfterLoaded == "undefined" && model.model) scene.remove(model.model.scene);
           });
           sandbox.initialize();
         }
@@ -2207,7 +2283,7 @@
       utils.options.set("ThrowingGrenade", false);
       utils.options.set("Sprinting", false);
       utils.options.set("Aiming", false);
-      utils.options.set("ReloadCallbackFunction", () => {});
+      utils.options.set("ReloadCallback", {});
       utils.options.set("bulletHoles", {
         0: {
           size: new THREE.Vector3(0.04, 0.04, 0.04),
