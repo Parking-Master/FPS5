@@ -67,8 +67,30 @@ const AudioWrapper = function(src, alias = false) {
   return mainWrapper;
 };
 
+const AudioWrapper3d = function(src) {
+  let mainWrapper = {};
+  new THREE.AudioLoader().load(src, buffer => {
+    const sound = new THREE.PositionalAudio(camera.audioListener);
+    sound.setBuffer(buffer);
+    scene.add(sound);
+    mainWrapper.sound = sound;
+  });
+  return mainWrapper;
+}
+
 audio = {
   ctx: new (window.AudioContext || window.webkitAudioContext)(),
+  initialize: function() {
+    const listener = new THREE.AudioListener();
+    scene.add(listener);
+    camera.audioListener = listener;
+  },
+  update: function() {
+    if (typeof camera.audioListener != "undefined") {
+      camera.audioListener.position.copy(camera.position);
+      camera.audioListener.rotation.copy(camera.rotation);
+    }
+  },
   reload: function(weapon, type = "normal") {
     const sound = audio.sounds[`reload.${weapon.name}.${type}`];
     sound.pause();
@@ -85,7 +107,22 @@ audio = {
     sound.pause();
     sound.currentTime = 0;
     sound.play();
-  }
+  },
+  grenadeHit: function(position) {
+    if (Date.now() - grenade.lastHitTimestamp < 200) return;
+    grenade.lastHitTimestamp = Date.now();
+    const sound = audio.sounds["grenade.hit.0"].sound;
+    sound.position.copy(position);
+    if (sound.source) sound.stop();
+    sound.play();
+  },
+  grenadeExplosion: function(position) {
+    const sound = audio.sounds["grenade.explosion.0"].sound;
+    sound.position.copy(position);
+    sound.setVolume(5);
+    if (sound.source) sound.stop();
+    sound.play();
+  },
 };
 
 audio.sounds = {
@@ -101,6 +138,8 @@ audio.sounds = {
   "reload.30-SST.normal": AudioWrapper("/sounds/weapons/reloading/30-SST.mp3"),
   "reload.30-SST.full": AudioWrapper("/sounds/weapons/reloading/30-SST.full.mp3"),
   "fire.30-SST": AudioWrapper("/sounds/weapons/shooting/30-SST.mp3", true),
+  "grenade.hit.0": AudioWrapper3d("/sounds/grenades/hits/0.mp3"),
+  "grenade.explosion.0": AudioWrapper3d("/sounds/grenades/explosions/0.mp3")
 };
 
 document.addEventListener("touchstart", () => {
