@@ -67,16 +67,27 @@ const AudioWrapper = function(src, alias = false) {
   return mainWrapper;
 };
 
-const AudioWrapper3d = function(src) {
+const AudioWrapper3d = function(src, alias = false) {
   let mainWrapper = {};
   new THREE.AudioLoader().load(src, buffer => {
-    const sound = new THREE.PositionalAudio(camera.audioListener);
-    sound.setBuffer(buffer);
-    scene.add(sound);
-    mainWrapper.sound = sound;
+    let steps = 1;
+    if (alias) steps = 2;
+    for (let i = 0; i < steps; i++) {
+      const sound = new THREE.PositionalAudio(camera.audioListener);
+      sound.setBuffer(buffer);
+      scene.add(sound);
+      if (i == 0) {
+        mainWrapper.sound = sound;
+      } else {
+        mainWrapper.sound.alias = sound;
+
+      }
+    }
   });
   return mainWrapper;
 }
+
+let currentExplodeSound = 0;
 
 audio = {
   ctx: new (window.AudioContext || window.webkitAudioContext)(),
@@ -116,12 +127,27 @@ audio = {
     if (sound.source) sound.stop();
     sound.play();
   },
-  grenadeExplosion: function(position) {
-    const sound = audio.sounds["grenade.explosion.0"].sound;
-    sound.position.copy(position);
-    sound.setVolume(5);
-    if (sound.source) sound.stop();
-    sound.play();
+  grenadeExplosion: function(position, type) {
+    if (type == "mk2") {
+      let sound = null;
+      if ((currentExplodeSound + 1) % 2 == 0) {
+        sound = audio.sounds["grenade.explosion.mk2"].sound.alias;
+      } else {
+        sound = audio.sounds["grenade.explosion.mk2"].sound;
+      }
+      currentExplodeSound++;
+      sound.position.copy(position);
+      sound.setVolume(7);
+      if (sound.source) sound.stop();
+      sound.play();
+    } else if (type == "plasma") {
+      const sound = audio.sounds[`grenade.explosion.plasma.${(currentExplodeSound + 1) % 2}`].sound;
+      currentExplodeSound++;
+      sound.position.copy(position);
+      sound.setVolume(7);
+      if (sound.source) sound.stop();
+      sound.play();
+    }
   },
 };
 
@@ -139,7 +165,9 @@ audio.sounds = {
   "reload.30-SST.full": AudioWrapper("/sounds/weapons/reloading/30-SST.full.mp3"),
   "fire.30-SST": AudioWrapper("/sounds/weapons/shooting/30-SST.mp3", true),
   "grenade.hit.0": AudioWrapper3d("/sounds/grenades/hits/0.mp3"),
-  "grenade.explosion.0": AudioWrapper3d("/sounds/grenades/explosions/0.mp3")
+  "grenade.explosion.mk2": AudioWrapper3d("/sounds/grenades/explosions/0.mp3", true),
+  "grenade.explosion.plasma.0": AudioWrapper3d("/sounds/grenades/explosions/1.mp3"),
+  "grenade.explosion.plasma.1": AudioWrapper3d("/sounds/grenades/explosions/2.mp3")
 };
 
 document.addEventListener("touchstart", () => {

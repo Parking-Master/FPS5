@@ -460,12 +460,13 @@
           if (result) {
             grenade.hits++;
             grenade.velocity.addScaledVector(result.normal, -result.normal.dot(grenade.velocity) * 1.8);
-            if (result.normal.x <= 0 || result.normal.y <= 0 || result.normal.z <= 0) {
-              grenade.collided = true;
-            }
-            if (grenade.collided || grenade.hits == 1) {
-              grenade.collided = false;
-              audio.grenadeHit(grenade.mesh.position);
+
+            if (grenade.type == "mk2") {
+              grenade.doSound = true;
+              if (grenade.doSound && !grenade.didSound && grenade.hits < 8) {
+                grenade.didSound = true;
+                audio.grenadeHit(grenade.mesh.position);
+              }
             }
 
             if (grenade.timestamp == null) {
@@ -478,6 +479,8 @@
             grenade.collider.center.add(result.normal.multiplyScalar(result.depth));
           } else {
             grenade.velocity.y -= (GRAVITY * deltaTime + 0.01) * 1.8;
+            grenade.didSound = false;
+            grenade.doSound = false;
           }
           const damping = (Math.exp(deltaTime * -2.3) - 1.003) / 1.2;
           grenade.velocity.addScaledVector(grenade.velocity, damping);
@@ -1975,7 +1978,7 @@
             } else {
               particles.explosion(worldPosition);
             }
-            audio.grenadeExplosion(worldPosition);
+            audio.grenadeExplosion(worldPosition, grenade.type);
             utils.players.hit(null, null, grenade);
             const shakeIntensity = 2 / (Math.max(camera.position.distanceTo(worldPosition), 1) / 2);
             utils.effects.shake(shakeIntensity);
@@ -1985,8 +1988,11 @@
             grenade.available = true;
             grenade.hits = 0;
             grenade.timestamp = null;
+            grenade.lastHitTimestamp = null;
             grenade.stuck = false;
             grenade.explode = true;
+            grenade.didSound = false;
+            grenade.doSound = false;
             grenade.multiplayerId = null;
             grenade.playerUUID = null;
           },
@@ -2002,12 +2008,13 @@
               angularVelocity: new THREE.Vector3(),
               available: true,
               hits: 0,
-              collided: false,
               timestamp: null,
               lastHitTimestamp: null,
               explodeTime: 1500,
               stuck: false,
               explode: true,
+              didSound: false,
+              doSound: false,
               id: grenades.length,
               multiplayerId: null,
               playerUUID: null,
