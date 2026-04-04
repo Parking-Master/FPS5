@@ -369,6 +369,11 @@
           console.log('FPS:', fps.toFixed(1));
         }
 
+        if (weapon.scope && utils.options.get("Zoomed")) {
+          renderer.setRenderTarget(utils.options.get("scopeRenderTarget"));
+          renderer.render(scene, sandbox.currentWeapon.getObjectByName("LensCamera"));
+          renderer.setRenderTarget(null);
+        }
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
       }
@@ -540,13 +545,13 @@
           map: "Lihid",
           character: "SWAT",
           respawnTime: 5,
-          loadout: ["30-SST", "SCAR-H"],
+          loadout: ["HK-G28", "SCAR-H"],
           grenades: {
             "mk2": 2,
             "plasma": 0
           }
         },
-        loadout: ["30-SST", "SCAR-H"],
+        loadout: ["HK-G28", "SCAR-H"],
         grenades: {
           "mk2": 2,
           "plasma": 0
@@ -679,6 +684,13 @@
             requiredMaps: []
           },
           {
+            id: "weapon.HK-G28",
+            path: "/models/weapons/HK-G28.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
             id: "grenade.MK2",
             path: "/models/weapons/grenades/MK2.glb",
             model: null,
@@ -735,6 +747,13 @@
           },
           {
             id: "propweapon.30-SST",
+            path: "/models/characters/weapons/30-SST.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: "all"
+          },
+          {
+            id: "propweapon.HK-G28",
             path: "/models/characters/weapons/30-SST.glb",
             model: null,
             loaded: false,
@@ -919,6 +938,41 @@
               shoot: [6, 1, 1],
               throw: [8, 1.4, 1],
               walk: [7, 1.2, 1]
+            }
+          },
+          "HK-G28": {
+            name: "HK-G28",
+            displayName: "Sniper Rifle HK-G28",
+            ammo: 8,
+            defaultAmmo: 8,
+            currentAmmo: 4,
+            maxAmmo: 4,
+            damage: 100,
+            headshotDamage: 200,
+            spread: 0.1,
+            muzzleFlash: false,
+            zoomPosition: [0.232, 0.06, -0.15, 0.05, -0.055, 0],
+            zoomFov: 40,
+            zoomDuration: 200,
+            fireMode: "semi",
+            fireRate: 200,
+            range: 60,
+            recoil: 2,
+            reticle: 1,
+            bulletHole: 0,
+            scope: true,
+            type: "rifle",
+            model: null,
+            loaded: false,
+            requiredMaps: ["Cargo_Port"],
+            animationStructure: {
+              idle: [0, 1, 1],
+              walk: [1, 1, 0.5],
+              shoot: [2, 1, 1],
+              reload: [3, 1, 1],
+              reload_full: [4, 1, 1],
+              run: [1, 1.5, 0.5],
+              throw: [2, 1.4, 1],
             }
           }
         }
@@ -2216,7 +2270,13 @@
               if (name == sandbox.loadout[0]) utils.weapons.setPrimary(model.scene);
               if (name == sandbox.loadout[1]) utils.weapons.setSecondary(model.scene);
               utils.images.preload("/images/crosshairs/" + sandbox.weapons[name].reticle + ".png");
-              utils.effects.muzzleFlash(model.scene);
+              if (sandbox.weapons[name].muzzleFlash) utils.effects.muzzleFlash(model.scene);
+              if (sandbox.weapons[name].scope) {
+                const lensCamera = model.scene.getObjectByName("LensCamera");
+                lensCamera.aspect = 1;
+                lensCamera.updateProjectionMatrix();
+                model.scene.getObjectByName("Lens").material.map = utils.options.get("scopeRenderTarget").texture;
+              }
             }
             renderer.render(scene, camera);
           });
@@ -2314,6 +2374,7 @@
         }
       });
       utils.options.set("playerCamera", camera.clone());
+      utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(500, 500));
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("aimRaycaster", new THREE.Raycaster());
       utils.options.set("globalZoomTween", null);
