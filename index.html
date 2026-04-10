@@ -369,10 +369,16 @@
           console.log('FPS:', fps.toFixed(1));
         }
 
-        if (weapon.scope && utils.options.get("Zoomed")) {
-          renderer.setRenderTarget(utils.options.get("scopeRenderTarget"));
-          renderer.render(scene, sandbox.currentWeapon.getObjectByName("LensCamera"));
-          renderer.setRenderTarget(null);
+        if (weapon.scope) {
+          if (utils.options.get("Zoomed") || !weapon.scopeRendered) {
+            if (!weapon.scopeRendered) {
+              weapon.scopeRendered = true;
+              sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x000000);
+            }
+            renderer.setRenderTarget(utils.options.get("scopeRenderTarget"));
+            renderer.render(scene, sandbox.currentWeapon.getObjectByName("LensCamera"));
+            renderer.setRenderTarget(null);
+          }
         }
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
@@ -950,8 +956,8 @@
             damage: 100,
             headshotDamage: 200,
             spread: 0.1,
-            muzzleFlash: false,
-            zoomPosition: [0.232, 0.06, -0.15, 0.05, -0.055, 0],
+            muzzleFlash: true,
+            zoomPosition: [0.0435, 0.014, -0.04, 0.05, -0.055, 0],
             zoomFov: 40,
             zoomDuration: 200,
             fireMode: "semi",
@@ -961,18 +967,21 @@
             reticle: 1,
             bulletHole: 0,
             scope: true,
+            scopeRendered: false,
+            delayBetweenShots: 700,
+            lastShot: null,
             type: "rifle",
             model: null,
             loaded: false,
             requiredMaps: ["Cargo_Port"],
             animationStructure: {
-              idle: [0, 1, 1],
-              walk: [1, 1, 0.5],
-              shoot: [2, 1, 1],
-              reload: [3, 1, 1],
-              reload_full: [4, 1, 1],
-              run: [1, 1.5, 0.5],
-              throw: [2, 1.4, 1],
+              shoot: [0, 0.8, 1],
+              idle: [1, 1, 1],
+              reload: [2, 0.9, 1],
+              reload_full: [3, 0.9, 1],
+              walk: [4, 1, 0.5],
+              run: [4, 1.5, 0.5],
+              throw: [2, 1.4, 1]
             }
           }
         }
@@ -1675,6 +1684,7 @@
           fire: function(rounds = 1) {
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("Switching") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || weapon.currentAmmo <= 0) return;
+            if (Date.now() - weapon.lastShot < weapon.delayBetweenShots) return;
             utils.options.set("Firing", true);
             utils.options.set("ContinueFiring", true);
             utils.weapons.stopSprint();
@@ -1692,13 +1702,18 @@
               if (roundsFired < rounds && weapon.currentAmmo > 0 && utils.options.get("ContinueFiring")) {
                 if (Date.now() - lastFire >= weapon.fireRate) {
                   lastFire = Date.now();
+                  if (weapon.delayBetweenShots) weapon.lastShot = Date.now();
                   utils.weapons.animations.start("shoot", { loop: THREE.LoopOnce, reset: true });
                   audio.fire(weapon, roundsFired);
 
                   const spreadX = spreads[roundsFired];
                   const spreadY = spreads[roundsFired + 1];
                   utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
-                  if (weapon.muzzleFlash) utils.effects.muzzleFlash();
+                  if (weapon.muzzleFlash) {
+                    if (!weapon.scope || !utils.options.get("Zoomed")) {
+                      utils.effects.muzzleFlash();
+                    }
+                  }
                   utils.effects.bob(1, weapon.recoil);
 
                   roundsFired++;
@@ -1746,6 +1761,9 @@
               });
               weapon.animationStructure["walk"][2] *= 5;
               utils.ui.showVignette();
+              if (weapon.scope) {
+                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x000000);
+              }
               utils.options.set("Zoomed", false);
             } else {
               utils.weapons.stopMelee();
@@ -1765,6 +1783,9 @@
               });
               weapon.animationStructure["walk"][2] /= 5;
               utils.ui.hideVignette();
+              if (weapon.scope) {
+                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0xaaaaff);
+              }
               utils.options.set("Zoomed", true);
             }
             if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
@@ -2374,7 +2395,7 @@
         }
       });
       utils.options.set("playerCamera", camera.clone());
-      utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(500, 500));
+      utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(300, 300));
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("aimRaycaster", new THREE.Raycaster());
       utils.options.set("globalZoomTween", null);
