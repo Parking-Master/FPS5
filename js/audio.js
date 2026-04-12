@@ -164,6 +164,8 @@ audio.sounds = {
   "reload.30-SST.normal": AudioWrapper("/sounds/weapons/reloading/30-SST.mp3"),
   "reload.30-SST.full": AudioWrapper("/sounds/weapons/reloading/30-SST.full.mp3"),
   "fire.30-SST": AudioWrapper("/sounds/weapons/shooting/30-SST.mp3", true),
+  "reload.HK-G28.normal": AudioWrapper("/sounds/weapons/reloading/HK-G28.mp3"),
+  "reload.HK-G28.full": AudioWrapper("/sounds/weapons/reloading/HK-G28.full.mp3"),
   "fire.HK-G28": AudioWrapper("/sounds/weapons/shooting/HK-G28.mp3"),
   "grenade.hit.0": AudioWrapper3d("/sounds/grenades/hits/0.mp3"),
   "grenade.explosion.mk2": AudioWrapper3d("/sounds/grenades/explosions/0.mp3", true),

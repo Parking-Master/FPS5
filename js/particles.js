@@ -231,7 +231,7 @@ let plasmaMaterial = new THREE.ShaderMaterial({
 });
 
 particles = {
-  dust: function(position) {
+  dust: function(position, size = 1) {
     const burst = { particles: [], material: dustMaterial };
     for (let i = 0; i < 20; i++) {
       const particle = {
@@ -243,7 +243,7 @@ particles = {
         vz: (Math.random() - 0.4) * 0.06,
         life: 4.0,
         maxLife: 4.0,
-        size: 0.01 + Math.random() * 0.015
+        size: 0.01 + Math.random() * 0.015 * size
       };
       burst.particles.push(particle);
     }

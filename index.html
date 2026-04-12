@@ -373,7 +373,7 @@
           if (utils.options.get("Zoomed") || !weapon.scopeRendered) {
             if (!weapon.scopeRendered) {
               weapon.scopeRendered = true;
-              sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x000000);
+              sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x2154f0);
             }
             renderer.setRenderTarget(utils.options.get("scopeRenderTarget"));
             renderer.render(scene, sandbox.currentWeapon.getObjectByName("LensCamera"));
@@ -454,9 +454,14 @@
         for (let i = 0; i < grenades.length; i++) {
           const grenade = grenades[i];
 
-          if (!grenade.available && grenade.hits > 0) {
-            if (time - grenade.timestamp > grenade.explodeTime && grenade.explode) {
-              utils.grenades.explode(grenade);
+          if (!grenade.available) {
+            if (grenade.smoke && time % 3 == 0) {
+              particles.dust(grenade.mesh.position, 0.1);
+            }
+            if (grenade.hits > 0) {
+              if (time - grenade.timestamp > grenade.explodeTime && grenade.explode) {
+                utils.grenades.explode(grenade);
+              }
             }
           }
 
@@ -548,7 +553,7 @@
 
       sandbox = {
         presets: {
-          map: "Lihid",
+          map: "Cargo_Port",
           character: "SWAT",
           respawnTime: 5,
           loadout: ["HK-G28", "SCAR-H"],
@@ -703,7 +708,7 @@
             loaded: false,
             requiredMaps: "all",
             callback: function(model) {
-              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xff8888, opacity: 0.6, map: new THREE.TextureLoader().load("/images/assets/glow/0.png"), sizeAttenuation: true }));
+              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xff8888, opacity: 0.6, map: new THREE.TextureLoader().load("/images/assets/glow/0.png"), sizeAttenuation: true, depthWrite: false }));
               glow.scale.set(0.3, 0.3, 0.3);
               model.scene.add(glow);
               for (let i = 0; i < 6; i++) {
@@ -720,8 +725,8 @@
             loaded: false,
             requiredMaps: "all",
             callback: function(model) {
-              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x1551ff, opacity: 1, map: new THREE.TextureLoader().load("/images/assets/glow/0.png"), sizeAttenuation: true }));
-              glow.scale.set(0.6, 0.6, 0.6);
+              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xffffff, opacity: 1, map: new THREE.TextureLoader().load("/images/assets/glow/2.png"), sizeAttenuation: true, depthTest: false, depthWrite: false }));
+              glow.scale.set(0.5, 0.5, 0.5);
               model.scene.add(glow);
               for (let i = 0; i < 6; i++) {
                 const grenade = model.scene.clone();
@@ -964,7 +969,7 @@
             fireRate: 200,
             range: 60,
             recoil: 2,
-            reticle: 1,
+            reticle: 4,
             bulletHole: 0,
             scope: true,
             scopeRendered: false,
@@ -977,8 +982,8 @@
             animationStructure: {
               shoot: [0, 0.8, 1],
               idle: [1, 1, 1],
-              reload: [2, 0.9, 1],
-              reload_full: [3, 0.9, 1],
+              reload: [2, 0.8, 1],
+              reload_full: [3, 0.8, 1],
               walk: [4, 1, 0.5],
               run: [4, 1.5, 0.5],
               throw: [2, 1.4, 1]
@@ -1762,7 +1767,7 @@
               weapon.animationStructure["walk"][2] *= 5;
               utils.ui.showVignette();
               if (weapon.scope) {
-                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x000000);
+                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x2154f0);
               }
               utils.options.set("Zoomed", false);
             } else {
@@ -1784,7 +1789,7 @@
               weapon.animationStructure["walk"][2] /= 5;
               utils.ui.hideVignette();
               if (weapon.scope) {
-                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0xaaaaff);
+                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x5489ff);
               }
               utils.options.set("Zoomed", true);
             }
@@ -2093,7 +2098,8 @@
               id: grenades.length,
               multiplayerId: null,
               playerUUID: null,
-              damage: type == "mk2" ? 100 : 130
+              damage: type == "mk2" ? 100 : 130,
+              smoke: type == "mk2" ? true : false
             });
           }
         },
@@ -2395,7 +2401,7 @@
         }
       });
       utils.options.set("playerCamera", camera.clone());
-      utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(300, 300));
+      utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(250, 250));
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("aimRaycaster", new THREE.Raycaster());
       utils.options.set("globalZoomTween", null);
