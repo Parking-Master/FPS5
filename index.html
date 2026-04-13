@@ -52,8 +52,6 @@
         margin: 0;
         padding: 0;
         pointer-events: none !important;
-        transition: opacity 0.1s;
-        opacity: 0;
       }
       .crosshair {
         position: absolute;
@@ -195,9 +193,9 @@
     <script src="/js/Tween.js"></script>
     <script src="/js/PointerLockControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
+    <div class="hurt-screen"></div>
     <div class="ui" id="game-ui">
       <img class="vignette" src="/images/vignette.png">
-      <img class="hurt-screen" src="/images/hurt.png">
       <img class="crosshair" src="/images/crosshairs/0.png">
       <div class="ui-section top-section">
         <div class="ui-health-bar">
@@ -463,6 +461,9 @@
                 utils.grenades.explode(grenade);
               }
             }
+            if (grenade.type == "plasma") {
+              grenade.mesh.children[1].lookAt(camera.position);
+            }
           }
 
           if (grenade.stuck) continue;
@@ -501,7 +502,23 @@
           const damping = (Math.exp(deltaTime * -2.3) - 1.003) / 1.2;
           grenade.velocity.addScaledVector(grenade.velocity, damping);
           grenade.angularVelocity.addScaledVector(grenade.angularVelocity, damping);
-          grenadeCollisions(grenades[i], grenades[i + 1]);
+          const grenade1 = grenades[i];
+          const grenade2 = grenades[i + 1];
+          if (grenade2) {
+            const d2 = grenade1.collider.center.distanceToSquared(grenade2.collider.center);
+            const r = grenade1.collider.radius + grenade2.collider.radius;
+            const r2 = r * r;
+            if (d2 < r2) {
+              const normal = vectors[1].subVectors(grenade1.collider.center, grenade2.collider.center).normalize();
+              const v1 = vectors[2].copy(normal).multiplyScalar(normal.dot(grenade1.velocity));
+              const v2 = vectors[3].copy(normal).multiplyScalar(normal.dot(grenade2.velocity));
+              grenade1.velocity.add(v2).sub(v1);
+              grenade2.velocity.add(v1).sub(v2);
+              const d = (r - Math.sqrt(d2)) / 20;
+              grenade1.collider.center.addScaledVector(normal, d);
+              grenade2.collider.center.addScaledVector(normal, - d);
+            }
+          }
           grenade.mesh.position.copy(grenade.collider.center);
           if (grenade.type == "plasma") {
             for (player in utils.players.objects) {
@@ -529,25 +546,9 @@
               grenade.hits = 1;
               grenade.timestamp = Date.now();
               camera.add(grenade.mesh);
-              grenade.mesh.position.set(0, -0.12, -0.2);
+              grenade.mesh.position.set(-0.15, -0.1, -0.2);
             }
           }
-        }
-      }
-      function grenadeCollisions(grenade1, grenade2) {
-        if (!grenade2) return;
-        const d2 = grenade1.collider.center.distanceToSquared(grenade2.collider.center);
-        const r = grenade1.collider.radius + grenade2.collider.radius;
-        const r2 = r * r;
-        if (d2 < r2) {
-          const normal = vectors[1].subVectors(grenade1.collider.center, grenade2.collider.center).normalize();
-          const v1 = vectors[2].copy(normal).multiplyScalar(normal.dot(grenade1.velocity));
-          const v2 = vectors[3].copy(normal).multiplyScalar(normal.dot(grenade2.velocity));
-          grenade1.velocity.add(v2).sub(v1);
-          grenade2.velocity.add(v1).sub(v2);
-          const d = (r - Math.sqrt(d2)) / 20;
-          grenade1.collider.center.addScaledVector(normal, d);
-          grenade2.collider.center.addScaledVector(normal, - d);
         }
       }
 
@@ -696,7 +697,7 @@
           },
           {
             id: "weapon.HK-G28",
-            path: "/models/weapons/HK-G28.glb",
+            path: "/models/weapons/HK-G281.glb",
             model: null,
             loaded: false,
             requiredMaps: []
@@ -725,9 +726,12 @@
             loaded: false,
             requiredMaps: "all",
             callback: function(model) {
-              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xffffff, opacity: 1, map: new THREE.TextureLoader().load("/images/assets/glow/2.png"), sizeAttenuation: true, depthTest: false, depthWrite: false }));
+              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.TextureLoader().load("/images/assets/glow/2.png"), sizeAttenuation: true, depthWrite: false }));
               glow.scale.set(0.5, 0.5, 0.5);
-              model.scene.add(glow);
+              glow.position.z = 0.2;
+              const group = new THREE.Group();
+              group.add(glow);
+              model.scene.add(group);
               for (let i = 0; i < 6; i++) {
                 const grenade = model.scene.clone();
                 scene.add(grenade);
@@ -962,7 +966,7 @@
             headshotDamage: 200,
             spread: 0.1,
             muzzleFlash: true,
-            zoomPosition: [0.0435, 0.014, -0.04, 0.05, -0.055, 0],
+            zoomPosition: [0.04, 0.014, -0.04, 0.05, -0.055, 0],
             zoomFov: 40,
             zoomDuration: 200,
             fireMode: "semi",
@@ -986,7 +990,7 @@
               reload_full: [3, 0.8, 1],
               walk: [4, 1, 0.5],
               run: [4, 1.5, 0.5],
-              throw: [2, 1.4, 1]
+              throw: [5, 1.4, 1]
             }
           }
         }
@@ -1026,7 +1030,7 @@
             grenades_plasma: document.querySelector(".ui .ui-grenades-plasma .value"),
             healthBarValue: document.querySelector(".ui .ui-health-value"),
             healthBar: document.querySelector(".ui .ui-health-bar"),
-            hurtScreen: document.querySelector(".ui .hurt-screen"),
+            hurtScreen: document.querySelector(".hurt-screen"),
             ui: document.querySelector(".ui"),
             vignette: document.querySelector(".ui .vignette"),
             primaryWeaponDisplay: document.querySelector(".ui .ui-primary-weapon-display"),
@@ -1195,11 +1199,40 @@
               }
             }
           },
-          hurtScreen: function(intensity) {
-            utils.ui.elements.hurtScreen.style.opacity = Math.min(intensity, 1);
+          hurtScreen: function(position, intensity) {
+            const locations = {
+              mild: {
+                "topLeft": "inset 60px 60px 50px rgba(255, 150, 0, 0.6), inset 150px 150px 80px rgba(255, 80, 0, 0.8)",
+                "topRight": "inset -60px 60px 50px rgba(255, 150, 0, 0.6), inset -150px 150px 80px rgba(255, 80, 0, 0.8)",
+                "bottomLeft": "inset 60px -60px 50px rgba(255, 150, 0, 0.6), inset 150px -150px 80px rgba(255, 80, 0, 0.8)",
+                "bottomRight": "inset -60px -60px 50px rgba(255, 150, 0, 0.6), inset -150px -150px 80px rgba(255, 80, 0, 0.8)",
+                "top": "inset 0 60px 50px rgba(255, 150, 0, 0.6), inset 0 150px 80px rgba(255, 80, 0, 0.8)",
+                "left": "inset 60px 0 50px rgba(255, 150, 0, 0.6), inset 150px 0 80px rgba(255, 80, 0, 0.8)",
+                "bottom": "inset 0 -60px 50px rgba(255, 150, 0, 0.6), inset 0 -150px 80px rgba(255, 80, 0, 0.8)",
+                "right": "inset -60px 0 50px rgba(255, 150, 0, 0.6), inset -150px 0 80px rgba(255, 80, 0, 0.8)",
+                "all": "inset 0 0 100px rgba(255, 150, 0, 0.6), inset 0 0 100px rgba(255, 80, 0, 0.8)"
+              },
+              strong: {
+                "topLeft": "inset 60px 60px 50px rgba(255, 0, 0, 0.6), inset 150px 150px 80px rgba(255, 0, 0, 0.8)",
+                "topRight": "inset -60px 60px 50px rgba(255, 0, 0, 0.6), inset -150px 150px 80px rgba(255, 0, 0, 0.8)",
+                "bottomLeft": "inset 60px -60px 50px rgba(255, 0, 0, 0.6), inset 150px -150px 80px rgba(255, 0, 0, 0.8)",
+                "bottomRight": "inset -60px -60px 50px rgba(255, 0, 0, 0.6), inset -150px -150px 80px rgba(255, 0, 0, 0.8)",
+                "top": "inset 0 60px 50px rgba(255, 0, 0, 0.6), inset 0 150px 80px rgba(255, 0, 0, 0.8)",
+                "left": "inset 60px 0 50px rgba(255, 0, 0, 0.6), inset 150px 0 80px rgba(255, 0, 0, 0.8)",
+                "bottom": "inset 0 -60px 50px rgba(255, 0, 0, 0.6), inset 0 -150px 80px rgba(255, 0, 0, 0.8)",
+                "right": "inset -60px 0 50px rgba(255, 0, 0, 0.6), inset -150px 0 80px rgba(255, 0, 0, 0.8)",
+                "all": "inset 0 50px 100px rgba(255, 0, 0, 0.6), inset 0 0 100px rgba(255, 0, 0, 0.8)"
+              }
+            };
+            const location = utils.physics.getSideOfCamera(position);
+            if (intensity > 0.6 || utils.health.current <= 0) {
+              utils.ui.elements.hurtScreen.style = `transition: none; box-shadow: ${locations.strong[location]}; opacity: ${Math.min(intensity, 1)}`;
+            } else {
+              utils.ui.elements.hurtScreen.style = `transition: none; box-shadow: ${locations.mild[location]}; opacity: ${Math.min(intensity, 1)}`;
+            }
             setTimeout(() => {
-              utils.ui.elements.hurtScreen.style.opacity = 0;
-            }, 100);
+              utils.ui.elements.hurtScreen.style = `transition: box-shadow ${Math.max(Math.pow(Math.min(intensity, 1), 2), 0.2)}s ease-out; box-shadow: inset 0px 0px 0px transparent; opacity: ${Math.min(intensity, 1)}`;
+            }, 10);
           }
         },
         players: {
@@ -1256,7 +1289,7 @@
               const distance = weapon.mesh.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
               if (distance > 4) return;
               const realDamage = Math.min(weapon.damage / (distance / 1.3), weapon.damage);
-              utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null);
+              utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null, weapon);
             } else if (weapon == "melee") {
               const realDamage = 100;
               gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid]);
@@ -1500,6 +1533,26 @@
             tmpObjects.push(deathPose);
             utils.options.set("tmpObjects", tmpObjects);
             return deathPose;
+          }
+        },
+        physics: {
+          getSideOfCamera: function(position) {
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward).normalize();
+            const right = new THREE.Vector3();
+            right.crossVectors(forward, camera.up).normalize();
+            const toObject = position.clone().sub(camera.position).normalize();
+            const f = forward.dot(toObject);
+            const r = right.dot(toObject);
+            if (f > 0.5 && r > 0.5) return "topRight";
+            if (f > 0.5 && r < -0.5) return "topLeft";
+            if (f < -0.5 && r > 0.5) return "bottomRight";
+            if (f < -0.5 && r < -0.5) return "bottomLeft";
+            if (f > 0.5) return "top";
+            if (f < -0.5) return "bottom";
+            if (r > 0.5) return "right";
+            if (r < -0.5) return "left";
+            return "all";
           }
         },
         models: {
@@ -2206,7 +2259,7 @@
             utils.health.current = newHealth;
             utils.ui.setHealthBar(newHealth, "short");
           },
-          subtract: function(amount, killer) {
+          subtract: function(amount, killer, grenade) {
             const newHealth = utils.health.current - Math.round(amount);
             if (newHealth <= -25) {
               utils.health.die(killer || "self");
@@ -2215,7 +2268,14 @@
             utils.ui.setHealthBar(Math.max(newHealth, 0), "short");
             utils.health.lastHitTimestamp = Date.now();
             utils.health.incremented = false;
-            utils.ui.hurtScreen(amount / 28);
+            const hurtIntensity = amount / 28;
+            if (grenade) {
+              utils.ui.hurtScreen(grenade.mesh.position, hurtIntensity);
+            } else if (killer) {
+              utils.ui.hurtScreen(killer.scene.position, hurtIntensity);
+            } else {
+              utils.ui.hurtScreen(camera.position, hurtIntensity);
+            }
           },
           reset: function() {
             utils.health.current = 100;
