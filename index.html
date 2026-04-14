@@ -52,6 +52,7 @@
         margin: 0;
         padding: 0;
         pointer-events: none !important;
+        z-index: 99;
       }
       .crosshair {
         position: absolute;
@@ -528,10 +529,11 @@
                 playerPosition.y += 1;
                 if (!grenade.stuck) {
                   if (grenade.mesh.position.distanceTo(playerPosition) < 0.5) {
+                    audio.grenadeExplosion(grenade.mesh.position, grenade.type, true);
                     grenade.stuck = true;
+                    grenade.explodeTime = 1200;
                     grenade.hits = 1;
                     grenade.timestamp = Date.now();
-
                     playerObject.scene.add(grenade.mesh);
                     const worldPosition = grenade.mesh.position;
                     playerObject.scene.updateMatrixWorld(true);
@@ -542,7 +544,9 @@
               }
             }
             if (!grenade.stuck && grenade.mesh.position.distanceTo(camera.position) < 0.5) {
+              audio.grenadeExplosion(grenade.mesh.position, grenade.type, true);
               grenade.stuck = true;
+              grenade.explodeTime = 1200;
               grenade.hits = 1;
               grenade.timestamp = Date.now();
               camera.add(grenade.mesh);
@@ -697,7 +701,7 @@
           },
           {
             id: "weapon.HK-G28",
-            path: "/models/weapons/HK-G281.glb",
+            path: "/models/weapons/HK-G28.glb",
             model: null,
             loaded: false,
             requiredMaps: []
@@ -2111,7 +2115,9 @@
             } else {
               particles.explosion(worldPosition);
             }
-            audio.grenadeExplosion(worldPosition, grenade.type);
+            if (!grenade.stuck) {
+              audio.grenadeExplosion(worldPosition, grenade.type);
+            }
             utils.players.hit(null, null, grenade);
             const shakeIntensity = 2 / (Math.max(camera.position.distanceTo(worldPosition), 1) / 2);
             utils.effects.shake(shakeIntensity);
@@ -2122,6 +2128,7 @@
             grenade.hits = 0;
             grenade.timestamp = null;
             grenade.lastHitTimestamp = null;
+            grenade.explodeTime = 1500;
             grenade.stuck = false;
             grenade.explode = true;
             grenade.didSound = false;
@@ -2298,6 +2305,7 @@
             } else {
               utils.options.set("Killer", killer.uuid);
             }
+            camera.rotation.set(Math.PI / 2 - 0.8, 0, 0);
             deathScreen = true;
             utils.weapons.stopWalking();
             scene.remove(sandbox.currentWeapon);

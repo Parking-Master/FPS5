@@ -127,7 +127,7 @@ audio = {
     if (sound.source) sound.stop();
     sound.play();
   },
-  grenadeExplosion: function(position, type) {
+  grenadeExplosion: function(position, type, stuck = false) {
     if (type == "mk2") {
       let sound = null;
       if ((currentExplodeSound + 1) % 2 == 0) {
@@ -141,7 +141,7 @@ audio = {
       if (sound.source) sound.stop();
       sound.play();
     } else if (type == "plasma") {
-      const sound = audio.sounds[`grenade.explosion.plasma.${(currentExplodeSound + 1) % 2}`].sound;
+      const sound = audio.sounds[`grenade.explosion.plasma.${stuck ? 2 : (currentExplodeSound + 1) % 2}`].sound;
       currentExplodeSound++;
       sound.position.copy(position);
       sound.setVolume(7);
@@ -170,7 +170,8 @@ audio.sounds = {
   "grenade.hit.0": AudioWrapper3d("/sounds/grenades/hits/0.mp3"),
   "grenade.explosion.mk2": AudioWrapper3d("/sounds/grenades/explosions/0.mp3", true),
   "grenade.explosion.plasma.0": AudioWrapper3d("/sounds/grenades/explosions/1.mp3"),
-  "grenade.explosion.plasma.1": AudioWrapper3d("/sounds/grenades/explosions/2.mp3")
+  "grenade.explosion.plasma.1": AudioWrapper3d("/sounds/grenades/explosions/2.mp3"),
+  "grenade.explosion.plasma.2": AudioWrapper3d("/sounds/grenades/explosions/3.mp3")
 };
 
 document.addEventListener("touchstart", () => {
