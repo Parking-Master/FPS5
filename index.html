@@ -39,7 +39,8 @@
         padding: 0;
         pointer-events: none !important;
         opacity: 1;
-        transition: opacity 0.3s;
+        transition: opacity 0.3s, box-shadow 0.5s;
+        box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.6);
       }
       .hurt-screen {
         position: absolute;
@@ -196,7 +197,7 @@
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
     <div class="hurt-screen"></div>
     <div class="ui" id="game-ui">
-      <img class="vignette" src="/images/vignette.png">
+      <div class="vignette"></div>
       <img class="crosshair" src="/images/crosshairs/0.png">
       <div class="ui-section top-section">
         <div class="ui-health-bar">
@@ -355,7 +356,7 @@
             const targetQuaternion = new THREE.Quaternion();
             const matrix = new THREE.Matrix4().lookAt(camera.position, target.position, camera.up);
             targetQuaternion.setFromRotationMatrix(matrix);
-            camera.quaternion.slerp(targetQuaternion, 0.15);
+            camera.quaternion.slerp(targetQuaternion, 0.04);
           }
         }
 
@@ -561,13 +562,13 @@
           map: "Cargo_Port",
           character: "SWAT",
           respawnTime: 5,
-          loadout: ["HK-G28", "SCAR-H"],
+          loadout: ["Phone-Gun", "SCAR-H"],
           grenades: {
             "mk2": 2,
             "plasma": 0
           }
         },
-        loadout: ["HK-G28", "SCAR-H"],
+        loadout: ["Phone-Gun", "SCAR-H"],
         grenades: {
           "mk2": 2,
           "plasma": 0
@@ -707,6 +708,13 @@
             requiredMaps: []
           },
           {
+            id: "weapon.Phone-Gun",
+            path: "/models/weapons/Phone-Gun.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
             id: "grenade.MK2",
             path: "/models/weapons/grenades/MK2.glb",
             model: null,
@@ -774,6 +782,13 @@
           {
             id: "propweapon.HK-G28",
             path: "/models/characters/weapons/HK-G28.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: "all"
+          },
+          {
+            id: "propweapon.Phone-Gun",
+            path: "/models/characters/weapons/Phone-Gun.glb",
             model: null,
             loaded: false,
             requiredMaps: "all"
@@ -996,7 +1011,41 @@
               run: [4, 1.5, 0.5],
               throw: [5, 1.4, 1]
             }
-          }
+          },
+          "Phone-Gun": {
+            name: "Phone-Gun",
+            displayName: "Cell Phone Gun",
+            ammo: 5,
+            defaultAmmo: 5,
+            currentAmmo: 1,
+            maxAmmo: 1,
+            damage: 18,
+            headshotDamage: 24,
+            spread: 4,
+            muzzleFlash: false,
+            zoomPosition: [0.0325, 0.013, -0.016, 0.04991641660703782, -0.0778416846389471, 0.09494591130849153],
+            zoomFov: 35,
+            zoomDuration: 250,
+            fireMode: "semi",
+            fireRate: 200,
+            range: 8,
+            recoil: 1,
+            reticle: 5,
+            bulletHole: 0,
+            type: "pistol",
+            model: null,
+            loaded: false,
+            requiredMaps: ["Cargo_Port"],
+            animationStructure: {
+              reload: [0, 1.2, 1],
+              reload_full: [0, 1.2, 1],
+              idle: [2, 0.5, 0.2],
+              run: [5, 2.5, 1],
+              shoot: [3, 1, 1],
+              throw: [4, 0.5, 1],
+              walk: [5, 1.6, 1]
+            }
+          },
         }
       };
       utils = {
@@ -1077,11 +1126,12 @@
               utils.ui.elements.crosshair.style.filter = "brightness(0) saturate(100%) invert(16%) sepia(56%) saturate(6249%) hue-rotate(356deg) brightness(99%) contrast(124%)";
             }
           },
-          hideVignette: function() {
-            utils.ui.elements.vignette.style.opacity = "0";
-          },
-          showVignette: function() {
-            utils.ui.elements.vignette.style.opacity = "";
+          setVignette: function(mode = 0) {
+            if (mode == 0) {
+              utils.ui.elements.vignette.style.boxShadow = "";
+            } else if (mode == 1) {
+              utils.ui.elements.vignette.style.boxShadow = "inset 0 0 300px #000";
+            }
           },
           hide: function() {
             utils.ui.elements.ui.style.visibility = "hidden";
@@ -1822,7 +1872,7 @@
                 }
               });
               weapon.animationStructure["walk"][2] *= 5;
-              utils.ui.showVignette();
+              utils.ui.setVignette(0);
               if (weapon.scope) {
                 sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x2154f0);
               }
@@ -1844,7 +1894,7 @@
                 }
               });
               weapon.animationStructure["walk"][2] /= 5;
-              utils.ui.hideVignette();
+              utils.ui.setVignette(1);
               if (weapon.scope) {
                 sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x5489ff);
               }
@@ -1899,6 +1949,7 @@
               utils.weapons.animations.cancelCallback(reloadCallback._function);
               utils.weapons.animations.stop("reload");
               utils.weapons.animations.stop("reload_full");
+              audio.stopReload(utils.weapons.getCurrentEntry());
               utils.options.set("Reloading", false);
             }
           },
@@ -2312,6 +2363,7 @@
             utils.ui.hide();
             camera.fov = 70;
             camera.updateProjectionMatrix();
+            utils.effects.shake(10, 100, 800);
             PointerControls.isLocked = false;
             gametime.run("playerDie", [gametime.player.uuid]);
           },

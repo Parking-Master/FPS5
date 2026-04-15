@@ -108,6 +108,12 @@ audio = {
     sound.currentTime = 0;
     sound.play();
   },
+  stopReload: function(weapon) {
+    const sound1 = audio.sounds[`reload.${weapon.name}.normal`];
+    const sound2 = audio.sounds[`reload.${weapon.name}.full`];
+    sound1.pause();
+    sound2.pause();
+  },
   fire: function(weapon, roundsFired) {
     let sound = null;
     if (weapon.fireMode == "auto" && (roundsFired + 1) % 2 == 0) {
