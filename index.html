@@ -192,6 +192,7 @@
     <script src="/js/graphics.js"></script>
     <script src="/js/particles.js"></script>
     <script src="/js/audio.js"></script>
+    <script src="/js/text.js"></script>
     <script src="/js/Tween.js"></script>
     <script src="/js/PointerLockControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
@@ -252,8 +253,6 @@
       graphics.activate();
 
       let frameCount = 0;
-      let lastTime = performance.now();
-      let fps = 0;
       function animate(now) {
         const clockDelta = clock.getDelta();
         const deltaTime = Math.min(0.05, clockDelta) / STEPS_PER_FRAME;
@@ -361,13 +360,6 @@
         }
 
         frameCount++;
-        const diff = now - lastTime;
-        if (diff >= 1000) {
-          fps = (frameCount * 1000) / diff;
-          frameCount = 0;
-          lastTime = now;
-          console.log('FPS:', fps.toFixed(1));
-        }
 
         if (weapon.scope) {
           if (utils.options.get("Zoomed") || !weapon.scopeRendered) {
@@ -562,13 +554,18 @@
           map: "Cargo_Port",
           character: "SWAT",
           respawnTime: 5,
-          loadout: ["Phone-Gun", "SCAR-H"],
+          loadout: ["HK-G28", "FN-502"],
           grenades: {
             "mk2": 2,
             "plasma": 0
+          },
+          options: {
+            teamGame: true,
+            teamSize: 2,
+            teamOrder: null
           }
         },
-        loadout: ["Phone-Gun", "SCAR-H"],
+        loadout: ["HK-G28", "FN-502"],
         grenades: {
           "mk2": 2,
           "plasma": 0
@@ -592,10 +589,14 @@
             position: [0, 0, 0],
             rotation: [0, 0, 0],
             loadout: sandbox.loadout,
-            visibleOnRadar: false
+            visibleOnRadar: false,
+            team: null
           });
           gametime.connect();
           gametime.onconnect = function() {
+            if (sandbox.presets.options.teamGame) {
+              gametime.player.data.team = sandbox.presets.options.teamOrder[gametime.player.position - 1];
+            }
             utils.ui.radar.init();
             animate();
             update();
@@ -1299,7 +1300,7 @@
               scene.add(playerObject.scene);
               playerObject.animationMixer = new THREE.AnimationMixer(playerObject.scene);
               playerObject.animationStructure = {
-                "death": [0, 1, 1],
+                "death": [0, 1.5, 1],
                 "throw_grenade": [1, 0.6, 1],
                 "pistol_idle": [2, 1, 1],
                 "pistol_jump": [3, 1, 1],
@@ -1324,6 +1325,7 @@
               playerObject.visibleOnRadar = false;
               playerObject.allowedToUpdate = true;
               playerObject.uuid = player.uuid;
+              playerObject.team = player.data.team;
               utils.players.objects[player.uuid] = playerObject;
               utils.players.weapons.set(playerObject, player.data.loadout[0]);
               playerObject.scene.getObjectByName("Death_Pose").visible = false;
@@ -1336,6 +1338,28 @@
               bodyShield.isShield = true;
               headShield.isShield = true;
               utils.players.shields.push(bodyShield, headShield);
+              if (sandbox.presets.options.teamGame) {
+                if (player.data.team != gametime.player.data.team) {
+                  const usernamePointer = text.createUsername(player.username);
+                  playerObject.scene.add(usernamePointer);
+                }
+                const armor1 = playerObject.scene.getObjectByName("Mesh");
+                const armor2 = playerObject.scene.getObjectByName("Mesh_1");
+                if (player.data.team == "red") {
+                  armor1.material.color.setHex(0xff0000);
+                  armor1.material.emissive.setHex(0x220000);
+                  armor2.material.color.setHex(0xff0000);
+                  armor2.material.emissive.setHex(0x220000);
+                } else if (player.data.team == "blue") {
+                  armor1.material.color.setHex(0x18b6dd);
+                  armor1.material.emissive.setHex(0x000011);
+                  armor2.material.color.setHex(0x18b6dd);
+                  armor2.material.emissive.setHex(0x000011);
+                }
+              } else {
+                const usernamePointer = text.createUsername(player.username);
+                playerObject.scene.add(usernamePointer);
+              }
             });
           },
           hit: function(player, shield, weapon) {
@@ -1572,6 +1596,16 @@
               deathPose = utils.models.get("deathpose").model.scene;
               deathPose.parentType = "camera";
               deathPose.rotation.y = point.rotation.y;
+              if (sandbox.presets.options.teamGame) {
+                const armor = deathPose.getObjectByName("Mesh_1");
+                if (gametime.player.data.team == "red") {
+                  armor.material.color.setHex(0xff0000);
+                  armor.material.emissive.setHex(0x220000);
+                } else if (gametime.player.data.team == "blue") {
+                  armor.material.color.setHex(0x18b6dd);
+                  armor.material.emissive.setHex(0x000011);
+                }
+              }
             } else {
               deathPose = point.scene.getObjectByName("Death_Pose").clone();
               deathPose.position.copy(point.scene.position);
@@ -2140,10 +2174,12 @@
               utils.weapons.animations.stop("idle");
               utils.weapons.animations.start("throw", { reset: true, loop: THREE.LoopOnce }, function() {
                 utils.options.set("ThrowingGrenade", false);
-                if (utils.options.get("Walking")) {
-                  utils.weapons.animations.start("walk", { instant: true });
-                } else {
-                  utils.weapons.animations.start("idle");
+                if (!utils.options.get("Reloading")) {
+                  if (utils.options.get("Walking")) {
+                    utils.weapons.animations.start("walk", { instant: true });
+                  } else {
+                    utils.weapons.animations.start("idle");
+                  }
                 }
                 utils.weapons.update();
               });
@@ -2396,6 +2432,8 @@
         }
       };
 
+      sandbox.presets.options.teamOrder = Array(sandbox.presets.options.teamSize).fill("red").concat(Array(sandbox.presets.options.teamSize).fill("blue"));
+
       for (let i = 0; i < sandbox.models.length; i++) {
         const idSplit = sandbox.models[i].id.split(".");
         const isWeapon = idSplit[0] == "weapon";
@@ -2536,7 +2574,7 @@
 
       gametime.onupdate = function(player) {
         if (player.uuid == gametime.player.uuid) return;
-        if (typeof utils.players.objects[player.uuid] === "undefined") {
+        if (typeof utils.players.objects[player.uuid] === "undefined" && player.data.team) {
           utils.players.add(player);
         }
       };
