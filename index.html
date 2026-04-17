@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FPS5 multiplayer shooter</title>
     <style>
+      @font-face {
+        font-family: "Arame";
+        src: url(/fonts/Arame.ttf);
+      }
       @keyframes health-flash {
         0% {
           box-shadow: inset 0 0 20px rgba(220, 30, 20, 0.7);
@@ -1339,10 +1343,8 @@
               headShield.isShield = true;
               utils.players.shields.push(bodyShield, headShield);
               if (sandbox.presets.options.teamGame) {
-                if (player.data.team != gametime.player.data.team) {
-                  const usernamePointer = text.createUsername(player.username);
-                  playerObject.scene.add(usernamePointer);
-                }
+                const usernamePointer = text.createUsername(player.username, player.data.team != gametime.player.data.team);
+                playerObject.scene.add(usernamePointer);
                 const armor1 = playerObject.scene.getObjectByName("Mesh");
                 const armor2 = playerObject.scene.getObjectByName("Mesh_1");
                 if (player.data.team == "red") {
@@ -1357,7 +1359,7 @@
                   armor2.material.emissive.setHex(0x000011);
                 }
               } else {
-                const usernamePointer = text.createUsername(player.username);
+                const usernamePointer = text.createUsername(player.username, true);
                 playerObject.scene.add(usernamePointer);
               }
             });
@@ -1389,6 +1391,15 @@
                   utils.players.objects[player].scene.position.lerp(target, 0.25);
                   utils.players.objects[player].weaponRotation = rotation[0];
                   utils.players.objects[player].visibleOnRadar = gametime.players[player].data.visibleOnRadar;
+                  const distance = camera.position.distanceTo(utils.players.objects[player].scene.position);
+                  const usernamePointer = utils.players.objects[player].scene.getObjectByName("UsernamePointer");
+                  if (usernamePointer) {
+                    if (distance < 3 || distance > 60) {
+                      usernamePointer.visible = false;
+                    } else {
+                      usernamePointer.visible = true;
+                    }
+                  }
                   if (utils.players.objects[player].isDead) {
                     utils.players.objects[player].visibleOnRadar = false;
                   } else {
@@ -2210,7 +2221,7 @@
             utils.effects.shake(shakeIntensity);
             if (grenade.stuck) scene.add(grenade.mesh);
             if (!isMultiplayer) gametime.run("explodeGrenade", [gametime.player.uuid, grenade.id, [worldPosition.x, worldPosition.y, worldPosition.z]]);
-            grenade.collider.center.set(0, -100, 0);
+            grenade.collider.center.set(0, -2000, 0);
             grenade.available = true;
             grenade.hits = 0;
             grenade.timestamp = null;
