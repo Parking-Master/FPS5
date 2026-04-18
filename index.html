@@ -185,6 +185,19 @@
         margin-left: 2px;
         filter: saturate(50%);
       }
+      .ui-section.left-section {
+        position: absolute;
+        left: 40px;
+        bottom: 30%;
+        margin-bottom: 100px;
+        z-index: 10;
+      }
+      .ui-section.left-section .ui-kill-stats .row {
+        font-family: "Arame";
+        font-size: 11px;
+        font-weight: 600;
+        color: #67d4ff;
+      }
     </style>
   </head>
   <body>
@@ -200,7 +213,11 @@
     <script src="/js/Tween.js"></script>
     <script src="/js/PointerLockControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Parking-Master/Gametime.js/js/username-generator.js"></script>
     <div class="hurt-screen"></div>
+    <div class="ui-section left-section">
+      <div class="ui-kill-stats"></div>
+    </div>
     <div class="ui" id="game-ui">
       <div class="vignette"></div>
       <img class="crosshair" src="/images/crosshairs/0.png">
@@ -596,6 +613,7 @@
             visibleOnRadar: false,
             team: null
           });
+          gametime.set("username", generateName());
           gametime.connect();
           gametime.onconnect = function() {
             if (sandbox.presets.options.teamGame) {
@@ -1092,7 +1110,8 @@
             ui: document.querySelector(".ui"),
             vignette: document.querySelector(".ui .vignette"),
             primaryWeaponDisplay: document.querySelector(".ui .ui-primary-weapon-display"),
-            secondaryWeaponDisplay: document.querySelector(".ui .ui-secondary-weapon-display")
+            secondaryWeaponDisplay: document.querySelector(".ui .ui-secondary-weapon-display"),
+            killStats: document.querySelector(".ui-kill-stats")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -1125,10 +1144,20 @@
           showCrosshair: function() {
             utils.ui.elements.crosshair.style.opacity = "1";
           },
-          aimCrosshair: function() {
+          unaimCrosshair: function() {
+            if (utils.ui.cache.crosshairAimed) {
+              utils.ui.cache.crosshairAimed = false;
+              utils.ui.elements.crosshair.style.filter = "";
+            }
+          },
+          aimCrosshair: function(color = "red") {
             if (!utils.ui.cache.crosshairAimed) {
               utils.ui.cache.crosshairAimed = true;
-              utils.ui.elements.crosshair.style.filter = "brightness(0) saturate(100%) invert(16%) sepia(56%) saturate(6249%) hue-rotate(356deg) brightness(99%) contrast(124%)";
+              if (color == "red") {
+                utils.ui.elements.crosshair.style.filter = "brightness(0) saturate(100%) invert(16%) sepia(56%) saturate(6249%) hue-rotate(356deg) brightness(99%) contrast(124%)";
+              } else if (color == "green") {
+                utils.ui.elements.crosshair.style.filter = "brightness(0) saturate(100%) invert(63%) sepia(44%) saturate(6700%) hue-rotate(83deg) brightness(126%) contrast(117%)";
+              }
             }
           },
           setVignette: function(mode = 0) {
@@ -1144,17 +1173,30 @@
           show: function() {
             utils.ui.elements.ui.style.visibility = "";
           },
-          unaimCrosshair: function() {
-            if (utils.ui.cache.crosshairAimed) {
-              utils.ui.cache.crosshairAimed = false;
-              utils.ui.elements.crosshair.style.filter = "";
-            }
-          },
           setPrimaryDisplay: function(weapon) {
             utils.ui.elements.primaryWeaponDisplay.src = "/images/weapons/" + weapon + ".png";
           },
           setSecondaryDisplay: function(weapon) {
             utils.ui.elements.secondaryWeaponDisplay.src = "/images/weapons/" + weapon + ".png";
+          },
+          addKillStatsRow: function(killer, player) {
+            let text = null;
+            if (killer == "self" && player == "self") {
+              text = "YOU COMMITED SUICIDE";
+            } else if (killer != "self" && player == "self") {
+              text = gametime.players[killer].username.toUpperCase() + " KILLED YOU";
+            } else if (killer == gametime.player.uuid && player != "self") {
+              text = "YOU KILLED " + gametime.players[player].username.toUpperCase();
+            } else if (killer == player) {
+              text = gametime.players[player].username.toUpperCase() + " COMMITED SUICIDE";
+            } else {
+              text = gametime.players[killer].username.toUpperCase() + " KILLED " + gametime.players[player].username.toUpperCase();
+            }
+            const row = document.createElement("div");
+            row.className = "row";
+            row.textContent = text;
+            utils.ui.elements.killStats.appendChild(row);
+            setTimeout(() => row.remove(), 6000);
           },
           radar: {
             init: function(radarRange = 18) {
@@ -1394,7 +1436,7 @@
                   const distance = camera.position.distanceTo(utils.players.objects[player].scene.position);
                   const usernamePointer = utils.players.objects[player].scene.getObjectByName("UsernamePointer");
                   if (usernamePointer) {
-                    if (distance < 3 || distance > 60) {
+                    if (distance < 3 || distance > 60 || utils.players.objects[player].isDead || utils.options.get("Zoomed")) {
                       usernamePointer.visible = false;
                     } else {
                       usernamePointer.visible = true;
@@ -1582,7 +1624,7 @@
             }
           },
           health: {
-            die: function(player) {
+            die: function(player, killer) {
               player.isDead = true;
               utils.players.animations.stop(player, "rifle_idle");
               utils.players.animations.stop(player, "pistol_idle");
@@ -1593,6 +1635,7 @@
                   player.scene.position.set(0, -1000, 0);
                 }
               });
+              utils.ui.addKillStatsRow(killer, player.uuid);
             },
             respawn: function(player, spawnPoint) {
               player.isDead = false;
@@ -2125,14 +2168,14 @@
               utils.weapons.crouch();
             }
           },
-          stopWalking: function() {
+          stopWalking: function(updateMultiplayer = true) {
             utils.options.set("Walking", false);
             utils.weapons.stopSprint();
             if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
               utils.weapons.animations.stop("walk");
               utils.weapons.animations.start("idle");
             }
-            gametime.run("stopWalking", [gametime.player.uuid]);
+            if (updateMultiplayer) gametime.run("stopWalking", [gametime.player.uuid]);
           },
           updateAim: function(weapon) {
             const raycaster = utils.options.get("aimRaycaster");
@@ -2141,8 +2184,18 @@
             if (intersects.length > 0) {
               const intersect = intersects[0];
               if (camera.position.distanceTo(intersect.point) < weapon.range) {
-                utils.ui.aimCrosshair();
-                utils.options.set("Aiming", true);
+                if (sandbox.presets.options.teamGame) {
+                  const player = utils.players.objects[intersect.object.playerUUID];
+                  if (player.team == gametime.player.data.team) {
+                    utils.ui.aimCrosshair("green");
+                  } else {
+                    utils.ui.aimCrosshair();
+                  }
+                  utils.options.set("Aiming", true);
+                } else {
+                  utils.ui.aimCrosshair();
+                  utils.options.set("Aiming", true);
+                }
               } else {
                 utils.ui.unaimCrosshair();
                 utils.options.set("Aiming", false);
@@ -2392,6 +2445,7 @@
             utils.weapons.stopReload();
             utils.weapons.stopMelee();
             utils.weapons.stopCrouch(false);
+            utils.weapons.stopWalking(false);
             if (utils.options.get("DeathTime")) return;
             utils.options.set("DeathTime", Date.now());
             const deathPose = utils.players.createDeathPose(camera);
@@ -2400,19 +2454,21 @@
                 killType: "self",
                 body: deathPose
               });
+              utils.ui.addKillStatsRow("self", "self");
+              gametime.run("playerDie", [gametime.player.uuid, gametime.player.uuid]);
             } else {
               utils.options.set("Killer", killer.uuid);
+              utils.ui.addKillStatsRow(killer.uuid, "self");
+              gametime.run("playerDie", [gametime.player.uuid, killer.uuid]);
             }
             camera.rotation.set(Math.PI / 2 - 0.8, 0, 0);
             deathScreen = true;
-            utils.weapons.stopWalking();
             scene.remove(sandbox.currentWeapon);
             utils.ui.hide();
             camera.fov = 70;
             camera.updateProjectionMatrix();
-            utils.effects.shake(10, 100, 800);
+            utils.effects.shake(3, 100, 800);
             PointerControls.isLocked = false;
-            gametime.run("playerDie", [gametime.player.uuid]);
           },
           respawn: function() {
             utils.options.set("DeathTime", null);
@@ -2655,9 +2711,9 @@
           utils.health.subtract(damage, utils.players.objects[killer]);
         }
       });
-      gametime.on("playerDie", function(player) {
+      gametime.on("playerDie", function(player, killer) {
         if (player != gametime.player.uuid) {
-          utils.players.health.die(utils.players.objects[player]);
+          utils.players.health.die(utils.players.objects[player], killer);
         }
       });
       gametime.on("playerRespawn", function(player, spawnPoint) {
