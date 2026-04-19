@@ -234,11 +234,11 @@
       <div class="ui-section bottom-right-section">
         <div class="ui-weapon">
           <div class="ui-ammo"><span class="current-value">36</span> <span class="remaining-value">/ 108</span></div>
-          <img src="/images/weapons/AK-74.png" class="ui-primary-weapon-display">
+          <img class="ui-primary-weapon-display">
         </div>
         <div class="ui-slot ui-grenades ui-grenades-mk2"><img class="icon" src="/images/ui/grenade_mk2.png"> <span class="value">0</span></div>
         <div class="ui-slot ui-grenades ui-grenades-plasma"><img class="icon" src="/images/ui/grenade_plasma.png"> <span class="value">0</span></div>
-        <img src="/images/weapons/FN-502.png" class="ui-secondary-weapon-display">
+        <img class="ui-secondary-weapon-display">
       </div>
     </div>
     <script>
@@ -248,32 +248,26 @@
       const clock = new THREE.Clock();
       const worldOctree = new THREE.Octree();
 
-      audio.initialize();
-
-      const STEPS_PER_FRAME = 4;
-      const GRAVITY = 10;
-
       let map = null;
       let playerOnFloor = false;
       let playerAgainstWall = false;
       let deathScreen = false;
+      let frameCount = 0;
       const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-      const playerDefaultPosition = [13.5, 0.35, -18.5];
       const keyStates = {};
       const grenades = [];
       const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
       const playerVelocity = vectors[0].clone();
       const playerDirection = vectors[0].clone();
       const playerSpeeds = [];
+      const STEPS_PER_FRAME = 4;
 
       camera.rotation.order = "YXZ";
       scene.add(camera);
-      playerCollider.start.set(playerDefaultPosition[0], playerDefaultPosition[1], playerDefaultPosition[2]);
-      playerCollider.end.set(playerDefaultPosition[0], playerDefaultPosition[1] + .65, playerDefaultPosition[2]);
       document.body.appendChild(renderer.domElement);
       graphics.activate();
+      audio.initialize();
 
-      let frameCount = 0;
       function animate(now) {
         const clockDelta = clock.getDelta();
         const deltaTime = Math.min(0.05, clockDelta) / STEPS_PER_FRAME;
@@ -281,9 +275,9 @@
         const weapon = utils.weapons.getCurrentEntry();
 
         for (let i = 0; i < STEPS_PER_FRAME; i++) {
-          controls(deltaTime);
-          updatePlayer(deltaTime);
-          updateGrenades(deltaTime, time);
+          utils.physics.controls(deltaTime);
+          utils.physics.updatePlayer(deltaTime);
+          utils.physics.updateGrenades(deltaTime, time);
         }
 
         TWEEN.update();
@@ -335,21 +329,27 @@
         if (frameCount % 3 == 0) utils.weapons.updateAim(weapon);
 
         const tmpObjects = utils.options.get("tmpObjects");
-        for (let i = 0; i < tmpObjects.length; i++) {
-          const object = tmpObjects[i];
+        for (uuid in tmpObjects) {
+          const object = tmpObjects[uuid];
           if (time - object.timestamp > object.disposeTime) {
             if (object.objectType == "muzzleFlash") {
               object.opacity = 0;
+              delete tmpObjects[uuid];
             } else if (object.objectType == "bulletHole") {
               scene.remove(object);
               object.geometry.dispose();
+              delete tmpObjects[uuid];
             } else if (object.objectType == "deathPose") {
               scene.remove(object);
+              delete tmpObjects[uuid];
+            } else if (object.objectType == "htmlElement") {
+              object.remove();
+              delete tmpObjects[uuid];
             }
           }
           if (object.objectType == "deathPose" && object.parentType == "camera") {
             object.position.copy(camera.position);
-            object.position.y += -0.9;
+            object.position.y += -1;
             if (time - object.timestamp > sandbox.presets.respawnTime * 1000) {
               object.parentType = "player";
             }
@@ -397,177 +397,12 @@
         requestAnimationFrame(animate);
       }
 
-      function update() {
-        renderer.shadowMap.needsUpdate = true;
-      }
-      function getForwardVector() {
-        camera.getWorldDirection(playerDirection);
-        playerDirection.y = 0;
-        playerDirection.normalize();
-        return playerDirection;
-      }
-      function getSideVector() {
-        camera.getWorldDirection(playerDirection);
-        playerDirection.y = 0;
-        playerDirection.normalize();
-        playerDirection.cross(camera.up);
-        return playerDirection;
-      }
-      function controls(deltaTime) {
-        if (deathScreen) return;
-        const speedDelta = deltaTime;
-        const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1.5) * (utils.options.get("Sprinting") ? 1.7 : utils.options.get("Crouching") ? 0.5 : 1);
-        if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
-          playerVelocity.add(getForwardVector().multiplyScalar(walkSpeed));
-        }
-        if (keyStates["KeyS"] || keyStates["ArrowDown"]) {
-          playerVelocity.add(getForwardVector().multiplyScalar(-walkSpeed));
-        }
-        if (keyStates["KeyA"] || keyStates["ArrowLeft"]) {
-          playerVelocity.add(getSideVector().multiplyScalar(-walkSpeed));
-        }
-        if (keyStates["KeyD"] || keyStates["ArrowRight"]) {
-          playerVelocity.add(getSideVector().multiplyScalar(walkSpeed));
-        }
-        if (playerOnFloor && keyStates["Space"]) {
-          playerVelocity.y = 4;
-          utils.weapons.stopCrouch();
-          gametime.run("jump", [gametime.player.uuid]);
-        }
-      }
-      function playerCollisions() {
-        const result = worldOctree.capsuleIntersect(playerCollider);
-        playerOnFloor = false;
-        playerAgainstWall = false;
-        if (result) {
-          playerOnFloor = result.normal.y > 0;
-          playerAgainstWall = (result.normal.x > 0) || (result.normal.z > 0);
-          if (!playerOnFloor) {
-            playerVelocity.addScaledVector(result.normal, -result.normal.dot(playerVelocity));
-          }
-          playerCollider.translate(result.normal.multiplyScalar(result.depth));
-        }
-      }
-      function updatePlayer(deltaTime) {
-        let damping = (Math.exp(-4 * deltaTime) - 1) * 2;
-        if (!playerOnFloor) {
-          playerVelocity.y -= GRAVITY * (deltaTime);
-          damping *= 0.1;
-        }
-        playerVelocity.addScaledVector(playerVelocity, damping);
-        const deltaPosition = playerVelocity.clone().multiplyScalar(deltaTime);
-        playerCollider.translate(deltaPosition);
-        playerCollisions();
-        camera.position.copy(playerCollider.end);
-        if (camera.position.y <= -40) {
-          utils.health.die("self");
-        }
-      }
-      function updateGrenades(deltaTime, time) {
-        for (let i = 0; i < grenades.length; i++) {
-          const grenade = grenades[i];
-
-          if (!grenade.available) {
-            if (grenade.smoke && time % 3 == 0) {
-              particles.dust(grenade.mesh.position, 0.1);
-            }
-            if (grenade.hits > 0) {
-              if (time - grenade.timestamp > grenade.explodeTime && grenade.explode) {
-                utils.grenades.explode(grenade);
-              }
-            }
-            if (grenade.type == "plasma") {
-              grenade.mesh.children[1].lookAt(camera.position);
-            }
-          }
-
-          if (grenade.stuck) continue;
-
-          grenade.mesh.rotation.x += grenade.angularVelocity.x * deltaTime;
-          grenade.mesh.rotation.y += grenade.angularVelocity.y * deltaTime;
-          grenade.mesh.rotation.z += grenade.angularVelocity.z * deltaTime;
-          grenade.collider.center.addScaledVector(grenade.velocity, deltaTime);
-
-          const result = worldOctree.sphereIntersect(grenade.collider);
-          if (result) {
-            grenade.hits++;
-            grenade.velocity.addScaledVector(result.normal, -result.normal.dot(grenade.velocity) * 1.8);
-
-            if (grenade.type == "mk2") {
-              grenade.doSound = true;
-              if (grenade.doSound && !grenade.didSound && grenade.hits < 8) {
-                grenade.didSound = true;
-                audio.grenadeHit(grenade.mesh.position);
-              }
-            }
-
-            if (grenade.timestamp == null) {
-              grenade.timestamp = Date.now();
-            }
-
-            const rotationAxis = vectors[0].crossVectors(result.normal, grenade.velocity).normalize();
-            const rotationSpeed = grenade.velocity.length() * 0.2;
-            grenade.angularVelocity.addScaledVector(rotationAxis, rotationSpeed);
-            grenade.collider.center.add(result.normal.multiplyScalar(result.depth));
-          } else {
-            grenade.velocity.y -= (GRAVITY * deltaTime + 0.01) * 1.8;
-            grenade.didSound = false;
-            grenade.doSound = false;
-          }
-          const damping = (Math.exp(deltaTime * -2.3) - 1.003) / 1.2;
-          grenade.velocity.addScaledVector(grenade.velocity, damping);
-          grenade.angularVelocity.addScaledVector(grenade.angularVelocity, damping);
-          const grenade1 = grenades[i];
-          const grenade2 = grenades[i + 1];
-          if (grenade2) {
-            const d2 = grenade1.collider.center.distanceToSquared(grenade2.collider.center);
-            const r = grenade1.collider.radius + grenade2.collider.radius;
-            const r2 = r * r;
-            if (d2 < r2) {
-              const normal = vectors[1].subVectors(grenade1.collider.center, grenade2.collider.center).normalize();
-              const v1 = vectors[2].copy(normal).multiplyScalar(normal.dot(grenade1.velocity));
-              const v2 = vectors[3].copy(normal).multiplyScalar(normal.dot(grenade2.velocity));
-              grenade1.velocity.add(v2).sub(v1);
-              grenade2.velocity.add(v1).sub(v2);
-              const d = (r - Math.sqrt(d2)) / 20;
-              grenade1.collider.center.addScaledVector(normal, d);
-              grenade2.collider.center.addScaledVector(normal, - d);
-            }
-          }
-          grenade.mesh.position.copy(grenade.collider.center);
-          if (grenade.type == "plasma") {
-            for (player in utils.players.objects) {
-              const playerObject = utils.players.objects[player];
-              if (playerObject) {
-                const playerPosition = playerObject.scene.position.clone();
-                playerPosition.y += 1;
-                if (!grenade.stuck) {
-                  if (grenade.mesh.position.distanceTo(playerPosition) < 0.5) {
-                    audio.grenadeExplosion(grenade.mesh.position, grenade.type, true);
-                    grenade.stuck = true;
-                    grenade.explodeTime = 1200;
-                    grenade.hits = 1;
-                    grenade.timestamp = Date.now();
-                    playerObject.scene.add(grenade.mesh);
-                    const worldPosition = grenade.mesh.position;
-                    playerObject.scene.updateMatrixWorld(true);
-                    const localPosition = playerObject.scene.worldToLocal(worldPosition.clone());
-                    grenade.mesh.position.copy(localPosition);
-                  }
-                }
-              }
-            }
-            if (!grenade.stuck && grenade.mesh.position.distanceTo(camera.position) < 0.5) {
-              audio.grenadeExplosion(grenade.mesh.position, grenade.type, true);
-              grenade.stuck = true;
-              grenade.explodeTime = 1200;
-              grenade.hits = 1;
-              grenade.timestamp = Date.now();
-              camera.add(grenade.mesh);
-              grenade.mesh.position.set(-0.15, -0.1, -0.2);
-            }
-          }
-        }
+      function generateUUID() {
+        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+          let r = Math.random() * 16 | 0;
+          let v = (c == "x" ? r : (r & 0x3 | 0x8));
+          return v.toString(16);
+        });
       }
 
       sandbox = {
@@ -575,18 +410,19 @@
           map: "Cargo_Port",
           character: "SWAT",
           respawnTime: 5,
-          loadout: ["HK-G28", "FN-502"],
+          loadout: ["HK-G28", "30-SST"],
           grenades: {
             "mk2": 2,
             "plasma": 0
           },
           options: {
+            gravity: 10,
             teamGame: true,
             teamSize: 2,
             teamOrder: null
           }
         },
-        loadout: ["HK-G28", "FN-502"],
+        loadout: null,
         grenades: {
           "mk2": 2,
           "plasma": 0
@@ -621,7 +457,8 @@
             }
             utils.ui.radar.init();
             animate();
-            update();
+            renderer.shadowMap.needsUpdate = true;
+            audio.ambience(sandbox.maps[sandbox.presets.map].ambienceSound);
             utils.health.respawn();
           };
         },
@@ -819,6 +656,7 @@
         ],
         maps: {
           "Cargo_Port": {
+            ambienceSound: 0,
             spawnPoints: [
               [13.5, 0, -18.5, 0, 3.141592653589793, 0],
               [7.6, 0, -18.3, 0, 1.5707963267948966, 0],
@@ -835,6 +673,7 @@
             ]
           },
           "Lihid": {
+            ambienceSound: 0,
             spawnPoints: [
               [15.7, -0.2, -17.5, 0, 3.141592653589793, 0], 
               [15.5, 0.2, -25.3, 0, 3.141592653589793, 0], 
@@ -1082,6 +921,13 @@
               return null;
             }
             return utils.options.store[key];
+          },
+          addTmpObject: function(object, type, timeout) {
+            object.objectType = type;
+            object.timestamp = Date.now();
+            object.disposeTime = timeout;
+            const tmpObjects = utils.options.get("tmpObjects");
+            tmpObjects[generateUUID()] = object;
           }
         },
         ui: {
@@ -1196,7 +1042,7 @@
             row.className = "row";
             row.textContent = text;
             utils.ui.elements.killStats.appendChild(row);
-            setTimeout(() => row.remove(), 6000);
+            utils.options.addTmpObject(row, "htmlElement", 6000);
           },
           radar: {
             init: function(radarRange = 18) {
@@ -1636,6 +1482,7 @@
                 }
               });
               utils.ui.addKillStatsRow(killer, player.uuid);
+              audio.dying(player.scene.position);
             },
             respawn: function(player, spawnPoint) {
               player.isDead = false;
@@ -1668,12 +1515,7 @@
               deathPose.parentType = "player";
             }
             scene.add(deathPose);
-            const tmpObjects = utils.options.get("tmpObjects");
-            deathPose.objectType = "deathPose";
-            deathPose.timestamp = Date.now();
-            deathPose.disposeTime = 60000;
-            tmpObjects.push(deathPose);
-            utils.options.set("tmpObjects", tmpObjects);
+            utils.options.addTmpObject(deathPose, "deathPose", 60000);
             return deathPose;
           }
         },
@@ -1695,6 +1537,167 @@
             if (r > 0.5) return "right";
             if (r < -0.5) return "left";
             return "all";
+          },
+          getCameraForwardVector: function() {
+            camera.getWorldDirection(playerDirection);
+            playerDirection.y = 0;
+            playerDirection.normalize();
+            return playerDirection;
+          },
+          getCameraSideVector: function() {
+            camera.getWorldDirection(playerDirection);
+            playerDirection.y = 0;
+            playerDirection.normalize();
+            playerDirection.cross(camera.up);
+            return playerDirection;
+          },
+          controls: function(deltaTime) {
+            if (deathScreen) return;
+            const speedDelta = deltaTime;
+            const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1.5) * (utils.options.get("Sprinting") ? 1.7 : utils.options.get("Crouching") ? 0.5 : 1);
+            if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
+              playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(walkSpeed));
+            }
+            if (keyStates["KeyS"] || keyStates["ArrowDown"]) {
+              playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(-walkSpeed));
+            }
+            if (keyStates["KeyA"] || keyStates["ArrowLeft"]) {
+              playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(-walkSpeed));
+            }
+            if (keyStates["KeyD"] || keyStates["ArrowRight"]) {
+              playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(walkSpeed));
+            }
+            if (playerOnFloor && keyStates["Space"]) {
+              playerVelocity.y = 4;
+              utils.weapons.stopCrouch();
+              gametime.run("jump", [gametime.player.uuid]);
+            }
+          },
+          playerCollisions: function() {
+            const result = worldOctree.capsuleIntersect(playerCollider);
+            playerOnFloor = false;
+            playerAgainstWall = false;
+            if (result) {
+              playerOnFloor = result.normal.y > 0;
+              playerAgainstWall = (result.normal.x > 0) || (result.normal.z > 0);
+              if (!playerOnFloor) {
+                playerVelocity.addScaledVector(result.normal, -result.normal.dot(playerVelocity));
+              }
+              playerCollider.translate(result.normal.multiplyScalar(result.depth));
+            }
+          },
+          updatePlayer: function(deltaTime) {
+            let damping = (Math.exp(-4 * deltaTime) - 1) * 2;
+            if (!playerOnFloor) {
+              playerVelocity.y -= sandbox.presets.options.gravity * (deltaTime);
+              damping *= 0.1;
+            }
+            playerVelocity.addScaledVector(playerVelocity, damping);
+            const deltaPosition = playerVelocity.clone().multiplyScalar(deltaTime);
+            playerCollider.translate(deltaPosition);
+            utils.physics.playerCollisions();
+            camera.position.copy(playerCollider.end);
+            if (camera.position.y <= -40) {
+              utils.health.die("self");
+            }
+          },
+          updateGrenades: function(deltaTime, time) {
+            for (let i = 0; i < grenades.length; i++) {
+              const grenade = grenades[i];
+              if (grenade.available) continue;
+              if (grenade.smoke && time % 3 == 0) {
+                particles.dust(grenade.mesh.position, 0.1);
+              }
+              if (grenade.hits > 0) {
+                if (time - grenade.timestamp > grenade.explodeTime && grenade.explode) {
+                  utils.grenades.explode(grenade);
+                }
+              }
+              if (grenade.type == "plasma") {
+                grenade.mesh.children[1].lookAt(camera.position);
+              }
+              if (grenade.stuck) continue;
+              grenade.mesh.rotation.x += grenade.angularVelocity.x * deltaTime;
+              grenade.mesh.rotation.y += grenade.angularVelocity.y * deltaTime;
+              grenade.mesh.rotation.z += grenade.angularVelocity.z * deltaTime;
+              grenade.collider.center.addScaledVector(grenade.velocity, deltaTime);
+              const result = worldOctree.sphereIntersect(grenade.collider);
+              if (result) {
+                grenade.hits++;
+                grenade.velocity.addScaledVector(result.normal, -result.normal.dot(grenade.velocity) * 1.8);
+                if (grenade.type == "mk2") {
+                  grenade.doSound = true;
+                  if (grenade.doSound && !grenade.didSound && grenade.hits < 8) {
+                    grenade.didSound = true;
+                    audio.grenadeHit(grenade.mesh.position);
+                  }
+                }
+                if (grenade.timestamp == null) {
+                  grenade.timestamp = Date.now();
+                }
+                const rotationAxis = vectors[0].crossVectors(result.normal, grenade.velocity).normalize();
+                const rotationSpeed = grenade.velocity.length() * 0.2;
+                grenade.angularVelocity.addScaledVector(rotationAxis, rotationSpeed);
+                grenade.collider.center.add(result.normal.multiplyScalar(result.depth));
+              } else {
+                grenade.velocity.y -= (sandbox.presets.options.gravity * deltaTime + 0.01) * 1.8;
+                grenade.didSound = false;
+                grenade.doSound = false;
+              }
+              const damping = (Math.exp(deltaTime * -2.3) - 1.003) / 1.2;
+              grenade.velocity.addScaledVector(grenade.velocity, damping);
+              grenade.angularVelocity.addScaledVector(grenade.angularVelocity, damping);
+              const grenade1 = grenades[i];
+              const grenade2 = grenades[i + 1];
+              if (grenade2) {
+                const d2 = grenade1.collider.center.distanceToSquared(grenade2.collider.center);
+                const r = grenade1.collider.radius + grenade2.collider.radius;
+                const r2 = r * r;
+                if (d2 < r2) {
+                  const normal = vectors[1].subVectors(grenade1.collider.center, grenade2.collider.center).normalize();
+                  const v1 = vectors[2].copy(normal).multiplyScalar(normal.dot(grenade1.velocity));
+                  const v2 = vectors[3].copy(normal).multiplyScalar(normal.dot(grenade2.velocity));
+                  grenade1.velocity.add(v2).sub(v1);
+                  grenade2.velocity.add(v1).sub(v2);
+                  const d = (r - Math.sqrt(d2)) / 20;
+                  grenade1.collider.center.addScaledVector(normal, d);
+                  grenade2.collider.center.addScaledVector(normal, - d);
+                }
+              }
+              grenade.mesh.position.copy(grenade.collider.center);
+              if (grenade.type == "plasma") {
+                for (player in utils.players.objects) {
+                  const playerObject = utils.players.objects[player];
+                  if (playerObject) {
+                    const playerPosition = playerObject.scene.position.clone();
+                    playerPosition.y += 1;
+                    if (!grenade.stuck) {
+                      if (grenade.mesh.position.distanceTo(playerPosition) < 0.5) {
+                        audio.grenadeExplosion(grenade.mesh.position, grenade.type, true);
+                        grenade.stuck = true;
+                        grenade.explodeTime = 1200;
+                        grenade.hits = 1;
+                        grenade.timestamp = Date.now();
+                        playerObject.scene.add(grenade.mesh);
+                        const worldPosition = grenade.mesh.position;
+                        playerObject.scene.updateMatrixWorld(true);
+                        const localPosition = playerObject.scene.worldToLocal(worldPosition.clone());
+                        grenade.mesh.position.copy(localPosition);
+                      }
+                    }
+                  }
+                }
+                if (!grenade.stuck && grenade.mesh.position.distanceTo(camera.position) < 0.5) {
+                  audio.grenadeExplosion(grenade.mesh.position, grenade.type, true);
+                  grenade.stuck = true;
+                  grenade.explodeTime = 1200;
+                  grenade.hits = 1;
+                  grenade.timestamp = Date.now();
+                  camera.add(grenade.mesh);
+                  grenade.mesh.position.set(-0.15, -0.1, -0.2);
+                }
+              }
+            }
           }
         },
         models: {
@@ -1967,7 +1970,7 @@
               utils.options.set("Zoomed", false);
             } else {
               utils.weapons.stopMelee();
-              utils.weapons.stopSprint(false);
+              utils.weapons.stopSprint(false, true);
               utils.ui.hideCrosshair();
               if (utils.options.get("globalZoomTween")) {
                 utils.options.get("globalZoomTween").out.position.stop();
@@ -2065,7 +2068,7 @@
                   const initialPosition = camera.position.clone();
                   camera.lookAt(playerPosition);
                   function animation() {
-                    playerVelocity.add(getForwardVector().multiplyScalar(10));
+                    playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(10));
                     const currentDistance = camera.position.distanceTo(initialPosition);
                     if (currentDistance >= lungeDistance - 0.2) {
                       playerVelocity.set(0, 0, 0);
@@ -2112,8 +2115,10 @@
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.restart("run");
             utils.options.set("globalSprintTween", {
-              position: new TWEEN.Tween(utils.weapons.getChild().position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start(),
-              rotation: new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start()
+              in: {
+                position: new TWEEN.Tween(utils.weapons.getChild().position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start(),
+                rotation: new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start()
+              }
             });
             gametime.run("startRunning", [gametime.player.uuid]);
           },
@@ -2123,12 +2128,22 @@
             utils.ui.showCrosshair();
             utils.weapons.animations.stop("run");
             if (utils.options.get("globalSprintTween")) {
-              utils.options.get("globalSprintTween").position.stop();
-              utils.options.get("globalSprintTween").rotation.stop();
+              if (utils.options.get("globalSprintTween").in) {
+                utils.options.get("globalSprintTween").in.position.stop();
+                utils.options.get("globalSprintTween").in.rotation.stop();
+              }
+              if (utils.options.get("globalSprintTween").out) {
+                utils.options.get("globalSprintTween").out.position.stop();
+                utils.options.get("globalSprintTween").out.rotation.stop();
+              }
             }
             if (animation) {
-              new TWEEN.Tween(utils.weapons.getChild().position).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
-              new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+              utils.options.set("globalSprintTween", {
+                out: {
+                  position: new TWEEN.Tween(utils.weapons.getChild().position).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start(),
+                  rotation: new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0, y: 0, z: 0 }, 500).easing(TWEEN.Easing.Quadratic.Out).start()
+                }
+              });
             } else {
               utils.weapons.getChild().position.set(0, 0, 0);
               utils.weapons.getChild().rotation.set(0, 0, 0);
@@ -2291,10 +2306,11 @@
             return grenades.filter(grenade => grenade.type == type && grenade.available)[0].id;
           },
           add: function(mesh, type) {
+            mesh.position.y = -2000;
             grenades.push({
               type: type,
               mesh: mesh,
-              collider: new THREE.Sphere(new THREE.Vector3(0, -100, 0), 0.1),
+              collider: new THREE.Sphere(new THREE.Vector3(0, -2000, 0), 0.1),
               velocity: new THREE.Vector3(),
               angularVelocity: new THREE.Vector3(),
               available: true,
@@ -2338,12 +2354,7 @@
                 const decalMesh = new THREE.Mesh(decalGeometry, bulletHole.material);
                 scene.add(decalMesh);
                 particles.dust(intersect.point);
-                const tmpObjects = utils.options.get("tmpObjects");
-                decalMesh.objectType = "bulletHole";
-                decalMesh.timestamp = Date.now();
-                decalMesh.disposeTime = 20000;
-                tmpObjects.push(decalMesh);
-                utils.options.set("tmpObjects", tmpObjects);
+                utils.options.addTmpObject(decalMesh, "bulletHole", 20000);
               }
             }
           },
@@ -2353,12 +2364,7 @@
             flash.material.color.setHex(0xff1111);
             flash.material.emissive.setHex(0xff1c11);
             flash.material.opacity = 1;
-            const tmpObjects = utils.options.get("tmpObjects");
-            flash.material.objectType = "muzzleFlash";
-            flash.material.timestamp = Date.now();
-            flash.material.disposeTime = 30;
-            tmpObjects.push(flash.material);
-            utils.options.set("tmpObjects", tmpObjects);
+            utils.options.addTmpObject(flash.material, "muzzleFlash", 30);
           },
           shake: function(intensity = 2, startDuration = 200, endDuration = 700) {
             new TWEEN.Tween({ intensity: 0 }).to({ intensity: intensity }, startDuration).easing(TWEEN.Easing.Quadratic.InOut).start().onUpdate(function(value) {
@@ -2468,6 +2474,7 @@
             camera.fov = 70;
             camera.updateProjectionMatrix();
             utils.effects.shake(3, 100, 800);
+            audio.dying(camera.position);
             PointerControls.isLocked = false;
           },
           respawn: function() {
@@ -2500,6 +2507,7 @@
       };
 
       sandbox.presets.options.teamOrder = Array(sandbox.presets.options.teamSize).fill("red").concat(Array(sandbox.presets.options.teamSize).fill("blue"));
+      sandbox.loadout = sandbox.presets.loadout;
 
       for (let i = 0; i < sandbox.models.length; i++) {
         const idSplit = sandbox.models[i].id.split(".");
@@ -2632,7 +2640,7 @@
       utils.options.set("globalZoomTween", null);
       utils.options.set("globalMeleeTween", null);
       utils.options.set("globalSprintTween", null);
-      utils.options.set("tmpObjects", []);
+      utils.options.set("tmpObjects", {});
       utils.options.set("CameraShake", 0);
       utils.options.set("DeathTime", null);
       utils.options.set("Killer", null);
@@ -2645,7 +2653,6 @@
           utils.players.add(player);
         }
       };
-
       gametime.on("jump", function(player) {
         if (player != gametime.player.uuid) {
           utils.players.animations.start(utils.players.objects[player], utils.players.objects[player].weapon.type + "_jump", { loop: THREE.LoopOnce, reset: true });

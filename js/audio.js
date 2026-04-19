@@ -155,6 +155,19 @@ audio = {
       sound.play();
     }
   },
+  ambience: function(id) {
+    const sound = audio.sounds[`map.ambience.${id}`];
+    sound.loop = true;
+    sound.play();
+  },
+  dying: function(position) {
+    const sound = audio.sounds["dying.0"].sound;
+    sound.position.copy(position);
+    sound.setVolume(10);
+    sound.setRolloffFactor(0.5);
+    if (sound.source) sound.stop();
+    sound.play();
+  },
 };
 
 audio.sounds = {
@@ -177,7 +190,9 @@ audio.sounds = {
   "grenade.explosion.mk2": AudioWrapper3d("/sounds/grenades/explosions/0.mp3", true),
   "grenade.explosion.plasma.0": AudioWrapper3d("/sounds/grenades/explosions/1.mp3"),
   "grenade.explosion.plasma.1": AudioWrapper3d("/sounds/grenades/explosions/2.mp3"),
-  "grenade.explosion.plasma.2": AudioWrapper3d("/sounds/grenades/explosions/3.mp3")
+  "grenade.explosion.plasma.2": AudioWrapper3d("/sounds/grenades/explosions/3.mp3"),
+  "map.ambience.0": AudioWrapper("/sounds/ambience/0.mp3"),
+  "dying.0": AudioWrapper3d("/sounds/dying/0.mp3")
 };
 
 document.addEventListener("touchstart", () => {
