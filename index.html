@@ -209,6 +209,7 @@
     <script src="/js/graphics.js"></script>
     <script src="/js/particles.js"></script>
     <script src="/js/audio.js"></script>
+    <script src="/js/physics.js"></script>
     <script src="/js/text.js"></script>
     <script src="/js/Tween.js"></script>
     <script src="/js/PointerLockControls.js"></script>
@@ -256,6 +257,7 @@
       const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
       const keyStates = {};
       const grenades = [];
+      const vehicles = [];
       const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
       const playerVelocity = vectors[0].clone();
       const playerDirection = vectors[0].clone();
@@ -278,6 +280,7 @@
           utils.physics.controls(deltaTime);
           utils.physics.updatePlayer(deltaTime);
           utils.physics.updateGrenades(deltaTime, time);
+          utils.physics.updateVehicles(deltaTime);
         }
 
         TWEEN.update();
@@ -286,12 +289,11 @@
         utils.players.update();
         utils.weapons.position();
         audio.update();
+        physics.update();
 
         for (let i = 0; i < sandbox.models.length; i++) {
-          if (sandbox.models[i].loaded) {
-            if (sandbox.models[i].model.animationMixer) {
-              sandbox.models[i].model.animationMixer.update(clockDelta);
-            }
+          if (sandbox.models[i].loaded && sandbox.models[i].model.animationMixer) {
+            sandbox.models[i].model.animationMixer.update(clockDelta);
           }
         }
 
@@ -474,6 +476,9 @@
             callback: function(model) {
               map = model.scene;
               worldOctree.fromGraphNode(map);
+              if (sandbox.maps[sandbox.presets.map].vehicles.length > 0) {
+                physics.initialize(map);
+              }
               map.traverse(child => {
                 child.frustumCulled = false;
                 if (child.isMesh) {
@@ -579,13 +584,14 @@
             path: "/models/weapons/grenades/MK2.glb",
             model: null,
             loaded: false,
+            removeAfterLoaded: false,
             requiredMaps: "all",
             callback: function(model) {
               const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xff8888, opacity: 0.6, map: new THREE.TextureLoader().load("/images/assets/glow/0.png"), sizeAttenuation: true, depthWrite: false }));
               glow.scale.set(0.3, 0.3, 0.3);
               model.scene.add(glow);
               for (let i = 0; i < 6; i++) {
-                const grenade = model.scene.clone();
+                const grenade = i == 0 ? model.scene : model.scene.clone();
                 scene.add(grenade);
                 utils.grenades.add(grenade, "mk2");
               }
@@ -596,6 +602,7 @@
             path: "/models/weapons/grenades/Plasma.glb",
             model: null,
             loaded: false,
+            removeAfterLoaded: false,
             requiredMaps: "all",
             callback: function(model) {
               const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.TextureLoader().load("/images/assets/glow/2.png"), sizeAttenuation: true, depthWrite: false }));
@@ -605,7 +612,7 @@
               group.add(glow);
               model.scene.add(group);
               for (let i = 0; i < 6; i++) {
-                const grenade = model.scene.clone();
+                const grenade = i == 0 ? model.scene : model.scene.clone();
                 scene.add(grenade);
                 utils.grenades.add(grenade, "plasma");
               }
@@ -653,6 +660,29 @@
             loaded: false,
             requiredMaps: "all"
           },
+          {
+            id: "vehicle.Jeep",
+            path: "/models/vehicles/Jeep.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            requiredMaps: ["Cargo_Port"],
+            callback: function(model) {
+              for (let i = 0; i < sandbox.maps[sandbox.presets.map].vehicles.length; i++) {
+                const mapVehicle = sandbox.maps[sandbox.presets.map].vehicles[i];
+                if (mapVehicle.type != "Jeep") return;
+                const vehicle = i == 0 ? model.scene : model.scene.clone();
+                vehicle.position.set(mapVehicle.position[0], mapVehicle.position[1], mapVehicle.position[2]);
+                vehicle.rotation.set(mapVehicle.position[3], mapVehicle.position[4], mapVehicle.position[5]);
+                scene.add(vehicle);
+                const body = physics.add(vehicle, 30);
+                vehicles.push({
+                  mesh: vehicle,
+                  velocity: body.velocity
+                });
+              }
+            }
+          },
         ],
         maps: {
           "Cargo_Port": {
@@ -670,6 +700,12 @@
               [-5, 0, -9.3, 0, 3.141592653589793, 0],
               [-9.1, 0, 2.7, 0, -1.5707963267948966, 0],
               [8, 0, 3.2, 0, 3.141592653589793, 0]
+            ],
+            vehicles: [
+              {
+                type: "Jeep",
+                position: [0, 1, 0, 0, 0, 0]
+              }
             ]
           },
           "Lihid": {
@@ -696,7 +732,8 @@
               [-20.9, 0.2, 26.6, 0, 0, 0], 
               [-28.6, 0.2, 22.9, 0, -1.5707963267948966, 0], 
               [-19.9, -1.1, 5.8, 0, 3.141592653589793, 0]
-            ]
+            ],
+            vehicles: []
           }
         },
         weapons: {
@@ -1282,7 +1319,7 @@
                   const distance = camera.position.distanceTo(utils.players.objects[player].scene.position);
                   const usernamePointer = utils.players.objects[player].scene.getObjectByName("UsernamePointer");
                   if (usernamePointer) {
-                    if (distance < 3 || distance > 60 || utils.players.objects[player].isDead || utils.options.get("Zoomed")) {
+                    if (distance < 2 || distance > 60 || utils.players.objects[player].isDead || utils.options.get("Zoomed")) {
                       usernamePointer.visible = false;
                     } else {
                       usernamePointer.visible = true;
@@ -1698,6 +1735,8 @@
                 }
               }
             }
+          },
+          updateVehicles: function(deltaTime) {
           }
         },
         models: {
@@ -2562,20 +2601,18 @@
       window.addEventListener("resize", onWindowResize);
       onWindowResize();
 
-      let globalRepeat = false;
-      document.addEventListener("keydown", (event) => {
+      document.addEventListener("keydown", function(event) {
         if (!PointerControls.isLocked) return;
         keyStates[event.code] = true;
-
-        if (!event.repeat && !deathScreen && !utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) {
-          utils.options.set("Walking", true);
-          if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
-            utils.weapons.animations.stop("idle");
-            utils.weapons.animations.start("walk");
-          }
-          gametime.run("startWalking", [gametime.player.uuid]);
-        }
         if (!event.repeat && !deathScreen) {
+          if (!utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) {
+            utils.options.set("Walking", true);
+            if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
+              utils.weapons.animations.stop("idle");
+              utils.weapons.animations.start("walk");
+            }
+            gametime.run("startWalking", [gametime.player.uuid]);
+          }
           if (sandbox.controls.fire.includes(event.code)) utils.weapons.fire();
           if (sandbox.controls.zoom.includes(event.code)) utils.weapons.zoom();
           if (sandbox.controls.reload.includes(event.code)) utils.weapons.reload();
@@ -2585,19 +2622,16 @@
           if (sandbox.controls.sprint.includes(event.code) && (keyStates["KeyW"] || keyStates["ArrowUp"])) utils.weapons.sprint();
           if (sandbox.controls.crouch.includes(event.code)) utils.weapons.crouch();
         }
-        globalRepeat = true;
       });
 
-      document.addEventListener("keyup", (event) => {
-        globalRepeat = false;
+      document.addEventListener("keyup", function(event) {
         keyStates[event.code] = false;
-
         if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) utils.weapons.stopWalking();
         if (sandbox.controls.fire.includes(event.code)) utils.weapons.stopFire();
         if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint();
       });
 
-      document.addEventListener("mousedown", (event) => {
+      document.addEventListener("mousedown", function(event) {
         if (document.pointerLockElement != null) return;
         document.body.requestPointerLock();
         PointerControls.lock();
@@ -2654,79 +2688,49 @@
         }
       };
       gametime.on("jump", function(player) {
-        if (player != gametime.player.uuid) {
-          utils.players.animations.start(utils.players.objects[player], utils.players.objects[player].weapon.type + "_jump", { loop: THREE.LoopOnce, reset: true });
-        }
+        if (player != gametime.player.uuid) utils.players.animations.start(utils.players.objects[player], utils.players.objects[player].weapon.type + "_jump", { loop: THREE.LoopOnce, reset: true });
       });
       gametime.on("switchWeapon", function(player, weapon) {
-        if (player != gametime.player.uuid) {
-          utils.players.weapons.set(utils.players.objects[player], weapon);
-        }
+        if (player != gametime.player.uuid) utils.players.weapons.set(utils.players.objects[player], weapon);
       });
       gametime.on("startWalking", function(player) {
-        if (player != gametime.player.uuid) {
-          utils.players.startWalking(utils.players.objects[player]);
-        }
+        if (player != gametime.player.uuid) utils.players.startWalking(utils.players.objects[player]);
       });
       gametime.on("stopWalking", function(player) {
-        if (player != gametime.player.uuid) {
-          utils.players.stopWalking(utils.players.objects[player]);
-        }
+        if (player != gametime.player.uuid) utils.players.stopWalking(utils.players.objects[player]);
       });
       gametime.on("startRunning", function(player) {
-        if (player != gametime.player.uuid) {
-          utils.players.startRunning(utils.players.objects[player]);
-        }
+        if (player != gametime.player.uuid) utils.players.startRunning(utils.players.objects[player]);
       });
       gametime.on("stopRunning", function(player) {
-        if (player != gametime.player.uuid) {
-          utils.players.stopRunning(utils.players.objects[player]);
-        }
+        if (player != gametime.player.uuid) utils.players.stopRunning(utils.players.objects[player]);
       });
       gametime.on("fireWeapon", function(player, point, spreadX, spreadY, bulletHole) {
-        if (player != gametime.player.uuid) {
-          utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY, bulletHole);
-        }
+        if (player != gametime.player.uuid) utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY, bulletHole);
       });
       gametime.on("reloadWeapon", function(player) {
-        if (player != gametime.player.uuid) {
-          utils.players.weapons.reload(utils.players.objects[player]);
-        }
+        if (player != gametime.player.uuid) utils.players.weapons.reload(utils.players.objects[player]);
       });
       gametime.on("throwGrenade", function(player, type, point, grenadeId) {
-        if (player != gametime.player.uuid) {
-          utils.players.grenades.throw(utils.players.objects[player], type, point, grenadeId);
-        }
+        if (player != gametime.player.uuid) utils.players.grenades.throw(utils.players.objects[player], type, point, grenadeId);
       });
       gametime.on("explodeGrenade", function(player, grenadeId, grenadePosition) {
-        if (player != gametime.player.uuid) {
-          utils.players.grenades.explode(grenadeId, grenadePosition);
-        }
+        if (player != gametime.player.uuid) utils.players.grenades.explode(grenadeId, grenadePosition);
       });
       gametime.on("startCrouching", function(player) {
-        if (player != gametime.player.uuid) {
-          utils.players.startCrouching(utils.players.objects[player]);
-        }
+        if (player != gametime.player.uuid) utils.players.startCrouching(utils.players.objects[player]);
       });
       gametime.on("stopCrouching", function(player) {
-        if (player != gametime.player.uuid) {
-          utils.players.stopCrouching(utils.players.objects[player]);
-        }
+        if (player != gametime.player.uuid) utils.players.stopCrouching(utils.players.objects[player]);
       });
       gametime.on("damage", function(player, damage, killer) {
-        if (player == gametime.player.uuid) {
-          utils.health.subtract(damage, utils.players.objects[killer]);
-        }
+        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer]);
       });
       gametime.on("playerDie", function(player, killer) {
-        if (player != gametime.player.uuid) {
-          utils.players.health.die(utils.players.objects[player], killer);
-        }
+        if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer);
       });
       gametime.on("playerRespawn", function(player, spawnPoint) {
-        if (player != gametime.player.uuid) {
-          utils.players.health.respawn(utils.players.objects[player], spawnPoint);
-        }
+        if (player != gametime.player.uuid) utils.players.health.respawn(utils.players.objects[player], spawnPoint);
       });
     </script>
   </body>
