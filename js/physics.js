@@ -9,7 +9,7 @@ physics = {
   initialized: false,
   initialize: function(model) {
     physics.initialized = true;
-    physics.world.gravity.set(0, -sandbox.presets.options.gravity * 2, 0);
+    physics.world.gravity.set(0, -100, 0);
     model.traverse(child => {
       if (child.isMesh) {
         const box = new THREE.Box3().setFromObject(child);
@@ -45,4 +45,4 @@ physics = {
 };
 
 physics.world.addContactMaterial(new CANNON.ContactMaterial(physics.worldMaterial, physics.worldMaterial, { friction: 0.4, restitution: 0.3, contactEquationStiffness: 1e8, contactEquationRelaxation: 3, frictionEquationStiffness: 1e8, frictionEquationRegularizationTime: 3 }));
-physics.world.addContactMaterial(new CANNON.ContactMaterial(physics.worldMaterial, physics.carMaterial, { friction: 0.005, restitution: 0.3, contactEquationStiffness: 1e8, contactEquationRelaxation: 3 }));
+physics.world.addContactMaterial(new CANNON.ContactMaterial(physics.worldMaterial, physics.carMaterial, { friction: 0.001, restitution: 0.3, contactEquationStiffness: 1e8, contactEquationRelaxation: 3 }));

@@ -272,7 +272,7 @@
 
       function animate(now) {
         const clockDelta = clock.getDelta();
-        const deltaTime = Math.min(0.05, clockDelta) / STEPS_PER_FRAME;
+        const deltaTime = Math.min(0.04, clockDelta) / STEPS_PER_FRAME;
         const time = Date.now();
         const weapon = utils.weapons.getCurrentEntry();
 
@@ -441,6 +441,7 @@
           "melee": ["KeyB"],
           "sprint": ["ShiftLeft"],
           "crouch": ["KeyC"],
+          "enterVehicle": ["KeyE", "KeyT"],
         },
         initialize: function() {
           gametime.set("player", {
@@ -675,10 +676,17 @@
                 vehicle.position.set(mapVehicle.position[0], mapVehicle.position[1], mapVehicle.position[2]);
                 vehicle.rotation.set(mapVehicle.position[3], mapVehicle.position[4], mapVehicle.position[5]);
                 scene.add(vehicle);
-                const body = physics.add(vehicle, 30);
+                const body = physics.add(vehicle, 5);
                 vehicles.push({
+                  type: "Jeep",
                   mesh: vehicle,
-                  velocity: body.velocity
+                  body: body,
+                  seats: [
+                    {
+                      type: "driver",
+                      seat: vehicle.getObjectByName("Driver_Seat")
+                    }
+                  ]
                 });
               }
             }
@@ -1590,24 +1598,39 @@
           },
           controls: function(deltaTime) {
             if (deathScreen) return;
-            const speedDelta = deltaTime;
-            const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1.5) * (utils.options.get("Sprinting") ? 1.7 : utils.options.get("Crouching") ? 0.5 : 1);
-            if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
-              playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(walkSpeed));
-            }
-            if (keyStates["KeyS"] || keyStates["ArrowDown"]) {
-              playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(-walkSpeed));
-            }
-            if (keyStates["KeyA"] || keyStates["ArrowLeft"]) {
-              playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(-walkSpeed));
-            }
-            if (keyStates["KeyD"] || keyStates["ArrowRight"]) {
-              playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(walkSpeed));
-            }
-            if (playerOnFloor && keyStates["Space"]) {
-              playerVelocity.y = 4;
-              utils.weapons.stopCrouch();
-              gametime.run("jump", [gametime.player.uuid]);
+            const vehicle = utils.options.get("CurrentVehicle");
+            if (vehicle) {
+              if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
+                utils.vehicles.throttle(vehicle, "drive", deltaTime);
+              }
+              if (keyStates["KeyS"] || keyStates["ArrowDown"]) {
+                utils.vehicles.throttle(vehicle, "reverse", deltaTime);
+              }
+              if (keyStates["KeyA"] || keyStates["ArrowLeft"]) {
+                utils.vehicles.steer(vehicle, "left", deltaTime);
+              }
+              if (keyStates["KeyD"] || keyStates["ArrowRight"]) {
+                utils.vehicles.steer(vehicle, "right", deltaTime);
+              }
+            } else {
+              const walkSpeed = deltaTime * (playerOnFloor ? 20 : 1.5) * (utils.options.get("Sprinting") ? 1.7 : utils.options.get("Crouching") ? 0.5 : 1);
+              if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
+                playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(walkSpeed));
+              }
+              if (keyStates["KeyS"] || keyStates["ArrowDown"]) {
+                playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(-walkSpeed));
+              }
+              if (keyStates["KeyA"] || keyStates["ArrowLeft"]) {
+                playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(-walkSpeed));
+              }
+              if (keyStates["KeyD"] || keyStates["ArrowRight"]) {
+                playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(walkSpeed));
+              }
+              if (playerOnFloor && keyStates["Space"]) {
+                playerVelocity.y = 4;
+                utils.weapons.stopCrouch();
+                gametime.run("jump", [gametime.player.uuid]);
+              }
             }
           },
           playerCollisions: function() {
@@ -1633,7 +1656,9 @@
             const deltaPosition = playerVelocity.clone().multiplyScalar(deltaTime);
             playerCollider.translate(deltaPosition);
             utils.physics.playerCollisions();
-            camera.position.copy(playerCollider.end);
+            if (!utils.options.get("CurrentVehicle")) {
+              camera.position.copy(playerCollider.end);
+            }
             if (camera.position.y <= -40) {
               utils.health.die("self");
             }
@@ -1737,6 +1762,26 @@
             }
           },
           updateVehicles: function(deltaTime) {
+            for (let i = 0; i < vehicles.length; i++) {
+              const vehicle = vehicles[i];
+              const physicsVariables = utils.vehicles.physicsVariables[vehicle.type];
+
+              const forward = new CANNON.Vec3(0, 0, -1);
+              vehicle.body.quaternion.vmult(forward, forward);
+              forward.scale(physicsVariables.enginePower * deltaTime, forward);
+              const result = new CANNON.Vec3();
+              vehicle.body.velocity.lerp(forward, 0.04, result);
+              vehicle.body.velocity.x = result.x;
+              vehicle.body.velocity.z = result.z;
+
+              const speed = Math.sqrt(Math.pow(vehicle.body.velocity.x,2)+Math.pow(vehicle.body.velocity.y,2)+Math.pow(vehicle.body.velocity.z,2));
+              const delta = new CANNON.Quaternion();
+              const turningAngle = utils.vehicles.calculateTurningAngle(speed, physicsVariables.heading);
+              physicsVariables.heading += utils.vehicles.calculateHeadingReset(physicsVariables.heading, speed);
+              delta.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), physicsVariables.enginePower < 0 ? (turningAngle * -2) : turningAngle);
+              vehicle.body.quaternion = vehicle.body.quaternion.mult(delta);
+              vehicle.mesh.getObjectByName("Steering_Wheel").rotation.y = -physicsVariables.heading * 10;
+            }
           }
         },
         models: {
@@ -2441,6 +2486,88 @@
             animation();
           }
         },
+        vehicles: {
+          physicsVariables: {
+            "Jeep": {
+              enginePower: 0,
+              maxEnginePower: 2000,
+              heading: 0,
+              maxHeading: 0.3,
+              steeringSensitivity: 0.005,
+              currentGear: "drive"
+            }
+          },
+          exit: function() {
+            if (utils.options.get("CurrentVehicle")) {
+              utils.options.set("CurrentVehicle", null);
+              const worldPosition = camera.getWorldPosition(new THREE.Vector3());
+              playerCollider.start.set(worldPosition.x, worldPosition.y - 0.65, worldPosition.z);
+              playerCollider.end.set(worldPosition.x, worldPosition.y, worldPosition.z);
+              scene.add(camera);
+              scene.add(sandbox.currentWeapon);
+              return true;
+            }
+            return false;
+          },
+          enter: function() {
+            if (utils.vehicles.exit()) return;
+            for (let i = 0; i < vehicles.length; i++) {
+              const vehicle = vehicles[i];
+              for (let j = 0; j < vehicle.seats.length; j++) {
+                const seat = vehicle.seats[j];
+                const worldPosition = seat.seat.getWorldPosition(new THREE.Vector3());
+                if (camera.position.distanceTo(worldPosition) < 1) {
+                  vehicle.currentSeat = seat;
+                  utils.options.set("CurrentVehicle", vehicle);
+                  camera.position.set(0, 0, 0);
+                  camera.rotation.set(0, 0, 0);
+                  seat.seat.add(camera);
+                  scene.remove(sandbox.currentWeapon);
+                }
+              }
+            }
+          },
+          throttle: function(vehicle, gear, deltaTime) {
+            const physicsVariables = utils.vehicles.physicsVariables[vehicle.type];
+            physicsVariables.currentGear = gear;
+            if (gear == "drive") {
+              if (physicsVariables.enginePower < physicsVariables.maxEnginePower) {
+                physicsVariables.enginePower += 10;
+              }
+            } else if (gear == "reverse") {
+              if (physicsVariables.enginePower > -physicsVariables.maxEnginePower) {
+                physicsVariables.enginePower -= 10;
+              }
+            }
+          },
+          stopThrottle: function(vehicle) {
+            const physicsVariables = utils.vehicles.physicsVariables[vehicle.type];
+            physicsVariables.enginePower = 0;
+          },
+          steer: function(vehicle, direction, deltaTime) {
+            const physicsVariables = utils.vehicles.physicsVariables[vehicle.type];
+            if (direction == "left") {
+              if (physicsVariables.heading < physicsVariables.maxHeading) {
+                physicsVariables.heading += physicsVariables.steeringSensitivity;
+              }
+            } else if (direction == "right") {
+              if (physicsVariables.heading > -physicsVariables.maxHeading) {
+                physicsVariables.heading -= physicsVariables.steeringSensitivity;
+              }
+            }
+          },
+          calculateTurningAngle: function(v, a) {
+            return (v / 2.7) * Math.tan((a / (Math.max(v * 2.24, 10) / 10)) * (Math.PI / 180));
+          },
+          calculateHeadingReset: function(a, v) {
+            const resetStrength = 0.2;
+            const maxResetRate = Math.min(Math.max(v, 15), 30);
+            let correctionAngularVelocity = -resetStrength * a * v;
+            if (correctionAngularVelocity > maxResetRate) correctionAngularVelocity = maxResetRate;
+            if (correctionAngularVelocity < -maxResetRate) correctionAngularVelocity = -maxResetRate;
+            return correctionAngularVelocity / 100;
+          }
+        },
         health: {
           max: 100,
           current: 100,
@@ -2621,12 +2748,17 @@
           if (sandbox.controls.melee.includes(event.code)) utils.weapons.melee();
           if (sandbox.controls.sprint.includes(event.code) && (keyStates["KeyW"] || keyStates["ArrowUp"])) utils.weapons.sprint();
           if (sandbox.controls.crouch.includes(event.code)) utils.weapons.crouch();
+          if (sandbox.controls.enterVehicle.includes(event.code)) utils.vehicles.enter();
         }
       });
 
       document.addEventListener("keyup", function(event) {
         keyStates[event.code] = false;
         if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) utils.weapons.stopWalking();
+        if (!keyStates["KeyW"] && !keyStates["KeyS"] && !keyStates["ArrowUp"] && !keyStates["ArrowDown"]) {
+          const vehicle = utils.options.get("CurrentVehicle");
+          if (vehicle) utils.vehicles.stopThrottle(vehicle);
+        }
         if (sandbox.controls.fire.includes(event.code)) utils.weapons.stopFire();
         if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint();
       });
@@ -2656,6 +2788,7 @@
       utils.options.set("ThrowingGrenade", false);
       utils.options.set("Sprinting", false);
       utils.options.set("Aiming", false);
+      utils.options.set("CurrentVehicle", false);
       utils.options.set("ReloadCallback", {});
       utils.options.set("bulletHoles", {
         0: {
