@@ -6,10 +6,13 @@ physics = {
   bodies: [],
   worldMaterial: new CANNON.Material("worldMaterial"),
   carMaterial: new CANNON.Material("carMaterial"),
+  forward: new CANNON.Vec3(0, 0, -1),
+  _vec1: new CANNON.Vec3(),
+  _quat1: new CANNON.Quaternion(),
   initialized: false,
   initialize: function(model) {
     physics.initialized = true;
-    physics.world.gravity.set(0, -100, 0);
+    physics.world.gravity.set(0, -80, 0);
     model.traverse(child => {
       if (child.isMesh) {
         const box = new THREE.Box3().setFromObject(child);
@@ -22,16 +25,28 @@ physics = {
       }
     });
   },
-  add: function(mesh, mass) {
+  add: function(mesh, mass, rotation) {
+    mesh.rotation.set(0, 0, 0);
     const box = new THREE.Box3().setFromObject(mesh);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     const shape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
     const body = new CANNON.Body({ mass: mass, shape: shape, material: physics.carMaterial });
+    mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
     body.position.copy(mesh.getWorldPosition(new THREE.Vector3()));
+    body.quaternion.copy(mesh.quaternion);
     physics.world.add(body);
     physics.meshes.push(mesh);
     physics.bodies.push(body);
+    body.addEventListener("collide", function(event) {
+      if (typeof body.oncollision == "function") {
+        let worldPoint = new CANNON.Vec3();
+        worldPoint.copy(event.contact.bi.position);
+        worldPoint.vadd(event.contact.ri, worldPoint);
+        worldPoint = new THREE.Vector3(worldPoint.x, worldPoint.y - 0.3, worldPoint.z);
+        body.oncollision(worldPoint, event.contact.getImpactVelocityAlongNormal());
+      }
+    });
     return body;
   },
   update: function() {
