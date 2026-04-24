@@ -8,13 +8,17 @@ physics = {
   carMaterial: new CANNON.Material("carMaterial"),
   forward: new CANNON.Vec3(0, 0, -1),
   _vec1: new CANNON.Vec3(),
+  _vec2: new THREE.Vector3(),
+  _vec3: new CANNON.Vec3(),
   _quat1: new CANNON.Quaternion(),
   initialized: false,
   initialize: function(model) {
     physics.initialized = true;
-    physics.world.gravity.set(0, -80, 0);
+    physics.world.gravity.set(0, -20, 0);
     model.traverse(child => {
       if (child.isMesh) {
+        physics._vec2.set(child.rotation.x, child.rotation.y, child.rotation.z);
+        child.rotation.set(0, 0, 0);
         const box = new THREE.Box3().setFromObject(child);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
@@ -22,6 +26,8 @@ physics = {
         const body = new CANNON.Body({ mass: 0, shape: shape, material: physics.worldMaterial });
         body.position.copy(child.getWorldPosition(new THREE.Vector3()));
         physics.world.add(body);
+        child.rotation.set(physics._vec2.x, physics._vec2.y, physics._vec2.z);
+        body.quaternion.copy(child.quaternion);
       }
     });
   },

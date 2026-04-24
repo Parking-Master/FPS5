@@ -1268,6 +1268,7 @@
                 "rifle_run": [12, 1.5, 1],
                 "rifle_reload": [10, 0.6, 1],
                 "crouch_idle": [14, 1, 1],
+                "sitting": [15, 1, 1]
               };
               playerObject.isWalking = false;
               playerObject.isRunning = false;
@@ -1277,6 +1278,7 @@
               playerObject.weaponRotation = 0;
               playerObject.visibleOnRadar = false;
               playerObject.allowedToUpdate = true;
+              playerObject.vehicle = null;
               playerObject.uuid = player.uuid;
               playerObject.team = player.data.team;
               utils.players.objects[player.uuid] = playerObject;
@@ -1332,27 +1334,46 @@
             gametime.player.data.rotation = [camera.rotation.x, camera.rotation.y, camera.rotation.z];
             gametime.update();
             for (player in gametime.players) {
-              if (player != gametime.player.uuid && typeof utils.players.objects[player] !== "undefined" && utils.players.objects[player] != null) {
-                if (utils.players.objects[player].allowedToUpdate) {
+              const playerObject = utils.players.objects[player];
+              if (player != gametime.player.uuid && typeof playerObject !== "undefined" && playerObject != null) {
+                if (playerObject.allowedToUpdate) {
                   const position = gametime.players[player].data.position;
                   const rotation = gametime.players[player].data.rotation;
                   const target = new THREE.Vector3(position[0], position[1], position[2]);
-                  utils.players.objects[player].scene.position.lerp(target, 0.25);
-                  utils.players.objects[player].weaponRotation = rotation[0];
-                  utils.players.objects[player].visibleOnRadar = gametime.players[player].data.visibleOnRadar;
-                  const distance = camera.position.distanceTo(utils.players.objects[player].scene.position);
-                  const usernamePointer = utils.players.objects[player].scene.getObjectByName("UsernamePointer");
+                  playerObject.scene.position.lerp(target, 0.25);
+                  playerObject.weaponRotation = rotation[0];
+                  playerObject.visibleOnRadar = gametime.players[player].data.visibleOnRadar;
+                  playerObject.vehicle = gametime.players[player].data.vehicle;
+                  const distance = camera.position.distanceTo(playerObject.scene.position);
+                  const usernamePointer = playerObject.scene.getObjectByName("UsernamePointer");
                   if (usernamePointer) {
-                    if (distance < 2 || distance > 60 || utils.players.objects[player].isDead || utils.options.get("Zoomed")) {
+                    if (distance < 2 || distance > 60 || playerObject.isDead || utils.options.get("Zoomed")) {
                       usernamePointer.visible = false;
                     } else {
                       usernamePointer.visible = true;
                     }
                   }
-                  if (utils.players.objects[player].isDead) {
-                    utils.players.objects[player].visibleOnRadar = false;
+                  if (playerObject.isDead) {
+                    playerObject.visibleOnRadar = false;
                   } else {
-                    utils.players.objects[player].scene.rotation.set(0, rotation[1], 0);
+                    playerObject.scene.rotation.set(0, rotation[1], 0);
+                  }
+                  if (playerObject.vehicle) {
+                    const vehicle = vehicles[playerObject.vehicle.index];
+                    const seat = vehicle.seats.filter(seat => seat.type == playerObject.vehicle.seat)[0];
+                    if (seat.type == "driver") {
+                      const result = physics._vec1;
+                      const position = physics._vec3;
+                      result.set(0, 0, 0);
+                      position.set(playerObject.vehicle.position[3], playerObject.vehicle.position[4], playerObject.vehicle.position[5]);
+                      vehicle.body.position.lerp(position, 0.4, result);
+                      vehicle.body.velocity.set(playerObject.vehicle.position[0], playerObject.vehicle.position[1], playerObject.vehicle.position[2]);
+                      vehicle.body.position.set(result.x, result.y, result.z);
+                      vehicle.body.quaternion.set(playerObject.vehicle.position[6], playerObject.vehicle.position[7], playerObject.vehicle.position[8], playerObject.vehicle.position[9]);
+                    }
+                    const worldPosition = seat.seat.getWorldPosition(vectors[6]);
+                    playerObject.scene.position.set(worldPosition.x, worldPosition.y - 1, worldPosition.z);
+                    playerObject.scene.rotation.set(vehicle.mesh.rotation.x, vehicle.mesh.rotation.y, vehicle.mesh.rotation.z);
                   }
                 }
               }
@@ -1528,6 +1549,22 @@
               utils.players.animations.start(player, player.weapon.type + "_walk");
             } else {
               utils.players.animations.start(player, player.weapon.type + "_idle");
+            }
+          },
+          vehicles: {
+            enter: function(player) {
+              utils.players.animations.stop(player, player.weapon.type + "_idle");
+              utils.players.animations.stop(player, player.weapon.type + "_walk");
+              utils.players.animations.stop(player, player.weapon.type + "_run");
+              utils.players.animations.start(player, "sitting");
+            },
+            exit: function(player) {
+              utils.players.animations.stop(player, "sitting");
+              if (player.isWalking) {
+                utils.players.animations.start(player, player.weapon.type + "_walk");
+              } else {
+                utils.players.animations.start(player, player.weapon.type + "_idle");
+              }
             }
           },
           health: {
@@ -1829,6 +1866,7 @@
                 const motion = vectors[5];
                 motion.set(vehicle.body.velocity.x / 100, vehicle.body.velocity.y / 100, vehicle.body.velocity.z / 100);
                 camera.position.lerp(motion, 0.02);
+                gametime.player.data.vehicle.position = [vehicle.body.velocity.x, vehicle.body.velocity.y, vehicle.body.velocity.z, vehicle.body.position.x, vehicle.body.position.y, vehicle.body.position.z, vehicle.body.quaternion.x, vehicle.body.quaternion.y, vehicle.body.quaternion.z, vehicle.body.quaternion.w];
               }
             }
           }
@@ -1960,6 +1998,7 @@
             }
           },
           switch: function(slot = null, instant = false) {
+            if (utils.options.get("CurrentVehicle")) return;
             utils.options.set("Switching", true);
             utils.weapons.stopFire();
             utils.weapons.stopZoom();
@@ -2018,6 +2057,7 @@
             }
           },
           fire: function(rounds = 1) {
+            if (utils.options.get("CurrentVehicle")) return;
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("Switching") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || weapon.currentAmmo <= 0) return;
             if (Date.now() - weapon.lastShot < weapon.delayBetweenShots) return;
@@ -2079,6 +2119,7 @@
             }
           },
           zoom: function(force = false) {
+            if (utils.options.get("CurrentVehicle")) return;
             if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Zoomed")) {
@@ -2131,6 +2172,7 @@
             if (utils.options.get("Zoomed")) utils.weapons.zoom(true);
           },
           reload: function(full = false) {
+            if (utils.options.get("CurrentVehicle")) return;
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Reloading") || weapon.ammo <= 0 || weapon.currentAmmo >= weapon.maxAmmo) return;
             utils.options.set("Reloading", true);
@@ -2178,6 +2220,7 @@
             }
           },
           melee: function() {
+            if (utils.options.get("CurrentVehicle")) return;
             if (utils.options.get("Melee")) return;
             utils.options.set("Melee", true);
             utils.options.set("CancelMelee", false);
@@ -2237,6 +2280,7 @@
             }
           },
           sprint: function() {
+            if (utils.options.get("CurrentVehicle")) return;
             if (utils.options.get("Sprinting")) return;
             utils.options.set("Sprinting", true);
             utils.weapons.stopFire();
@@ -2290,6 +2334,7 @@
             gametime.run("stopRunning", [gametime.player.uuid]);
           },
           crouch: function() {
+            if (utils.options.get("CurrentVehicle")) return;
             function animation(amount) {
               let step = 0;
               function next() {
@@ -2316,7 +2361,17 @@
               utils.weapons.crouch();
             }
           },
+          startWalking: function() {
+            if (utils.options.get("CurrentVehicle")) return;
+            utils.options.set("Walking", true);
+            if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
+              utils.weapons.animations.stop("idle");
+              utils.weapons.animations.start("walk");
+            }
+            gametime.run("startWalking", [gametime.player.uuid]);
+          },
           stopWalking: function(updateMultiplayer = true) {
+            if (utils.options.get("CurrentVehicle")) return;
             utils.options.set("Walking", false);
             utils.weapons.stopSprint();
             if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
@@ -2551,6 +2606,8 @@
               scene.add(sandbox.currentWeapon);
               vehicle.currentSeat = null;
               utils.options.set("CurrentVehicle", null);
+              gametime.player.data.vehicle = null;
+              gametime.run("exitVehicle", [gametime.player.uuid]);
               return true;
             }
             return false;
@@ -2569,6 +2626,12 @@
                   camera.rotation.set(0, 0, 0);
                   seat.seat.add(camera);
                   scene.remove(sandbox.currentWeapon);
+                  gametime.player.data.vehicle = {
+                    index: vehicles.indexOf(vehicle),
+                    position: [0, 0, 0, 0, 0, 0, 0],
+                    seat: seat.type
+                  };
+                  gametime.run("enterVehicle", [gametime.player.uuid]);
                 }
               }
             }
@@ -2654,6 +2717,7 @@
             utils.weapons.stopMelee();
             utils.weapons.stopCrouch(false);
             utils.weapons.stopWalking(false);
+            utils.vehicles.exit();
             if (utils.options.get("DeathTime")) return;
             utils.options.set("DeathTime", Date.now());
             const deathPose = utils.players.createDeathPose(camera);
@@ -2768,14 +2832,7 @@
         if (!PointerControls.isLocked) return;
         keyStates[event.code] = true;
         if (!event.repeat && !deathScreen) {
-          if (!utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) {
-            utils.options.set("Walking", true);
-            if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
-              utils.weapons.animations.stop("idle");
-              utils.weapons.animations.start("walk");
-            }
-            gametime.run("startWalking", [gametime.player.uuid]);
-          }
+          if (!utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.startWalking();
           if (sandbox.controls.fire.includes(event.code)) utils.weapons.fire();
           if (sandbox.controls.zoom.includes(event.code)) utils.weapons.zoom();
           if (sandbox.controls.reload.includes(event.code)) utils.weapons.reload();
@@ -2897,6 +2954,12 @@
       });
       gametime.on("playerRespawn", function(player, spawnPoint) {
         if (player != gametime.player.uuid) utils.players.health.respawn(utils.players.objects[player], spawnPoint);
+      });
+      gametime.on("enterVehicle", function(player) {
+        if (player != gametime.player.uuid) utils.players.vehicles.enter(utils.players.objects[player]);
+      });
+      gametime.on("exitVehicle", function(player) {
+        if (player != gametime.player.uuid) utils.players.vehicles.exit(utils.players.objects[player]);
       });
     </script>
   </body>
