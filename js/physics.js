@@ -10,23 +10,36 @@ physics = {
   _vec1: new CANNON.Vec3(),
   _vec2: new THREE.Vector3(),
   _vec3: new CANNON.Vec3(),
+  _vec4: new CANNON.Vec3(),
+  _vec5: new CANNON.Vec3(),
+  _vec6: new THREE.Vector3(),
+  _vec7: new THREE.Vector3(),
+  _vec8: new THREE.Vector3(),
+  _vec9: new CANNON.Vec3(),
+  _vec10: new THREE.Vector3(2, 2, 2),
+  _box: new THREE.Box3(),
   _quat1: new CANNON.Quaternion(),
   initialized: false,
   initialize: function(model) {
     physics.initialized = true;
-    physics.world.gravity.set(0, -20, 0);
+    physics.world.gravity.set(0, -30, 0);
     model.traverse(child => {
       if (child.isMesh) {
         physics._vec2.set(child.rotation.x, child.rotation.y, child.rotation.z);
         child.rotation.set(0, 0, 0);
-        const box = new THREE.Box3().setFromObject(child);
-        const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
-        const shape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
+        const box = physics._box.setFromObject(child);
+        physics._vec7.set(0, 0, 0);
+        physics._vec8.set(0, 0, 0);
+        const size = box.getSize(physics._vec7);
+        const center = box.getCenter(physics._vec8);
+        physics._vec9.set(size.x / 2, size.y / 2, size.z / 2);
+        const shape = new CANNON.Box(physics._vec9);
         const body = new CANNON.Body({ mass: 0, shape: shape, material: physics.worldMaterial });
-        body.position.copy(child.getWorldPosition(new THREE.Vector3()));
         physics.world.add(body);
         child.rotation.set(physics._vec2.x, physics._vec2.y, physics._vec2.z);
+        box.setFromObject(child);
+        const worldPosition = box.min.add(box.max).divide(physics._vec10);
+        body.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
         body.quaternion.copy(child.quaternion);
       }
     });
@@ -46,18 +59,17 @@ physics = {
     physics.bodies.push(body);
     body.addEventListener("collide", function(event) {
       if (typeof body.oncollision == "function") {
-        let worldPoint = new CANNON.Vec3();
-        worldPoint.copy(event.contact.bi.position);
-        worldPoint.vadd(event.contact.ri, worldPoint);
-        worldPoint = new THREE.Vector3(worldPoint.x, worldPoint.y - 0.3, worldPoint.z);
-        body.oncollision(worldPoint, event.contact.getImpactVelocityAlongNormal());
+        physics._vec5.copy(event.contact.bi.position);
+        physics._vec5.vadd(event.contact.ri, physics._vec5);
+        physics._vec6.set(physics._vec5.x, physics._vec5.y - 0.3, physics._vec5.z);
+        body.oncollision(physics._vec6, event.contact.getImpactVelocityAlongNormal());
       }
     });
     return body;
   },
-  update: function() {
+  update: function(deltaTime) {
     if (!physics.initialized) return;
-    physics.world.step(1 / 60);
+    physics.world.step(deltaTime * 0.48);
     for (let i = 0; i < physics.meshes.length; i++) {
       physics.meshes[i].position.copy(physics.bodies[i].position);
       physics.meshes[i].quaternion.copy(physics.bodies[i].quaternion);
@@ -66,4 +78,4 @@ physics = {
 };
 
 physics.world.addContactMaterial(new CANNON.ContactMaterial(physics.worldMaterial, physics.worldMaterial, { friction: 0.4, restitution: 0.3, contactEquationStiffness: 1e8, contactEquationRelaxation: 3, frictionEquationStiffness: 1e8, frictionEquationRegularizationTime: 3 }));
-physics.world.addContactMaterial(new CANNON.ContactMaterial(physics.worldMaterial, physics.carMaterial, { friction: 0.001, restitution: 0.3, contactEquationStiffness: 1e8, contactEquationRelaxation: 3 }));
+physics.world.addContactMaterial(new CANNON.ContactMaterial(physics.worldMaterial, physics.carMaterial, { friction: 0.0005, restitution: 0.3, contactEquationStiffness: 1e8, contactEquationRelaxation: 3 }));
