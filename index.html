@@ -280,7 +280,7 @@
           utils.physics.controls(deltaTime);
           utils.physics.updatePlayer(deltaTime);
           utils.physics.updateGrenades(deltaTime, time, i);
-          utils.physics.updateVehicles(deltaTime, time);
+          utils.physics.updateVehicles(deltaTime, time, i);
           utils.players.update();
         }
 
@@ -341,7 +341,11 @@
               object.geometry.dispose();
               delete tmpObjects[uuid];
             } else if (object.objectType == "deathPose") {
-              scene.remove(object);
+              if (object.isFirstPerson) {
+                utils.models.get("pose").model.scene.add(object);
+              } else {
+                scene.remove(object);
+              }
               delete tmpObjects[uuid];
             } else if (object.objectType == "htmlElement") {
               object.remove();
@@ -1317,6 +1321,16 @@
             } else if (weapon == "melee") {
               const realDamage = 100;
               gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid]);
+            } else if (weapon.seats) {
+              let realDamage = null;
+              if (weapon.speed < 8) {
+                realDamage = Math.min(weapon.speed * 10, 80);
+              } else if (weapon.speed < 15) {
+                realDamage = 100;
+              } else {
+                realDamage = 150;
+              }
+              utils.health.subtract(realDamage, utils.players.objects[weapon.lastUsedBy] || null, null);
             } else {
               const realDamage = (shield.shieldType == "head" ? weapon.headshotDamage : weapon.damage) / Math.max(camera.position.distanceTo(player.scene.position) / weapon.range, 1);
               gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid]);
@@ -1551,7 +1565,8 @@
             }
           },
           vehicles: {
-            enter: function(player, seat) {
+            enter: function(player, seat, vehicle) {
+              vehicle.lastUsedBy = player.uuid;
               utils.players.animations.stop(player, player.weapon.type + "_idle");
               utils.players.animations.stop(player, player.weapon.type + "_walk");
               utils.players.animations.stop(player, player.weapon.type + "_run");
@@ -1603,6 +1618,7 @@
             if (point == camera) {
               deathPose = utils.models.get("pose").model.scene.getObjectByName("Death_Pose") || scene.getObjectByName("Death_Pose");
               deathPose.parentType = "camera";
+              deathPose.isFirstPerson = true;
               deathPose.rotation.y = point.rotation.y;
             } else {
               deathPose = point.scene.getObjectByName("Death_Pose").clone();
@@ -1801,8 +1817,8 @@
               }
             }
           },
-          updateVehicles: function(deltaTime, time) {
-            physics.update(deltaTime);
+          updateVehicles: function(deltaTime, time, loop) {
+            physics.update(deltaTime, !utils.vehicles.check(true));
             for (let i = 0; i < vehicles.length; i++) {
               const vehicle = vehicles[i];
               for (let j = 0; j < vehicle.seats.length; j++) vehicle.seats[j].taken = false;
@@ -1830,6 +1846,7 @@
               vehicle.body.velocity.lerp(physics.forward, 0.06, result);
               vehicle.body.velocity.set(result.x, vehicle.body.velocity.y, result.z);
               const speed = Math.sqrt(Math.pow(vehicle.body.velocity.x, 2) + Math.pow(vehicle.body.velocity.y, 2) + Math.pow(vehicle.body.velocity.z, 2));
+              vehicle.speed = speed;
               const turningAngle = utils.vehicles.calculateTurningAngle(speed * (vehicle.physicsVariables.enginePower > 0 ? 1 : -1), vehicle.physicsVariables.heading);
               const target = physics._vec4.copy(vehicle.body.angularVelocity);
               target.y = turningAngle * 400;
@@ -1870,6 +1887,43 @@
                   camera.position.lerp(motion, 0.02);
                 }
                 gametime.player.data.vehicle.position = [vehicle.body.velocity.x, vehicle.body.velocity.y, vehicle.body.velocity.z, vehicle.body.position.x, vehicle.body.position.y, vehicle.body.position.z, vehicle.body.quaternion.x, vehicle.body.quaternion.y, vehicle.body.quaternion.z, vehicle.body.quaternion.w, vehicle.physicsVariables.heading];
+              }
+              if (vehicle.smoke && time % 10 == 0 && loop == 0) particles.dust(vehicle.mesh.position, 4);
+              function applyDamageLevel(level) {
+                if (level == 0) {
+                  const windshield = vehicle.mesh.getObjectByName("Windshield");
+                  windshield.material.map = null;
+                  windshield.material.opacity = 0.1;
+                } else if (level == 1) {
+                  const windshield = vehicle.mesh.getObjectByName("Windshield");
+                  windshield.material.map = new THREE.TextureLoader().load("/images/assets/vehicles/shattered_glass.png");
+                  windshield.material.opacity = 1;
+                } else if (level == 2) {
+                  vehicle.smoke = true;
+                } else if (level == 3) {
+                  utils.vehicles.explode(vehicle);
+                }
+              }
+              if (vehicle.mesh.position.y < -40) vehicle.condition = 0;
+              if (vehicle.condition <= 0) {
+                vehicle.damageLevel = 3;
+              } else if (vehicle.condition < 40) {
+                vehicle.damageLevel = 2;
+              } else if (vehicle.condition < 80) {
+                vehicle.damageLevel = 1;
+              } else {
+                vehicle.damageLevel = 0;
+              }
+              for (let level = 0; level < 4; level++) {
+                if (level <= vehicle.damageLevel && !vehicle.currentDamage.includes(level)) {
+                  vehicle.currentDamage.push(level);
+                  applyDamageLevel(level);
+                }
+              }
+              if (vehicle.despawnTime != null) {
+                if (time - vehicle.despawnTime > vehicle.respawnTime) {
+                  utils.vehicles.respawn(vehicle);
+                }
               }
             }
           }
@@ -2631,6 +2685,7 @@
                 mesh: vehicle,
                 body: body,
                 lastCollision: null,
+                lastPlayerCollision: null,
                 physicsVariables: {
                   enginePower: 0,
                   maxEnginePower: 2500,
@@ -2643,6 +2698,12 @@
                 },
                 currentSeat: null,
                 currentView: 1,
+                currentDamage: [],
+                damageLevel: 0,
+                condition: 100,
+                despawnTime: null,
+                respawnTime: 60000,
+                spawnPoint: mapVehicle.position,
                 seats: [
                   {
                     type: "driver",
@@ -2658,11 +2719,50 @@
                   }
                 ]
               };
-              body.oncollision = function(point, intensity) {
-                utils.vehicles.collision(entry, point, intensity);
+              body.oncollision = function(point, intensity, contact, body) {
+                if (body == physics.player) {
+                  const time = Date.now();
+                  const normal = new THREE.Vector3().copy(contact.ni);
+                  playerCollider.translate(normal.multiplyScalar(-0.1));
+                  if (time - entry.lastPlayerCollision > 500) {
+                    entry.lastPlayerCollision = time;
+                    utils.players.hit(null, null, entry);
+                  }
+                } else {
+                  utils.vehicles.collision(entry, point, intensity);
+                }
               };
               vehicles.push(entry);
             }
+          },
+          explode: function(vehicle) {
+            utils.vehicles.exit();
+            const distance = camera.position.distanceTo(vehicle.mesh.position);
+            const shakeIntensity = 2 / (Math.max(distance, 1) / 5);
+            utils.effects.shake(shakeIntensity);
+            if (distance < 6) {
+              utils.health.subtract(Math.min((2 / 3) * 100, 150), null);
+            }
+            particles.explosion(vehicle.mesh.position, 3);
+            particles.dust(vehicle.mesh.position, 40, 50);
+            vehicle.despawnTime = Date.now();
+            vehicle.physicsVariables.throttle = false;
+            vehicle.physicsVariables.enginePower = 0;
+            vehicle.physicsVariables.heading = 0;
+            vehicle.physicsVariables.gear = "drive";
+            vehicle.smoke = false;
+            vehicle.body.position.set(0, -2000, 0);
+          },
+          respawn: function(vehicle) {
+            vehicle.despawnTime = null;
+            vehicle.currentDamage = [];
+            vehicle.damageLevel = 0;
+            vehicle.condition = 100;
+            vehicle.body.velocity.set(0, 0, 0);
+            vehicle.body.angularVelocity.set(0, 0, 0);
+            vehicle.body.position.set(vehicle.spawnPoint[0], vehicle.spawnPoint[1], vehicle.spawnPoint[2]);
+            vehicle.mesh.rotation.set(vehicle.spawnPoint[3], vehicle.spawnPoint[4], vehicle.spawnPoint[5]);
+            vehicle.body.quaternion.copy(vehicle.mesh.quaternion);
           },
           switchView: function(view = null) {
             const vehicle = utils.options.get("CurrentVehicle");
@@ -2709,6 +2809,8 @@
               camera.rotation.set(0, vehicle.mesh.rotation.y, 0);
               if (vehicle.currentSeat.type == "driver") {
                 camera.translateX(-1);
+              } else {
+                camera.translateX(1);
               }
               playerCollider.start.set(camera.position.x, camera.position.y - 0.65, camera.position.z);
               playerCollider.end.set(camera.position.x, camera.position.y, camera.position.z);
@@ -2729,10 +2831,11 @@
             if (utils.vehicles.exit()) return;
             for (let i = 0; i < vehicles.length; i++) {
               const vehicle = vehicles[i];
+              vehicle.lastUsedBy = "self";
               for (let j = 0; j < vehicle.seats.length; j++) {
                 const seat = vehicle.seats[j];
                 const worldPosition = seat.seat.getWorldPosition(vectors[6]);
-                if (camera.position.distanceTo(worldPosition) < 0.7 && !seat.taken) {
+                if (camera.position.distanceTo(worldPosition) < 0.8 && !seat.taken) {
                   vehicle.currentSeat = seat;
                   utils.options.set("CurrentVehicle", vehicle);
                   camera.position.set(0, 0, 0);
@@ -2748,7 +2851,7 @@
                     position: [0, 0, 0, 0, 0, 0, 0],
                     seat: seat.type
                   };
-                  gametime.run("enterVehicle", [gametime.player.uuid, seat.type]);
+                  gametime.run("enterVehicle", [gametime.player.uuid, seat.type, gametime.player.data.vehicle.index]);
                   return;
                 }
               }
@@ -2774,10 +2877,16 @@
           },
           collision: function(vehicle, point, intensity) {
             const time = Date.now();
-            if (vehicle.currentSeat && time - vehicle.lastCollision > 500) utils.effects.shake(intensity / 30, 100, 300);
+            if (vehicle.currentSeat) {
+              if (time - vehicle.lastCollision > 500) utils.effects.shake(intensity / 30, 100, 300);
+              if (intensity > 5) utils.health.subtract(intensity, null);
+            }
             if (intensity > 0.5) {
               particles.dust(point, Math.min(intensity * 2, 20));
               vehicle.lastCollision = time;
+            }
+            if (intensity > 2) {
+              vehicle.condition += -intensity / 4;
             }
           },
           calculateTurningAngle: function(v, a) {
@@ -3084,8 +3193,8 @@
       gametime.on("playerRespawn", function(player, spawnPoint) {
         if (player != gametime.player.uuid) utils.players.health.respawn(utils.players.objects[player], spawnPoint);
       });
-      gametime.on("enterVehicle", function(player, seat) {
-        if (player != gametime.player.uuid) utils.players.vehicles.enter(utils.players.objects[player], seat);
+      gametime.on("enterVehicle", function(player, seat, vehicleIndex) {
+        if (player != gametime.player.uuid) utils.players.vehicles.enter(utils.players.objects[player], seat, vehicles[vehicleIndex]);
       });
       gametime.on("exitVehicle", function(player, seat, vehicleData) {
         if (player != gametime.player.uuid) utils.players.vehicles.exit(utils.players.objects[player], seat, vehicleData);

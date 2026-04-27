@@ -4,6 +4,7 @@ physics = {
   world: new CANNON.World(),
   meshes: [],
   bodies: [],
+  player: null,
   worldMaterial: new CANNON.Material("worldMaterial"),
   carMaterial: new CANNON.Material("carMaterial"),
   forward: new CANNON.Vec3(0, 0, -1),
@@ -43,6 +44,9 @@ physics = {
         body.quaternion.copy(child.quaternion);
       }
     });
+    const playerBody = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(0.1, 0.1, 0.1)) });
+    physics.player = playerBody;
+    physics.world.add(playerBody);
   },
   add: function(mesh, mass, rotation) {
     mesh.rotation.set(0, 0, 0);
@@ -62,17 +66,22 @@ physics = {
         physics._vec5.copy(event.contact.bi.position);
         physics._vec5.vadd(event.contact.ri, physics._vec5);
         physics._vec6.set(physics._vec5.x, physics._vec5.y - 0.3, physics._vec5.z);
-        body.oncollision(physics._vec6, event.contact.getImpactVelocityAlongNormal());
+        body.oncollision(physics._vec6, event.contact.getImpactVelocityAlongNormal(), event.contact, event.body);
       }
     });
     return body;
   },
-  update: function(deltaTime) {
+  update: function(deltaTime, updatePlayer) {
     if (!physics.initialized) return;
     physics.world.step(deltaTime * 0.48);
     for (let i = 0; i < physics.meshes.length; i++) {
       physics.meshes[i].position.copy(physics.bodies[i].position);
       physics.meshes[i].quaternion.copy(physics.bodies[i].quaternion);
+    }
+    if (updatePlayer) {
+      physics.player.position.set(camera.position.x, camera.position.y, camera.position.z);
+    } else {
+      physics.player.position.set(0, -2000, 0);
     }
   }
 };
