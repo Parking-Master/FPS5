@@ -254,7 +254,7 @@
       let playerAgainstWall = false;
       let deathScreen = false;
       let frameCount = 0;
-      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3()];
+      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3()];
       const keyStates = {};
       const grenades = [];
       const vehicles = [];
@@ -1384,27 +1384,30 @@
                   }
                   if (playerObject.vehicle) {
                     const vehicle = vehicles[playerObject.vehicle.index];
-                    const seat = vehicle.seats.filter(seat => seat.type == playerObject.vehicle.seat)[0];
-                    seat.taken = true;
-                    if (seat.type == "driver") {
-                      const result = physics._vec1;
-                      const position = physics._vec3;
-                      result.set(0, 0, 0);
-                      position.set(playerObject.vehicle.position[3], playerObject.vehicle.position[4], playerObject.vehicle.position[5]);
-                      vehicle.body.position.lerp(position, 0.4, result);
-                      vehicle.body.velocity.set(playerObject.vehicle.position[0], playerObject.vehicle.position[1], playerObject.vehicle.position[2]);
-                      vehicle.body.position.set(result.x, result.y, result.z);
-                      vehicle.body.quaternion.set(playerObject.vehicle.position[6], playerObject.vehicle.position[7], playerObject.vehicle.position[8], playerObject.vehicle.position[9]);
-                      vehicle.physicsVariables.heading = playerObject.vehicle.position[10];
-                      vehicle.physicsVariables.throttle = playerObject.vehicle.throttle;
-                      vehicle.physicsVariables.enginePower = playerObject.vehicle.enginePower;
-                      vehicle.physicsVariables.gear = playerObject.vehicle.gear;
-                      vehicle.condition = playerObject.vehicle.condition;
+                    if (vehicle.allowedToUpdate) {
+                      const seat = vehicle.seats.filter(seat => seat.type == playerObject.vehicle.seat)[0];
+                      seat.taken = true;
+                      if (seat.type == "driver") {
+                        const result = physics._vec1;
+                        const position = physics._vec3;
+                        result.set(0, 0, 0);
+                        position.set(playerObject.vehicle.position[3], playerObject.vehicle.position[4], playerObject.vehicle.position[5]);
+                        vehicle.body.position.lerp(position, 0.4, result);
+                        vehicle.body.velocity.set(playerObject.vehicle.position[0], playerObject.vehicle.position[1], playerObject.vehicle.position[2]);
+                        vehicle.body.position.set(result.x, result.y, result.z);
+                        vehicle.body.quaternion.set(playerObject.vehicle.position[6], playerObject.vehicle.position[7], playerObject.vehicle.position[8], playerObject.vehicle.position[9]);
+                        vehicle.physicsVariables.heading = playerObject.vehicle.position[10];
+                        vehicle.physicsVariables.throttle = playerObject.vehicle.throttle;
+                        vehicle.physicsVariables.enginePower = playerObject.vehicle.enginePower;
+                        vehicle.physicsVariables.gear = playerObject.vehicle.gear;
+                        vehicle.condition = playerObject.vehicle.condition;
+                      }
+                      vectors[25].set(0, 0, 0);
+                      const worldPosition = seat.seat.getWorldPosition(vectors[25]);
+                      playerObject.scene.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
+                      playerObject.scene.rotation.set(vehicle.mesh.rotation.x, vehicle.mesh.rotation.y, vehicle.mesh.rotation.z);
+                      playerObject.scene.translateY(-1);
                     }
-                    const worldPosition = seat.seat.getWorldPosition(vectors[6]);
-                    playerObject.scene.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
-                    playerObject.scene.rotation.set(vehicle.mesh.rotation.x, vehicle.mesh.rotation.y, vehicle.mesh.rotation.z);
-                    playerObject.scene.translateY(-1);
                   }
                 }
               }
@@ -1609,6 +1612,9 @@
               } else {
                 utils.players.animations.start(player, player.weapon.type + "_idle");
               }
+            },
+            hit: function(player, vehicle, damage) {
+              vehicle.condition += -damage;
             }
           },
           health: {
@@ -1836,6 +1842,7 @@
             physics.update(deltaTime, !utils.vehicles.check(true));
             for (let i = 0; i < vehicles.length; i++) {
               const vehicle = vehicles[i];
+              audio.updateVehicle(vehicle);
               for (let j = 0; j < vehicle.seats.length; j++) vehicle.seats[j].taken = false;
               const shiftFactor = vehicle.physicsVariables.gear == "drive" ? 1 : -1;
               if (vehicle.physicsVariables.throttle) {
@@ -1943,7 +1950,6 @@
                   utils.vehicles.respawn(vehicle);
                 }
               }
-              audio.updateVehicle(vehicle);
             }
           }
         },
@@ -2619,8 +2625,10 @@
               if (intersect.object.isShield && weapon != null) {
                 const shield = intersect.object;
                 if (shield.shieldType == "vehicle") {
-                  shield.vehicle.condition += -weapon.damage / 10;
+                  const damage = weapon.damage / 10;
+                  shield.vehicle.condition += -damage;
                   particles.dust(intersect.point);
+                  gametime.run("vehicleHit", [gametime.player.uuid, shield.vehicle.id, damage]);
                 } else {
                   utils.players.hit(utils.players.objects[shield.playerUUID], shield, weapon);
                   particles.blood(intersect.point);
@@ -2722,6 +2730,7 @@
                 condition: 100,
                 despawnTime: null,
                 respawnTime: 60000,
+                allowedToUpdate: true,
                 spawnPoint: mapVehicle.position,
                 seats: [
                   {
@@ -2767,12 +2776,14 @@
             if (distance < 6) utils.health.subtract(Math.min((2 / distance) * 100, 150), null);
             particles.explosion(vehicle.mesh.position, 3);
             particles.dust(vehicle.mesh.position, 20);
+            audio.vehicleExplosion(vehicle);
             vehicle.despawnTime = Date.now();
             vehicle.physicsVariables.throttle = false;
             vehicle.physicsVariables.enginePower = 0;
             vehicle.physicsVariables.heading = 0;
             vehicle.physicsVariables.gear = "drive";
             vehicle.smoke = false;
+            vehicle.allowedToUpdate = false;
             vehicle.body.position.set(0, -2000, 0);
           },
           respawn: function(vehicle) {
@@ -2780,6 +2791,7 @@
             vehicle.currentDamage = [];
             vehicle.damageLevel = 0;
             vehicle.condition = 100;
+            vehicle.allowedToUpdate = true;
             vehicle.body.velocity.set(0, 0, 0);
             vehicle.body.angularVelocity.set(0, 0, 0);
             vehicle.body.position.set(vehicle.spawnPoint[0], vehicle.spawnPoint[1], vehicle.spawnPoint[2]);
@@ -2911,6 +2923,7 @@
             if (intensity > 0.5) {
               particles.dust(point, Math.min(intensity * 2, 20));
               vehicle.lastCollision = time;
+              audio.vehicleCrash(vehicle, intensity);
             }
             if (intensity > 5) {
               vehicle.condition += -intensity / 8;
@@ -3152,8 +3165,8 @@
         }
       });
       utils.options.set("materials", {
-        windshield: new THREE.MeshBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.1 }),
-        shattered_windshield: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, map: new THREE.TextureLoader().load("/images/assets/vehicles/shattered_glass.png") })
+        windshield: new THREE.MeshBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.1, depthWrite: false }),
+        shattered_windshield: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, map: new THREE.TextureLoader().load("/images/assets/vehicles/shattered_glass.png") })
       });
       utils.options.set("playerCamera", camera.clone());
       utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(250, 250));
@@ -3225,6 +3238,9 @@
       });
       gametime.on("exitVehicle", function(player, seat, vehicleData) {
         if (player != gametime.player.uuid) utils.players.vehicles.exit(utils.players.objects[player], seat, vehicleData);
+      });
+      gametime.on("vehicleHit", function(player, vehicleIndex, damage) {
+        if (player != gametime.player.uuid) utils.players.vehicles.hit(utils.players.objects[player], vehicles[vehicleIndex], damage);
       });
     </script>
   </body>

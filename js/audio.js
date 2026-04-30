@@ -155,6 +155,7 @@ audio = {
     grenade.lastHitTimestamp = Date.now();
     const sound = audio.sounds["grenade.hit.0"].sound;
     sound.position.copy(position);
+    sound.setMaxDistance(10);
     if (sound.source) sound.stop();
     sound.play();
   },
@@ -169,6 +170,7 @@ audio = {
       currentExplodeSound++;
       sound.position.copy(position);
       sound.setVolume(7);
+      sound.setMaxDistance(30);
       if (sound.source) sound.stop();
       sound.play();
     } else if (type == "plasma") {
@@ -176,6 +178,7 @@ audio = {
       currentExplodeSound++;
       sound.position.copy(position);
       sound.setVolume(7);
+      sound.setMaxDistance(30);
       if (sound.source) sound.stop();
       sound.play();
     }
@@ -190,26 +193,55 @@ audio = {
     sound.position.copy(position);
     sound.setVolume(10);
     sound.setRolloffFactor(0.5);
+    sound.setMaxDistance(10);
     if (sound.source) sound.stop();
     sound.play();
   },
   vehicleAccelerate: function(vehicle, accelerateSound, decelerateSound) {
     if (accelerateSound.isPlaying) return;
     if (decelerateSound.source) decelerateSound.stop();
+    accelerateSound.setVolume(0.5);
+    accelerateSound.setMaxDistance(10);
     accelerateSound.offset = vehicle.speed / 2 + 1;
     accelerateSound.play();
   },
   vehicleDecelerate: function(accelerateSound, decelerateSound) {
     if (decelerateSound.isPlaying) return;
     if (accelerateSound.source) accelerateSound.stop();
+    decelerateSound.setVolume(0.5);
+    decelerateSound.setMaxDistance(10);
     decelerateSound.offset = 1;
     decelerateSound.play();
   },
   vehicleIdle: function(accelerateSound, decelerateSound, idleSound) {
     if (accelerateSound.isPlaying) audio.vehicleDecelerate(accelerateSound, decelerateSound);
     if (idleSound.isPlaying) return;
+    idleSound.setVolume(0.5);
+    idleSound.setMaxDistance(10);
     idleSound.loop = true;
     idleSound.play();
+  },
+  vehicleCrash: function(vehicle, intensity) {
+    let sound = null;
+    if (intensity < 5) {
+      sound = audio.sounds["vehicle." + vehicle.type + ".small-crash"].sound;
+    } else if (intensity < 12) {
+      sound = audio.sounds["vehicle." + vehicle.type + ".big-crash"].sound;
+    } else {
+      sound = audio.sounds["vehicle." + vehicle.type + ".major-crash"].sound;
+    }
+    sound.position.set(vehicle.body.position.x, vehicle.body.position.y, vehicle.body.position.z);
+    sound.setMaxDistance(12);
+    if (sound.source) sound.stop();
+    sound.play();
+  },
+  vehicleExplosion: function(vehicle) {
+    const sound = audio.sounds["vehicle." + vehicle.type + ".explosion"].sound;
+    sound.position.set(vehicle.body.position.x, vehicle.body.position.y, vehicle.body.position.z);
+    sound.setVolume(7);
+    sound.setMaxDistance(35);
+    if (sound.source) sound.stop();
+    sound.play();
   }
 };
 
@@ -238,7 +270,11 @@ audio.sounds = {
   "dying.0": AudioWrapper3d("/sounds/dying/0.mp3"),
   "vehicle.Jeep.accelerate": AudioWrapper3d("/sounds/vehicles/Jeep.accelerate.mp3", true),
   "vehicle.Jeep.decelerate": AudioWrapper3d("/sounds/vehicles/Jeep.decelerate.mp3", true),
-  "vehicle.Jeep.idle": AudioWrapper3d("/sounds/vehicles/Jeep.idle.mp3", true)
+  "vehicle.Jeep.idle": AudioWrapper3d("/sounds/vehicles/Jeep.idle.mp3", true),
+  "vehicle.Jeep.major-crash": AudioWrapper3d("/sounds/vehicles/Jeep.major-crash.mp3"),
+  "vehicle.Jeep.big-crash": AudioWrapper3d("/sounds/vehicles/Jeep.big-crash.mp3"),
+  "vehicle.Jeep.small-crash": AudioWrapper3d("/sounds/vehicles/Jeep.small-crash.mp3"),
+  "vehicle.Jeep.explosion": AudioWrapper3d("/sounds/vehicles/Jeep.explosion.mp3")
 };
 
 document.addEventListener("touchstart", () => {
