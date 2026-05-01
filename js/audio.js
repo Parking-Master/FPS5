@@ -108,15 +108,18 @@ audio = {
       accelerate = audio.sounds["vehicle." + vehicle.type + ".accelerate"].sound;
       decelerate = audio.sounds["vehicle." + vehicle.type + ".decelerate"].sound;
       idle = audio.sounds["vehicle." + vehicle.type + ".idle"].sound;
+      horn = audio.sounds["vehicle." + vehicle.type + ".horn"].sound;
     } else {
       accelerate = audio.sounds["vehicle." + vehicle.type + ".accelerate"].sound.alias;
       decelerate = audio.sounds["vehicle." + vehicle.type + ".decelerate"].sound.alias;
       idle = audio.sounds["vehicle." + vehicle.type + ".idle"].sound.alias;
+      horn = audio.sounds["vehicle." + vehicle.type + ".horn"].sound.alias;
     }
     if (typeof accelerate == "undefined" || typeof decelerate == "undefined" || typeof idle == "undefined") return;
     accelerate.position.set(vehicle.body.position.x, vehicle.body.position.y, vehicle.body.position.z);
     decelerate.position.set(vehicle.body.position.x, vehicle.body.position.y, vehicle.body.position.z);
     idle.position.set(vehicle.mesh.position.x, vehicle.mesh.position.y, vehicle.mesh.position.z);
+    horn.position.set(vehicle.mesh.position.x, vehicle.mesh.position.y, vehicle.mesh.position.z);
     if (vehicle.physicsVariables.enginePower > 50 || vehicle.physicsVariables.enginePower < -50) {
       if ((vehicle.physicsVariables.gear == "reverse" && vehicle.physicsVariables.enginePower > 0) || (vehicle.physicsVariables.gear == "drive" && vehicle.physicsVariables.enginePower < 0) || !vehicle.physicsVariables.throttle) {
         audio.vehicleDecelerate(accelerate, decelerate);
@@ -125,6 +128,11 @@ audio = {
       }
     } else {
       audio.vehicleIdle(accelerate, decelerate, idle);
+    }
+    if (vehicle.horn) {
+      audio.vehicleHornStart(horn);
+    } else {
+      audio.vehicleHornStop(horn);
     }
   },
   reload: function(weapon, type = "normal") {
@@ -242,6 +250,16 @@ audio = {
     sound.setMaxDistance(35);
     if (sound.source) sound.stop();
     sound.play();
+  },
+  vehicleHornStart: function(horn) {
+    if (horn.isPlaying) return;
+    horn.setVolume(4);
+    horn.setMaxDistance(20);
+    if (horn.source) horn.stop();
+    horn.play();
+  },
+  vehicleHornStop: function(horn) {
+    if (horn.isPlaying && horn.source) horn.stop();
   }
 };
 
@@ -274,7 +292,8 @@ audio.sounds = {
   "vehicle.Jeep.major-crash": AudioWrapper3d("/sounds/vehicles/Jeep.major-crash.mp3"),
   "vehicle.Jeep.big-crash": AudioWrapper3d("/sounds/vehicles/Jeep.big-crash.mp3"),
   "vehicle.Jeep.small-crash": AudioWrapper3d("/sounds/vehicles/Jeep.small-crash.mp3"),
-  "vehicle.Jeep.explosion": AudioWrapper3d("/sounds/vehicles/Jeep.explosion.mp3")
+  "vehicle.Jeep.explosion": AudioWrapper3d("/sounds/vehicles/Jeep.explosion.mp3"),
+  "vehicle.Jeep.horn": AudioWrapper3d("/sounds/vehicles/Jeep.horn.mp3", true)
 };
 
 document.addEventListener("touchstart", () => {

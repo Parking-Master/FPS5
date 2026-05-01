@@ -254,7 +254,7 @@
       let playerAgainstWall = false;
       let deathScreen = false;
       let frameCount = 0;
-      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3()];
+      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0)];
       const keyStates = {};
       const grenades = [];
       const vehicles = [];
@@ -1142,7 +1142,7 @@
                 if (averageSpeed > speedThreshold || utils.options.get("Firing")) {
                   ctx.beginPath();
                   ctx.fillStyle = "rgba(242, 218, 60, 0.8)";
-                  ctx.arc(radarRadiusPx, radarRadiusPx, 5, 0, 2 * Math.PI);
+                  ctx.arc(radarRadiusPx, radarRadiusPx, 3, 0, 2 * Math.PI);
                   ctx.fill();
                   gametime.player.data.visibleOnRadar = true;
                 } else {
@@ -1153,7 +1153,7 @@
                   if (!blip) return;
                   ctx.beginPath();
                   ctx.fillStyle = "rgba(255, 20, 20, 0.8)";
-                  ctx.arc(blip.x, blip.y, 5, 0, Math.PI * 2);
+                  ctx.arc(blip.x, blip.y, 3, 0, Math.PI * 2);
                   ctx.fill();
                   ctx.restore();
                 }
@@ -1401,6 +1401,7 @@
                         vehicle.physicsVariables.enginePower = playerObject.vehicle.enginePower;
                         vehicle.physicsVariables.gear = playerObject.vehicle.gear;
                         vehicle.condition = playerObject.vehicle.condition;
+                        vehicle.horn = playerObject.vehicle.horn;
                       }
                       vectors[25].set(0, 0, 0);
                       const worldPosition = seat.seat.getWorldPosition(vectors[25]);
@@ -1909,11 +1910,13 @@
                   camera.position.lerp(motion, 0.02);
                 }
                 gametime.player.data.vehicle.condition = vehicle.condition;
+                gametime.player.data.vehicle.horn = vehicle.horn;
                 gametime.player.data.vehicle.heading = vehicle.physicsVariables.heading;
                 gametime.player.data.vehicle.throttle = vehicle.physicsVariables.throttle;
                 gametime.player.data.vehicle.enginePower = vehicle.physicsVariables.enginePower;
                 gametime.player.data.vehicle.gear = vehicle.physicsVariables.gear;
                 gametime.player.data.vehicle.position = [vehicle.body.velocity.x, vehicle.body.velocity.y, vehicle.body.velocity.z, vehicle.body.position.x, vehicle.body.position.y, vehicle.body.position.z, vehicle.body.quaternion.x, vehicle.body.quaternion.y, vehicle.body.quaternion.z, vehicle.body.quaternion.w, vehicle.physicsVariables.heading];
+                if (frameCount % 60 == 0 && speed < 1 && utils.vehicles.checkIfFlipped(vehicle)) utils.vehicles.exit();
               }
               if (vehicle.smoke && time % 6 == 0 && loop == 0) particles.dust(vehicle.mesh.position, 4);
               function applyDamageLevel(level) {
@@ -2144,7 +2147,7 @@
             }
           },
           fire: function(rounds = 1) {
-            if (utils.vehicles.check()) return;
+            if (utils.vehicles.check()) return utils.vehicles.check().horn = true;
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("Switching") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || weapon.currentAmmo <= 0) return;
             const time = Date.now();
@@ -2202,6 +2205,7 @@
             animation();
           },
           stopFire: function() {
+            if (utils.vehicles.check()) return utils.vehicles.check().horn = false;
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Firing") && weapon.fireMode == "auto") {
               utils.options.set("ContinueFiring", false);
@@ -2730,6 +2734,7 @@
                 condition: 100,
                 despawnTime: null,
                 respawnTime: 60000,
+                horn: false,
                 allowedToUpdate: true,
                 spawnPoint: mapVehicle.position,
                 seats: [
@@ -2829,8 +2834,8 @@
           check: function(strict = false) {
             const vehicle = utils.options.get("CurrentVehicle");
             if (vehicle) {
-              if (strict) return true;
-              if (vehicle.currentSeat.type == "driver") return true;
+              if (strict) return vehicle;
+              if (vehicle.currentSeat.type == "driver") return vehicle;
               return false;
             }
           },
@@ -2863,7 +2868,7 @@
             return false;
           },
           enter: function() {
-            if (utils.vehicles.exit()) return;
+            if (utils.vehicles.exit() || utils.vehicles.flip()) return;
             for (let i = 0; i < vehicles.length; i++) {
               const vehicle = vehicles[i];
               vehicle.lastUsedBy = "self";
@@ -2896,6 +2901,21 @@
               }
             }
           },
+          flip: function() {
+            if (utils.vehicles.check(true)) return;
+            let didFlip = false;
+            for (let i = 0; i < vehicles.length; i++) {
+              const vehicle = vehicles[i];
+              if (!didFlip && camera.position.distanceTo(vehicle.mesh.position) < 3 && utils.vehicles.checkIfFlipped(vehicle)) {
+                didFlip = true;
+                vehicle.body.angularVelocity.x = 5;
+                vehicle.body.velocity.y += 5;
+                vehicle.body.angularVelocity.z = 5;
+                vehicle.body.angularVelocity.x = 10;
+              }
+            }
+            return didFlip;
+          },
           throttle: function(vehicle, gear) {
             if (vehicle.currentSeat.type == "driver") {
               vehicle.physicsVariables.gear = gear;
@@ -2922,12 +2942,28 @@
             }
             if (intensity > 0.5) {
               particles.dust(point, Math.min(intensity * 2, 20));
+              if (intensity < 2) {
+                if (time - vehicle.lastCollision > 250) audio.vehicleCrash(vehicle, intensity);
+              } else {
+                audio.vehicleCrash(vehicle, intensity);
+              }
               vehicle.lastCollision = time;
-              audio.vehicleCrash(vehicle, intensity);
             }
             if (intensity > 5) {
               vehicle.condition += -intensity / 8;
             }
+            if (intensity > 18) vehicle.horn = true;
+          },
+          checkIfFlipped: function(vehicle) {
+            const up = vectors[27];
+            up.set(vehicle.mesh.position.x, vehicle.mesh.position.y + 2, vehicle.mesh.position.z);
+            const position1 = vectors[28];
+            position1.set(vehicle.mesh.position.x, vehicle.mesh.position.y, vehicle.mesh.position.z);
+            vectors[29].copy(vectors[30]).applyQuaternion(vehicle.mesh.quaternion);
+            position1.add(vectors[29].multiplyScalar(1));
+            const position2 = vectors[29];
+            position2.set(vehicle.mesh.position.x, vehicle.mesh.position.y + 1, vehicle.mesh.position.z);
+            return position1.distanceTo(up) > position2.distanceTo(up) + 0.5;
           },
           calculateTurningAngle: function(v, a) {
             return (v / 2.7) * Math.tan((a / (Math.max(v * 2.24, 10) / 10)) * (Math.PI / 180));
@@ -3115,7 +3151,7 @@
           if (sandbox.controls.sprint.includes(event.code) && (keyStates["KeyW"] || keyStates["ArrowUp"])) utils.weapons.sprint();
           if (sandbox.controls.crouch.includes(event.code)) utils.weapons.crouch();
           if (sandbox.controls.enterVehicle.includes(event.code)) utils.vehicles.enter();
-          if (sandbox.controls.vehicleView.includes(event.code)) event.preventDefault(), utils.vehicles.switchView();
+          if (sandbox.controls.vehicleView.includes(event.code)) utils.vehicles.switchView();
         }
       });
       document.addEventListener("keyup", function(event) {
