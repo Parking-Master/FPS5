@@ -3234,7 +3234,7 @@
 
       gametime.onupdate = function(player) {
         if (player.uuid == gametime.player.uuid) return;
-        if (typeof utils.players.objects[player.uuid] === "undefined" && player.data.team) {
+        if (typeof utils.players.objects[player.uuid] === "undefined" && (sandbox.presets.options.teamGame ? player.data.team : true)) {
           utils.players.add(player);
         }
       };
