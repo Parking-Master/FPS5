@@ -1,12 +1,12 @@
 graphics = {
   activate: function() {
-    directionalLight = new THREE.DirectionalLight(0xfcc394, 0.9);
-    ambientLight = new THREE.AmbientLight(0xfcc394, 0.4);
+    directionalLight = new THREE.DirectionalLight(0xfdd394, 1.1);
+    ambientLight = new THREE.AmbientLight(0xefe1a7, 0.4);
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.VSMShadowMap;
     renderer.outputEncoding = THREE.sRGBEncoding;
-    directionalLight.position.set(40, 50, -30);
+    directionalLight.position.set(30, 60, -30);
     directionalLight.castShadow = true;
     directionalLight.shadow.camera.near = 0.01;
     directionalLight.shadow.camera.far = 500;
@@ -16,7 +16,7 @@ graphics = {
     directionalLight.shadow.camera.bottom = -30;
     directionalLight.shadow.mapSize.width = 1024;
     directionalLight.shadow.mapSize.height = 1024;
-    directionalLight.shadow.radius = 1.5;
+    directionalLight.shadow.radius = 14;
     directionalLight.shadow.bias = -0.00006;
     ambientLight.position.set(2, 1, 1);
     scene.add(directionalLight);
