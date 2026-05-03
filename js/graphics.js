@@ -1,6 +1,6 @@
 graphics = {
   activate: function() {
-    directionalLight = new THREE.DirectionalLight(0xfdd394, 1.1);
+    directionalLight = new THREE.DirectionalLight(0xf4e6bc, 1.1);
     ambientLight = new THREE.AmbientLight(0xefe1a7, 0.4);
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.enabled = true;

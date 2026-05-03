@@ -430,7 +430,7 @@
           map: "Cargo_Port",
           character: "Raven",
           respawnTime: 5,
-          loadout: ["AK-74", "FN-502"],
+          loadout: ["HK-G28", "30-SST"],
           grenades: {
             "mk2": 2,
             "plasma": 0
@@ -1848,8 +1848,8 @@
             physics.update(deltaTime, !utils.vehicles.check(true));
             for (let i = 0; i < vehicles.length; i++) {
               const vehicle = vehicles[i];
+              audio.updateVehicle(vehicle);
               if (vehicle.allowedToUpdate) {
-                audio.updateVehicle(vehicle);
                 for (let j = 0; j < vehicle.seats.length; j++) vehicle.seats[j].taken = false;
                 vehicle.shadow.position.set(vehicle.mesh.position.x, 0.05, vehicle.mesh.position.z);
                 vehicle.shadow.rotation.set(-Math.PI / 2, 0, vehicle.mesh.rotation.y);
@@ -2240,6 +2240,7 @@
                 }
               });
               weapon.animationStructure["walk"][2] *= 5;
+              PointerControls.pointerSpeed *= 2;
               utils.ui.setVignette(0);
               if (weapon.scope) {
                 sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x2154f0);
@@ -2262,6 +2263,7 @@
                 }
               });
               weapon.animationStructure["walk"][2] /= 5;
+              PointerControls.pointerSpeed /= 2;
               utils.ui.setVignette(1);
               if (weapon.scope) {
                 sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x5489ff);
@@ -2877,6 +2879,7 @@
               gametime.run("exitVehicle", [gametime.player.uuid, vehicle.currentSeat.type, { index: gametime.player.data.vehicle.index, enginePower: vehicle.physicsVariables.enginePower }]);
               gametime.player.data.vehicle = null;
               vehicle.currentSeat = null;
+              utils.weapons.update();
               return true;
             }
             return false;
@@ -2890,6 +2893,12 @@
                 const seat = vehicle.seats[j];
                 const worldPosition = seat.seat.getWorldPosition(vectors[6]);
                 if (camera.position.distanceTo(worldPosition) < 0.9 && !seat.taken) {
+                  utils.weapons.stopFire();
+                  utils.weapons.stopZoom();
+                  utils.weapons.stopReload();
+                  utils.weapons.stopMelee();
+                  utils.weapons.stopCrouch();
+                  utils.weapons.stopWalking();
                   vehicle.currentSeat = seat;
                   utils.options.set("CurrentVehicle", vehicle);
                   camera.position.set(0, 0, 0);
@@ -3031,13 +3040,13 @@
             utils.ui.setHealthBar(100, "instant");
           },
           die: function(killer) {
+            utils.vehicles.exit();
             utils.weapons.stopFire();
             utils.weapons.stopZoom();
             utils.weapons.stopReload();
             utils.weapons.stopMelee();
-            utils.weapons.stopCrouch(false);
+            utils.weapons.stopCrouch();
             utils.weapons.stopWalking(false);
-            utils.vehicles.exit();
             if (utils.options.get("DeathTime")) return;
             utils.options.set("DeathTime", Date.now());
             const deathPose = utils.players.createDeathPose(camera);
@@ -3119,7 +3128,10 @@
               if (name == sandbox.loadout[0]) utils.weapons.setPrimary(model.scene);
               if (name == sandbox.loadout[1]) utils.weapons.setSecondary(model.scene);
               utils.images.preload("/images/crosshairs/" + sandbox.weapons[name].reticle + ".png");
-              if (sandbox.weapons[name].muzzleFlash) utils.effects.muzzleFlash(model.scene);
+              if (sandbox.weapons[name].muzzleFlash) {
+                model.scene.getObjectByName("muzzleFlash").material.color.setHex(0xffaa55);
+                utils.effects.muzzleFlash(model.scene);
+              }
               if (sandbox.weapons[name].scope) {
                 const lensCamera = model.scene.getObjectByName("LensCamera");
                 lensCamera.aspect = 1;
@@ -3234,7 +3246,7 @@
 
       gametime.onupdate = function(player) {
         if (player.uuid == gametime.player.uuid) return;
-        if (typeof utils.players.objects[player.uuid] === "undefined" && player.data.team) {
+        if (typeof utils.players.objects[player.uuid] === "undefined" && (sandbox.presets.options.teamGame ? player.data.team : true)) {
           utils.players.add(player);
         }
       };
