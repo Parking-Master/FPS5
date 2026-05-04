@@ -430,7 +430,7 @@
           map: "Cargo_Port",
           character: "Raven",
           respawnTime: 5,
-          loadout: ["HK-G28", "30-SST"],
+          loadout: ["Ace-35r", "30-SST"],
           grenades: {
             "mk2": 2,
             "plasma": 0
@@ -502,9 +502,7 @@
                 if (child.isMesh) {
                   child.castShadow = true;
                   child.receiveShadow = true;
-                  if (child.material.map) {
-                    child.material.map.anisotropy = 4;
-                  }
+                  if (child.material.map) child.material.map.anisotropy = 4;
                 }
               });
               sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
@@ -530,9 +528,7 @@
                 if (child.isMesh) {
                   child.castShadow = true;
                   child.receiveShadow = true;
-                  if (child.material.map) {
-                    child.material.map.anisotropy = 4;
-                  }
+                  if (child.material.map) child.material.map.anisotropy = 4;
                 }
               });
               sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
@@ -592,6 +588,13 @@
           {
             id: "weapon.Phone-Gun",
             path: "/models/weapons/Phone-Gun.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "weapon.Ace-35r",
+            path: "/models/weapons/Ace-35r.glb",
             model: null,
             loaded: false,
             requiredMaps: []
@@ -673,6 +676,13 @@
           {
             id: "propweapon.Phone-Gun",
             path: "/models/characters/weapons/Phone-Gun.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: "all"
+          },
+          {
+            id: "propweapon.Ace-35r",
+            path: "/models/characters/weapons/Ace-35r.glb",
             model: null,
             loaded: false,
             requiredMaps: "all"
@@ -769,7 +779,6 @@
             type: "rifle",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"],
             animationStructure: {
               idle: [1, 1, 1],
               reload: [2, 1, 1],
@@ -803,7 +812,6 @@
             type: "pistol",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"],
             animationStructure: {
               reload: [0, 1, 1],
               reload_full: [1, 1, 1],
@@ -837,7 +845,6 @@
             type: "rifle",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"],
             animationStructure: {
               idle: [1, 1, 1],
               reload: [2, 1.2, 1],
@@ -871,7 +878,6 @@
             type: "rifle",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"],
             animationStructure: {
               idle: [0, 1, 1],
               reload: [3, 1.5, 1],
@@ -909,7 +915,6 @@
             type: "rifle",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"],
             animationStructure: {
               shoot: [0, 0.8, 1],
               idle: [1, 1, 1],
@@ -943,7 +948,6 @@
             type: "pistol",
             model: null,
             loaded: false,
-            requiredMaps: ["Cargo_Port"],
             animationStructure: {
               reload: [0, 1.2, 1],
               reload_full: [0, 1.2, 1],
@@ -952,6 +956,43 @@
               shoot: [3, 1, 1],
               throw: [4, 0.5, 1],
               walk: [5, 1.6, 1]
+            }
+          },
+          "Ace-35r": {
+            name: "Ace-35r",
+            displayName: "Ace-35r Battle Rifle",
+            ammo: 108,
+            defaultAmmo: 108,
+            currentAmmo: 36,
+            maxAmmo: 36,
+            damage: 8,
+            headshotDamage: 12,
+            spread: 0.1,
+            muzzleFlash: true,
+            zoomPosition: [0.0321, 0.0024, -0.075, 0.046, -0.057, -0.02],
+            zoomFov: 38,
+            zoomDuration: 150,
+            fireMode: "burst",
+            fireRate: 80,
+            range: 22,
+            recoil: 0.8,
+            reticle: 3,
+            bulletHole: 0,
+            scope: true,
+            scopeRendered: false,
+            delayBetweenShots: 200,
+            lastShot: null,
+            type: "rifle",
+            model: null,
+            loaded: false,
+            animationStructure: {
+              idle: [0, 1, 1],
+              reload: [3, 1.6, 1],
+              reload_full: [4, 1.6, 1],
+              run: [7, 1.5, 1],
+              shoot: [6, 1, 1],
+              throw: [8, 1.4, 1],
+              walk: [7, 1.2, 1]
             }
           },
         }
@@ -1237,7 +1278,7 @@
               scene.add(playerObject.scene);
               playerObject.animationMixer = new THREE.AnimationMixer(playerObject.scene);
               playerObject.animationStructure = {
-                "death": [0, 1.5, 1],
+                "death": [0, 1.7, 1],
                 "throw_grenade": [1, 0.6, 1],
                 "pistol_idle": [2, 1, 1],
                 "pistol_jump": [3, 1, 1],
