@@ -149,7 +149,7 @@ audio = {
   },
   fire: function(weapon, roundsFired) {
     let sound = null;
-    if (weapon.fireMode == "auto" && (roundsFired + 1) % 2 == 0) {
+    if ((weapon.fireMode == "auto" || weapon.fireMode == "burst") && (roundsFired + 1) % 2 == 0) {
       sound = audio.sounds[`fire.${weapon.name}`].alias;
     } else {
       sound = audio.sounds[`fire.${weapon.name}`];
@@ -279,6 +279,9 @@ audio.sounds = {
   "reload.HK-G28.normal": AudioWrapper("/sounds/weapons/reloading/HK-G28.mp3"),
   "reload.HK-G28.full": AudioWrapper("/sounds/weapons/reloading/HK-G28.full.mp3"),
   "fire.HK-G28": AudioWrapper("/sounds/weapons/shooting/HK-G28.mp3"),
+  "reload.Ace-35r.normal": AudioWrapper("/sounds/weapons/reloading/Ace-35r.mp3"),
+  "reload.Ace-35r.full": AudioWrapper("/sounds/weapons/reloading/Ace-35r.full.mp3"),
+  "fire.Ace-35r": AudioWrapper("/sounds/weapons/shooting/Ace-35r.mp3", true),
   "grenade.hit.0": AudioWrapper3d("/sounds/grenades/hits/0.mp3"),
   "grenade.explosion.mk2": AudioWrapper3d("/sounds/grenades/explosions/0.mp3", true),
   "grenade.explosion.plasma.0": AudioWrapper3d("/sounds/grenades/explosions/1.mp3"),

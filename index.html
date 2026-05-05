@@ -363,6 +363,9 @@
             } else if (object.objectType == "hurtScreen") {
               utils.ui.elements.hurtScreen.style = `transition: box-shadow ${Math.max(Math.pow(Math.min(object.intensity, 1), 2), 0.2)}s ease-out; box-shadow: inset 0px 0px 0px transparent; opacity: ${Math.min(object.intensity, 1)}`;
               delete tmpObjects[uuid];
+            } else if (object.objectType == "resetStyle") {
+              object.style = "";
+              delete tmpObjects[uuid];
             }
           }
           if (object.objectType == "deathPose" && object.parentType == "camera") {
@@ -405,8 +408,11 @@
           if (utils.options.get("Zoomed") || !weapon.scopeRendered) {
             if (!weapon.scopeRendered) {
               weapon.scopeRendered = true;
-              sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x2154f0);
+              sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(weapon.scopeColor[1]);
             }
+            const compass = utils.options.get("scopeCompass");
+            compass.position.z = -1;
+            compass.rotation.z = camera.rotation.y;
             renderer.setRenderTarget(utils.options.get("scopeRenderTarget"));
             renderer.render(scene, sandbox.currentWeapon.getObjectByName("LensCamera"));
             renderer.setRenderTarget(null);
@@ -430,7 +436,7 @@
           map: "Cargo_Port",
           character: "Raven",
           respawnTime: 5,
-          loadout: ["Ace-35r", "30-SST"],
+          loadout: ["Ace-35r", "HK-G28"],
           grenades: {
             "mk2": 2,
             "plasma": 0
@@ -478,10 +484,10 @@
               utils.players.setArmorColor("self");
             }
             utils.ui.radar.init();
+            utils.health.respawn();
             animate();
             renderer.shadowMap.needsUpdate = true;
             audio.ambience(sandbox.maps[sandbox.presets.map].ambienceSound);
-            utils.health.respawn();
           };
         },
         loadingManager: new THREE.LoadingManager(),
@@ -909,6 +915,7 @@
             reticle: 4,
             bulletHole: 0,
             scope: true,
+            scopeColor: [0x5489ff, 0x2154f0],
             scopeRendered: false,
             delayBetweenShots: 700,
             lastShot: null,
@@ -973,12 +980,13 @@
             zoomFov: 38,
             zoomDuration: 150,
             fireMode: "burst",
-            fireRate: 80,
+            fireRate: 70,
             range: 22,
             recoil: 0.8,
             reticle: 3,
             bulletHole: 0,
             scope: true,
+            scopeColor: [0xaaffaa, 0x55ff55],
             scopeRendered: false,
             delayBetweenShots: 200,
             lastShot: null,
@@ -1093,6 +1101,10 @@
                 utils.ui.elements.crosshair.style.filter = "brightness(0) saturate(100%) invert(63%) sepia(44%) saturate(6700%) hue-rotate(83deg) brightness(126%) contrast(117%)";
               }
             }
+          },
+          weaponSwitch: function() {
+            utils.ui.elements.primaryWeaponDisplay.style = "opacity: 1; filter: saturate(0) brightness(100%) contrast(4)";
+            utils.options.addTmpObject(utils.ui.elements.primaryWeaponDisplay, "resetStyle", 400);
           },
           setVignette: function(mode = 0) {
             if (mode == 0) {
@@ -2152,9 +2164,7 @@
                 slot = "secondary";
               }
             }
-            if (utils.options.get("Walking")) {
-              utils.weapons.animations.stop("walk");
-            }
+            if (utils.options.get("Walking")) utils.weapons.animations.stop("walk");
             function next() {
               utils.weapons.animations.stop("idle");
               scene.remove(sandbox.currentWeapon);
@@ -2167,6 +2177,7 @@
                 utils.ui.setPrimaryDisplay(utils.weapons.getSecondaryEntry().name);
                 utils.ui.setSecondaryDisplay(utils.weapons.getPrimaryEntry().name);
               }
+              utils.ui.weaponSwitch();
               utils.weapons.animations.start("idle");
               scene.add(sandbox.currentWeapon);
               if (instant) {
@@ -2284,7 +2295,8 @@
               PointerControls.pointerSpeed *= 2;
               utils.ui.setVignette(0);
               if (weapon.scope) {
-                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x2154f0);
+                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(weapon.scopeColor[1]);
+                camera.remove(utils.options.get("scopeCompass"));
               }
               utils.options.set("Zoomed", false);
             } else {
@@ -2307,7 +2319,8 @@
               PointerControls.pointerSpeed /= 2;
               utils.ui.setVignette(1);
               if (weapon.scope) {
-                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(0x5489ff);
+                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(weapon.scopeColor[0]);
+                camera.add(utils.options.get("scopeCompass"));
               }
               utils.options.set("Zoomed", true);
             }
@@ -3273,6 +3286,7 @@
       });
       utils.options.set("playerCamera", camera.clone());
       utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(250, 250));
+      utils.options.set("scopeCompass", new THREE.Mesh(new THREE.CircleGeometry(0.75, 30), new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load("/images/ui/compass.png"), transparent: true, opacity: 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide })));
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("aimRaycaster", new THREE.Raycaster());
       utils.options.set("globalZoomTween", null);
