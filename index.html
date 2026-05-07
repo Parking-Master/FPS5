@@ -405,7 +405,7 @@
         frameCount++;
 
         if (weapon.scope) {
-          if (utils.options.get("Zoomed") || !weapon.scopeRendered) {
+          if (utils.options.get("Zoomed") || frameCount % 3 == 0 || !weapon.scopeRendered) {
             if (!weapon.scopeRendered) {
               weapon.scopeRendered = true;
               sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(weapon.scopeColor[1]);
@@ -907,7 +907,7 @@
             muzzleFlash: true,
             zoomPosition: [0.04, 0.014, -0.04, 0.05, -0.055, 0],
             zoomFov: 40,
-            zoomDuration: 200,
+            zoomDuration: 150,
             fireMode: "semi",
             fireRate: 200,
             range: 60,
@@ -915,7 +915,7 @@
             reticle: 4,
             bulletHole: 0,
             scope: true,
-            scopeColor: [0x5489ff, 0x2154f0],
+            scopeColor: [0xffffff, 0x2154f0],
             scopeRendered: false,
             delayBetweenShots: 700,
             lastShot: null,
@@ -972,13 +972,13 @@
             defaultAmmo: 108,
             currentAmmo: 36,
             maxAmmo: 36,
-            damage: 8,
+            damage: 7,
             headshotDamage: 12,
             spread: 0.1,
             muzzleFlash: true,
-            zoomPosition: [0.0321, 0.0024, -0.075, 0.046, -0.057, -0.02],
-            zoomFov: 38,
-            zoomDuration: 150,
+            zoomPosition: [0.032, 0.0031, -0.075, 0.046, -0.057, -0.02],
+            zoomFov: 33,
+            zoomDuration: 110,
             fireMode: "burst",
             fireRate: 70,
             range: 22,
@@ -986,7 +986,7 @@
             reticle: 3,
             bulletHole: 0,
             scope: true,
-            scopeColor: [0xaaffaa, 0x55ff55],
+            scopeColor: [0xffffff, 0x55ff55],
             scopeRendered: false,
             delayBetweenShots: 200,
             lastShot: null,
@@ -2278,7 +2278,6 @@
             if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Zoomed")) {
-              utils.ui.showCrosshair();
               if (utils.options.get("globalZoomTween")) {
                 utils.options.get("globalZoomTween").in.position.stop();
                 utils.options.get("globalZoomTween").in.rotation.stop();
@@ -2292,17 +2291,20 @@
                 }
               });
               weapon.animationStructure["walk"][2] *= 5;
+              weapon.animationStructure["idle"][2] *= 5;
               PointerControls.pointerSpeed *= 2;
               utils.ui.setVignette(0);
               if (weapon.scope) {
                 sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(weapon.scopeColor[1]);
                 camera.remove(utils.options.get("scopeCompass"));
+                utils.options.get("scopeRenderTarget").setSize(30, 30);
+              } else {
+                utils.ui.showCrosshair();
               }
               utils.options.set("Zoomed", false);
             } else {
               utils.weapons.stopMelee();
               utils.weapons.stopSprint(false, true);
-              utils.ui.hideCrosshair();
               if (utils.options.get("globalZoomTween")) {
                 utils.options.get("globalZoomTween").out.position.stop();
                 utils.options.get("globalZoomTween").out.rotation.stop();
@@ -2316,15 +2318,23 @@
                 }
               });
               weapon.animationStructure["walk"][2] /= 5;
+              weapon.animationStructure["idle"][2] /= 5;
               PointerControls.pointerSpeed /= 2;
               utils.ui.setVignette(1);
               if (weapon.scope) {
                 sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(weapon.scopeColor[0]);
                 camera.add(utils.options.get("scopeCompass"));
+                utils.options.get("scopeRenderTarget").setSize(250, 250);
+              } else {
+                utils.ui.hideCrosshair();
               }
               utils.options.set("Zoomed", true);
             }
-            if (utils.options.get("Walking")) utils.weapons.animations.restart("walk");
+            if (utils.options.get("Walking")) {
+              utils.weapons.animations.restart("walk");
+            } else {
+              utils.weapons.animations.restart("idle");
+            }
             utils.weapons.update();
           },
           stopZoom: function() {
@@ -3285,7 +3295,7 @@
         shattered_windshield: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, map: new THREE.TextureLoader().load("/images/assets/vehicles/shattered_glass.png") })
       });
       utils.options.set("playerCamera", camera.clone());
-      utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(250, 250));
+      utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(30, 30));
       utils.options.set("scopeCompass", new THREE.Mesh(new THREE.CircleGeometry(0.75, 30), new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load("/images/ui/compass.png"), transparent: true, opacity: 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide })));
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("aimRaycaster", new THREE.Raycaster());
