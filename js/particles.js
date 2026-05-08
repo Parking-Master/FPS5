@@ -241,8 +241,8 @@ particles = {
         vx: (Math.random() - 0.5) * 0.08,
         vy: (Math.random() - 0.4) * 0.05,
         vz: (Math.random() - 0.4) * 0.06,
-        life: 4.0 * life,
-        maxLife: 4.0 * life,
+        life: 2 * life,
+        maxLife: 2 * life,
         size: 0.01 + Math.random() * 0.015 * size
       };
       burst.particles.push(particle);

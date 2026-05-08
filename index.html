@@ -166,7 +166,7 @@
       .ui-radar {
         position: absolute;
         bottom: 40px;
-        left: 60px;
+        left: 90px;
         width: 150px;
         height: 130px;
         border-radius: 100%;
@@ -248,6 +248,7 @@
       </div>
     </div>
     <script>
+      if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:4656";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -905,7 +906,7 @@
             headshotDamage: 200,
             spread: 0.1,
             muzzleFlash: true,
-            zoomPosition: [0.04, 0.014, -0.04, 0.05, -0.055, 0],
+            zoomPosition: [0.04, 0.0135, -0.03, 0.05, -0.055, 0],
             zoomFov: 40,
             zoomDuration: 150,
             fireMode: "semi",
@@ -973,17 +974,17 @@
             currentAmmo: 36,
             maxAmmo: 36,
             damage: 7,
-            headshotDamage: 12,
+            headshotDamage: 13,
             spread: 0.1,
             muzzleFlash: true,
             zoomPosition: [0.032, 0.0031, -0.075, 0.046, -0.057, -0.02],
             zoomFov: 33,
             zoomDuration: 110,
             fireMode: "burst",
-            fireRate: 70,
+            fireRate: 30,
             range: 22,
-            recoil: 0.8,
-            reticle: 3,
+            recoil: 0.5,
+            reticle: 6,
             bulletHole: 0,
             scope: true,
             scopeColor: [0xffffff, 0x55ff55],
@@ -1197,10 +1198,11 @@
                 if (playerSpeeds.length > 10) playerSpeeds.shift();
                 const averageSpeed = playerSpeeds.reduce((a, b) => a + b) / playerSpeeds.length;
                 const speedThreshold = (utils.options.get("Crouching") ? 1.3 : 0.03);
-                if (averageSpeed > speedThreshold || utils.options.get("Firing")) {
+                const inVehicle = utils.vehicles.check(true);
+                if (averageSpeed > speedThreshold || utils.options.get("Firing") || inVehicle) {
                   ctx.beginPath();
                   ctx.fillStyle = "rgba(242, 218, 60, 0.8)";
-                  ctx.arc(radarRadiusPx, radarRadiusPx, 4, 0, 2 * Math.PI);
+                  ctx.arc(radarRadiusPx, radarRadiusPx, inVehicle ? 8 : 4, 0, 2 * Math.PI);
                   ctx.fill();
                   gametime.player.data.visibleOnRadar = true;
                 } else {
@@ -1211,7 +1213,7 @@
                   if (!blip) return;
                   ctx.beginPath();
                   ctx.fillStyle = "rgba(255, 20, 20, 0.8)";
-                  ctx.arc(blip.x, blip.y, 4, 0, Math.PI * 2);
+                  ctx.arc(blip.x, blip.y, enemy.vehicle ? 8 : 4, 0, Math.PI * 2);
                   ctx.fill();
                   ctx.restore();
                 }
@@ -1592,6 +1594,7 @@
               const camera = utils.options.get("playerCamera");
               camera.position.set(point[0], point[1], point[2]);
               camera.rotation.set(point[3], point[4], point[5]);
+              camera.translateZ(-0.5);
               camera.updateMatrixWorld();
               utils.effects.bulletHole(spreadX, spreadY, type, camera);
             }
@@ -2211,6 +2214,7 @@
             if (utils.vehicles.check()) return utils.vehicles.check().horn = true;
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("Switching") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || weapon.currentAmmo <= 0) return;
+            const zoomed = utils.options.get("Zoomed");
             const time = Date.now();
             if (time - weapon.lastShot < weapon.delayBetweenShots) return;
             utils.options.set("Firing", true);
@@ -2224,7 +2228,7 @@
               rounds = 3;
             }
             let lastFire = time - weapon.fireRate;
-            let spreads = Array(rounds * 2).fill(0).map(x => { const spread = Math.random() / (utils.options.get("Zoomed") ? 90 : 60) * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
+            let spreads = Array(rounds * 2).fill(0).map(x => { const spread = Math.random() / (zoomed ? 90 : 60) * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
             let roundsFired = 0;
             function animation() {
               if (roundsFired < rounds && weapon.currentAmmo > 0 && utils.options.get("ContinueFiring")) {
@@ -2239,12 +2243,12 @@
                   const spreadY = spreads[roundsFired + 1];
                   utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
                   if (weapon.muzzleFlash) {
-                    if (!weapon.scope || !utils.options.get("Zoomed")) {
+                    if (!weapon.scope || !zoomed) {
                       utils.effects.muzzleFlash();
                     }
                   }
                   utils.effects.bob(1, weapon.recoil);
-                  utils.effects.shake(weapon.recoil / 2, 100, 50 * weapon.recoil);
+                  utils.effects.shake(weapon.recoil / (zoomed ? 4 : 2), 100, 50 * weapon.recoil);
 
                   roundsFired++;
                   weapon.currentAmmo--;
@@ -2292,6 +2296,7 @@
               });
               weapon.animationStructure["walk"][2] *= 5;
               weapon.animationStructure["idle"][2] *= 5;
+              weapon.animationStructure["shoot"][2] *= 5;
               PointerControls.pointerSpeed *= 2;
               utils.ui.setVignette(0);
               if (weapon.scope) {
@@ -2318,6 +2323,7 @@
               });
               weapon.animationStructure["walk"][2] /= 5;
               weapon.animationStructure["idle"][2] /= 5;
+              weapon.animationStructure["shoot"][2] /= 5;
               PointerControls.pointerSpeed /= 2;
               utils.ui.setVignette(1);
               if (weapon.scope) {
