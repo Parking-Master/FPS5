@@ -840,7 +840,7 @@
             headshotDamage: 10,
             spread: 1.8,
             muzzleFlash: true,
-            zoomPosition: [0.0414, 0.0038, -0.01, 0.03, -0.04, 0.05],
+            zoomPosition: [0.04157, 0.0031, 0, 0.03, -0.043, 0.05],
             zoomFov: 35,
             zoomDuration: 150,
             fireMode: "auto",
@@ -998,10 +998,10 @@
               idle: [0, 1, 1],
               reload: [3, 1.6, 1],
               reload_full: [4, 1.6, 1],
-              run: [7, 1.5, 1],
+              run: [8, 1.5, 1],
               shoot: [6, 1, 1],
-              throw: [8, 1.4, 1],
-              walk: [7, 1.2, 1]
+              throw: [7, 1.4, 1],
+              walk: [8, 1.2, 1]
             }
           },
         }
@@ -1353,7 +1353,7 @@
                 armor2.material.color.setHex(0xff0000);
                 armor2.material.emissive.setHex(0x220000);
                 for (weapon in sandbox.weapons) {
-                  if (sandbox.weapons[weapon].model) sandbox.weapons[weapon].model.scene.getObjectByName("Arms").material.emissive.setHex(0x440000);
+                  if (sandbox.weapons[weapon].model) sandbox.weapons[weapon].model.scene.getObjectByName("Arms").material.emissive.setHex(0x220000);
                 }
               } else if (gametime.player.data.team == "blue") {
                 armor1.material.color.setHex(0x18b6dd);
@@ -1361,7 +1361,7 @@
                 armor2.material.color.setHex(0x18b6dd);
                 armor2.material.emissive.setHex(0x000011);
                 for (weapon in sandbox.weapons) {
-                  if (sandbox.weapons[weapon].model) sandbox.weapons[weapon].model.scene.getObjectByName("Arms").material.emissive.setHex(0x00102f);
+                  if (sandbox.weapons[weapon].model) sandbox.weapons[weapon].model.scene.getObjectByName("Arms").material.emissive.setHex(0x000011);
                 }
               }
             } else {
@@ -1769,17 +1769,18 @@
                 utils.vehicles.steer(vehicle, "right", deltaTime);
               }
             } else {
-              const walkSpeed = deltaTime * (playerOnFloor ? 24 : 1.5) * (utils.options.get("Sprinting") ? 2 : utils.options.get("Crouching") ? 0.5 : 1);
+              const sprinting = utils.options.get("Sprinting");
+              const walkSpeed = deltaTime * (playerOnFloor ? 24 : 1.5) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1);
               if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
                 playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(walkSpeed));
               }
               if (keyStates["KeyS"] || keyStates["ArrowDown"]) {
                 playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(-walkSpeed));
               }
-              if (keyStates["KeyA"] || keyStates["ArrowLeft"]) {
+              if ((keyStates["KeyA"] || keyStates["ArrowLeft"]) && !sprinting) {
                 playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(-walkSpeed));
               }
-              if (keyStates["KeyD"] || keyStates["ArrowRight"]) {
+              if ((keyStates["KeyD"] || keyStates["ArrowRight"]) && !sprinting) {
                 playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(walkSpeed));
               }
               if (playerOnFloor && keyStates["Space"]) utils.weapons.jump();
@@ -2608,7 +2609,7 @@
             if (isMultiplayer) {
               grenade.explode = false;
             } else {
-              if (utils.vehicles.check()) return;
+              if (utils.vehicles.check(true)) return;
               utils.weapons.stopFire();
               utils.weapons.stopZoom();
               utils.weapons.stopReload();
