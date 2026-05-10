@@ -409,7 +409,7 @@
           if (utils.options.get("Zoomed") || !weapon.scopeRendered) {
             if (!weapon.scopeRendered) {
               weapon.scopeRendered = true;
-              sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(weapon.scopeColor[1]);
+              sandbox.currentWeapon.getObjectByName("Lens").material = weapon.scopeMaterial[1];
             }
             const compass = utils.options.get("scopeCompass");
             compass.position.z = -1;
@@ -916,7 +916,7 @@
             reticle: 4,
             bulletHole: 0,
             scope: true,
-            scopeColor: [0xffffff, 0x2154f0],
+            scopeMaterial: [new THREE.MeshBasicMaterial(), new THREE.MeshStandardMaterial({ color: 0xaaaaff, metalness: 0, roughness: 0.5, map: new THREE.TextureLoader().load("/images/assets/scopes/0.png") })],
             scopeRendered: false,
             delayBetweenShots: 700,
             lastShot: null,
@@ -987,7 +987,7 @@
             reticle: 6,
             bulletHole: 0,
             scope: true,
-            scopeColor: [0xffffff, 0x55ff55],
+            scopeMaterial: [new THREE.MeshBasicMaterial(), new THREE.MeshStandardMaterial({ color: 0x11aa33, metalness: 0.5, roughness: 0.5, map: new THREE.TextureLoader().load("/images/assets/scopes/1.png") })],
             scopeRendered: false,
             delayBetweenShots: 200,
             lastShot: null,
@@ -2301,7 +2301,7 @@
               PointerControls.pointerSpeed *= 2;
               utils.ui.setVignette(0);
               if (weapon.scope) {
-                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(weapon.scopeColor[1]);
+                sandbox.currentWeapon.getObjectByName("Lens").material = weapon.scopeMaterial[1];
                 camera.remove(utils.options.get("scopeCompass"));
               } else {
                 utils.ui.showCrosshair();
@@ -2328,7 +2328,7 @@
               PointerControls.pointerSpeed /= 2;
               utils.ui.setVignette(1);
               if (weapon.scope) {
-                sandbox.currentWeapon.getObjectByName("Lens").material.color.setHex(weapon.scopeColor[0]);
+                sandbox.currentWeapon.getObjectByName("Lens").material = weapon.scopeMaterial[0];
                 camera.add(utils.options.get("scopeCompass"));
               } else {
                 utils.ui.hideCrosshair();
@@ -3205,7 +3205,7 @@
                 const lensCamera = model.scene.getObjectByName("LensCamera");
                 lensCamera.aspect = 1;
                 lensCamera.updateProjectionMatrix();
-                model.scene.getObjectByName("Lens").material.map = utils.options.get("scopeRenderTarget").texture;
+                sandbox.weapons[name].scopeMaterial[0].map = utils.options.get("scopeRenderTarget").texture;
               }
             }
             renderer.render(scene, camera);
