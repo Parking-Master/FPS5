@@ -407,10 +407,7 @@
 
         if (weapon.scope) {
           if (utils.options.get("Zoomed") || !weapon.scopeRendered) {
-            if (!weapon.scopeRendered) {
-              weapon.scopeRendered = true;
-              sandbox.currentWeapon.getObjectByName("Lens").material = weapon.scopeMaterial[1];
-            }
+            weapon.scopeRendered = true;
             const compass = utils.options.get("scopeCompass");
             compass.position.z = -1;
             compass.rotation.z = camera.rotation.y;
@@ -434,7 +431,7 @@
       sandbox = {
         setup: false,
         presets: {
-          map: "Cargo_Port",
+          map: "Lihid",
           character: "Raven",
           respawnTime: 5,
           loadout: ["Ace-35r", "HK-G28"],
@@ -906,9 +903,9 @@
             headshotDamage: 200,
             spread: 0.1,
             muzzleFlash: true,
-            zoomPosition: [0.04, 0.0135, -0.03, 0.05, -0.055, 0],
+            zoomPosition: [0.0377, 0.0138, -0.03, 0.05, -0.055, 0],
             zoomFov: 40,
-            zoomDuration: 150,
+            zoomDuration: 140,
             fireMode: "semi",
             fireRate: 200,
             range: 60,
@@ -916,7 +913,6 @@
             reticle: 4,
             bulletHole: 0,
             scope: true,
-            scopeMaterial: [new THREE.MeshBasicMaterial(), new THREE.MeshStandardMaterial({ color: 0xaaaaff, metalness: 0, roughness: 0.5, map: new THREE.TextureLoader().load("/images/assets/scopes/0.png") })],
             scopeRendered: false,
             delayBetweenShots: 700,
             lastShot: null,
@@ -987,7 +983,6 @@
             reticle: 6,
             bulletHole: 0,
             scope: true,
-            scopeMaterial: [new THREE.MeshBasicMaterial(), new THREE.MeshStandardMaterial({ color: 0x11aa33, metalness: 0.5, roughness: 0.5, map: new THREE.TextureLoader().load("/images/assets/scopes/1.png") })],
             scopeRendered: false,
             delayBetweenShots: 200,
             lastShot: null,
@@ -1197,7 +1192,7 @@
                 playerSpeeds.push(playerSpeed);
                 if (playerSpeeds.length > 10) playerSpeeds.shift();
                 const averageSpeed = playerSpeeds.reduce((a, b) => a + b) / playerSpeeds.length;
-                const speedThreshold = (utils.options.get("Crouching") ? 1.3 : 0.03);
+                const speedThreshold = utils.options.get("Crouching") ? 1.5 : 0.03;
                 const inVehicle = utils.vehicles.check(true);
                 if (averageSpeed > speedThreshold || utils.options.get("Firing") || inVehicle) {
                   ctx.beginPath();
@@ -2301,7 +2296,7 @@
               PointerControls.pointerSpeed *= 2;
               utils.ui.setVignette(0);
               if (weapon.scope) {
-                sandbox.currentWeapon.getObjectByName("Lens").material = weapon.scopeMaterial[1];
+                sandbox.currentWeapon.getObjectByName("LensCover").visible = true;
                 camera.remove(utils.options.get("scopeCompass"));
               } else {
                 utils.ui.showCrosshair();
@@ -2328,7 +2323,7 @@
               PointerControls.pointerSpeed /= 2;
               utils.ui.setVignette(1);
               if (weapon.scope) {
-                sandbox.currentWeapon.getObjectByName("Lens").material = weapon.scopeMaterial[0];
+                sandbox.currentWeapon.getObjectByName("LensCover").visible = false;
                 camera.add(utils.options.get("scopeCompass"));
               } else {
                 utils.ui.hideCrosshair();
@@ -3205,7 +3200,7 @@
                 const lensCamera = model.scene.getObjectByName("LensCamera");
                 lensCamera.aspect = 1;
                 lensCamera.updateProjectionMatrix();
-                sandbox.weapons[name].scopeMaterial[0].map = utils.options.get("scopeRenderTarget").texture;
+                sandbox.weapons[name].model.scene.getObjectByName("Lens").material.map = utils.options.get("scopeRenderTarget").texture;
               }
             }
             renderer.render(scene, camera);
