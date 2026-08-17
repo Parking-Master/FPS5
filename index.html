@@ -61,12 +61,12 @@
       }
       .crosshair {
         position: absolute;
-        width: 20px;
-        height: 20px;
+        width: 35px;
+        height: 35px;
         left: 50%;
         top: 50%;
-        margin-left: -10px;
-        margin-top: -10px;
+        margin-left: -17.5px;
+        margin-top: -17.5px;
       }
       .ui {
         position: fixed;
@@ -203,6 +203,15 @@
         font-weight: 600;
         color: #67d4ff;
       }
+      .ui-ammo-info {
+        font-family: "Arame";
+        font-size: 26px;
+        font-weight: 600;
+        color: #67d4ff;
+        text-shadow: 2px 2px 20px rgb(50, 50, 50);
+        text-align: center;
+        opacity: 0;
+      }
     </style>
   </head>
   <body>
@@ -211,7 +220,7 @@
     <script src="/js/Capsule.js"></script>
     <script src="/js/Octree.js"></script>
     <script src="/js/DecalGeometry.js"></script>
-    <script src="/js/graphics.js"></script>
+    <script src="/js/Lensflare.js"></script>
     <script src="/js/particles.js"></script>
     <script src="/js/audio.js"></script>
     <script src="/js/physics.js"></script>
@@ -231,6 +240,7 @@
         <div class="ui-health-bar">
           <div class="ui-health-value"></div>
         </div>
+        <div class="ui-ammo-info">NO AMMO LEFT IN WEAPON. PRESS [Y] TO SWITCH WEAPON.</div>
       </div>
       <div class="ui-section bottom-left-section">
         <div class="ui-radar">
@@ -248,7 +258,7 @@
       </div>
     </div>
     <script>
-      if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:4656";
+      if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -273,7 +283,37 @@
       camera.rotation.order = "YXZ";
       scene.add(camera);
       document.body.appendChild(renderer.domElement);
-      graphics.activate();
+
+      const directionalLight = new THREE.DirectionalLight(0xf4e6bc, 1.1);
+      const ambientLight = new THREE.AmbientLight(0xefe1a7, 0.4);
+      renderer.shadowMap.autoUpdate = false;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.VSMShadowMap;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      directionalLight.position.set(30, 60, -30);
+      directionalLight.castShadow = true;
+      directionalLight.shadow.camera.near = 0.01;
+      directionalLight.shadow.camera.far = 500;
+      directionalLight.shadow.camera.right = 30;
+      directionalLight.shadow.camera.left = -30;
+      directionalLight.shadow.camera.top = 30;
+      directionalLight.shadow.camera.bottom = -30;
+      directionalLight.shadow.mapSize.width = 1024;
+      directionalLight.shadow.mapSize.height = 1024;
+      directionalLight.shadow.radius = 14;
+      directionalLight.shadow.bias = -0.00006;
+      ambientLight.position.set(2, 1, 1);
+      scene.add(directionalLight);
+      scene.add(ambientLight);
+  
+      const textureLoader = new THREE.TextureLoader();
+      const lensflare = new THREE.Lensflare();
+      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/flare0.png"), 700, 0.0));
+      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/flare1.png"), 200, 0.25));
+      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/flare3.png"), 60, 0.6));
+      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/hexangle.png"), 70, 1.0));
+      directionalLight.add(lensflare);
+
       audio.initialize();
 
       function animate(now) {
@@ -282,11 +322,6 @@
         const time = Date.now();
         const weapon = utils.weapons.getCurrentEntry();
 
-        const cameraPosition = camera.getWorldPosition(vectors[6]);
-        const cameraRotation = vectors[9];
-        camera.getWorldQuaternion(vectors[10]);
-        cameraRotation.setFromQuaternion(vectors[10]);
-
         for (let i = 0; i < STEPS_PER_FRAME; i++) {
           utils.physics.controls(deltaTime);
           utils.physics.updatePlayer(deltaTime);
@@ -294,6 +329,11 @@
           utils.physics.updateVehicles(deltaTime, time, i);
           utils.players.update();
         }
+
+        const cameraPosition = camera.getWorldPosition(vectors[6]);
+        const cameraRotation = vectors[9];
+        camera.getWorldQuaternion(vectors[10]);
+        cameraRotation.setFromQuaternion(vectors[10]);
 
         TWEEN.update();
         particles.update();
@@ -345,8 +385,16 @@
           const object = tmpObjects[uuid];
           if (object.disposeTime == 0 ? object.addedOnFrame != frameCount : time - object.timestamp > object.disposeTime) {
             if (object.objectType == "muzzleFlash") {
-              object.opacity = 0;
-              delete tmpObjects[uuid];
+              if (object.endingFrame) {
+                object.endingFrame = false;
+                object.material.opacity = 0;
+                object.scale.copy(object.defaultScale);
+                delete tmpObjects[uuid];
+              } else {
+                if (!object.defaultScale) object.defaultScale = object.scale.clone();
+                object.endingFrame = true;
+                object.scale.set(object.defaultScale.x / 1.3, object.defaultScale.y / 1.3, object.defaultScale.z / 1.3);
+              }
             } else if (object.objectType == "bulletHole") {
               scene.remove(object);
               object.geometry.dispose();
@@ -431,10 +479,10 @@
       sandbox = {
         setup: false,
         presets: {
-          map: "Lihid",
+          map: "Standoff",
           character: "Raven",
           respawnTime: 5,
-          loadout: ["Ace-35r", "HK-G28"],
+          loadout: ["Ace-35r", "FN-502"],
           grenades: {
             "mk2": 2,
             "plasma": 0
@@ -527,6 +575,10 @@
             callback: function(model) {
               map = model.scene;
               worldOctree.fromGraphNode(map);
+              directionalLight.position.set(50, 60, -35);
+              directionalLight.shadow.radius = 1;
+              directionalLight.shadow.bias = -0.00001;
+              directionalLight.shadow.normalBias = .3;
               map.traverse(child => {
                 child.frustumCulled = false;
                 if (child.isMesh) {
@@ -542,6 +594,85 @@
               }));
               sky.position.y = 2;
               scene.add(sky);
+            }
+          },
+          {
+            id: "map",
+            path: "/models/maps/Haven.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            requiredMaps: ["Haven"],
+            callback: function(model) {
+              map = model.scene;
+              worldOctree.fromGraphNode(map);
+              new THREE.TextureLoader().load("/images/assets/skies/2.png", function(texture) {
+                let envMap = new THREE.PMREMGenerator(renderer).fromEquirectangular(texture).texture;
+                directionalLight.position.set(10, 40, -50);
+                directionalLight.intensity = 1.5;
+                directionalLight.shadow.camera.right = 50;
+                directionalLight.shadow.camera.left = -50;
+                directionalLight.shadow.camera.top = 50;
+                directionalLight.shadow.camera.bottom = -50;
+                ambientLight.intensity = 1;
+                map.traverse(child => {
+                  child.frustumCulled = false;
+                  if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.material) {
+                    if (child.material.map) child.material.map.anisotropy = 4;
+                      child.material.envMap = envMap;
+                      child.material.roughness = .2;
+                      child.material.metalness = .3;
+                      child.material.color.setHex(0xffddaa);
+                    }
+                  }
+                });
+                sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
+                  color: 0xf9c886,
+                  map: texture,
+                  side: THREE.BackSide
+                }));
+                sky.position.y = 2;
+                scene.add(sky);
+              });
+            }
+          },
+          {
+            id: "map",
+            path: "/models/maps/Standoff.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            requiredMaps: ["Standoff"],
+            callback: function(model) {
+              map = model.scene;
+              worldOctree.fromGraphNode(map);
+              new THREE.TextureLoader().load("/images/assets/skies/0.png", function(texture) {
+                directionalLight.position.set(50, 60, -30);
+                directionalLight.intensity = 1.5;
+                directionalLight.shadow.camera.right = 50;
+                directionalLight.shadow.camera.left = -50;
+                directionalLight.shadow.camera.top = 50;
+                directionalLight.shadow.camera.bottom = -50;
+                directionalLight.shadow.radius = 1;
+                ambientLight.intensity = .6;
+                map.traverse(child => {
+                  child.frustumCulled = false;
+                  if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.material.map) child.material.map.anisotropy = 4;
+                  }
+                });
+                sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
+                  color: 0xffffff,
+                  map: texture,
+                  side: THREE.BackSide
+                }));
+                scene.add(sky);
+              });
             }
           },
           {
@@ -734,27 +865,50 @@
           "Lihid": {
             ambienceSound: 0,
             spawnPoints: [
-              [15.7, -0.2, -17.5, 0, 3.141592653589793, 0], 
-              [15.5, 0.2, -25.3, 0, 3.141592653589793, 0], 
-              [4.9, -0.2, -20.3, 0, -1.5707963267948966, 0], 
-              [5.9, -1.5, -6.1, 0, 1.5707963267948966, 0], 
-              [-4.2, -3.2, -3, 0, 1.5707963267948966, 0], 
-              [-14.9, -3, -4, 0, -1.5707963267948966, 0], 
-              [-28.5, -1.1, -1.3, 0, -1.5707963267948966, 0], 
-              [-22.5, -1.5, -7.5, 0, 0, 0], 
-              [-19.7, -1.5, -21.8, 0, 1.5707963267948966, 0], 
-              [-25.9, -1.1, -24.3, 0, 3.141592653589793, 0], 
-              [-5.8, -3.1, -17.1, 0, 3.141592653589793, 0], 
-              [3, -3.2, -17.4, 0, 3.141592653589793, 0], 
-              [23, -0.8, -12.1, 0, 1.5707963267948966, 0], 
-              [22.6, -0.6, 7.4, 0, 1.5707963267948966, 0], 
-              [13.6, -1.5, -0.2, 0, 3.141592653589793, 0], 
-              [8, -1.5, 2.2, 0, -1.5707963267948966, 0], 
-              [8.9, -1.5, 7.6, 0, 1.5707963267948966, 0], 
-              [-20.9, 0.2, 17.8, 0, 3.141592653589793, 0], 
-              [-20.9, 0.2, 26.6, 0, 0, 0], 
-              [-28.6, 0.2, 22.9, 0, -1.5707963267948966, 0], 
+              [15.7, -0.2, -17.5, 0, 3.141592653589793, 0],
+              [15.5, 0.2, -25.3, 0, 3.141592653589793, 0],
+              [4.9, -0.2, -20.3, 0, -1.5707963267948966, 0],
+              [5.9, -1.5, -6.1, 0, 1.5707963267948966, 0],
+              [-4.2, -3.2, -3, 0, 1.5707963267948966, 0],
+              [-14.9, -3, -4, 0, -1.5707963267948966, 0],
+              [-28.5, -1.1, -1.3, 0, -1.5707963267948966, 0],
+              [-22.5, -1.5, -7.5, 0, 0, 0],
+              [-19.7, -1.5, -21.8, 0, 1.5707963267948966, 0],
+              [-25.9, -1.1, -24.3, 0, 3.141592653589793, 0],
+              [-5.8, -3.1, -17.1, 0, 3.141592653589793, 0],
+              [3, -3.2, -17.4, 0, 3.141592653589793, 0],
+              [23, -0.8, -12.1, 0, 1.5707963267948966, 0],
+              [22.6, -0.6, 7.4, 0, 1.5707963267948966, 0],
+              [13.6, -1.5, -0.2, 0, 3.141592653589793, 0],
+              [8, -1.5, 2.2, 0, -1.5707963267948966, 0],
+              [8.9, -1.5, 7.6, 0, 1.5707963267948966, 0],
+              [-20.9, 0.2, 17.8, 0, 3.141592653589793, 0],
+              [-20.9, 0.2, 26.6, 0, 0, 0],
+              [-28.6, 0.2, 22.9, 0, -1.5707963267948966, 0],
               [-19.9, -1.1, 5.8, 0, 3.141592653589793, 0]
+            ],
+            vehicles: []
+          },
+          "Haven": {
+            ambienceSound: 0,
+            spawnPoints: [
+              [0, 0, 0, 0, 0, 0]
+            ],
+            vehicles: []
+          },
+          "Standoff": {
+            ambienceSound: 0,
+            spawnPoints: [
+              [-12.4, 1.7, 18.8, 0, -Math.PI / 2, 0],
+              [-13.2, 1.7, 29, 0, 0, 0],
+              [0, 1.7, 22.9, 0, 0, 0],
+              [13.6, 0, 18.6, 0, 0, 0],
+              [36.6, -.75, 19.9, 0, Math.PI / 2, 0],
+              [28.9, -.75, 4.8, 0, -Math.PI, 0],
+              [-1.4, 0, -2.3, 0, -2.75, 0],
+              [4.6, 0, 16.5, 0, 0, 0],
+              [8.1, 0, 7.6, 0, 0, 0],
+              [16.1, 2.5, 15.4, 0, 0, 0]
             ],
             vehicles: []
           }
@@ -1049,7 +1203,8 @@
             vignette: document.querySelector(".ui .vignette"),
             primaryWeaponDisplay: document.querySelector(".ui .ui-primary-weapon-display"),
             secondaryWeaponDisplay: document.querySelector(".ui .ui-secondary-weapon-display"),
-            killStats: document.querySelector(".ui-kill-stats")
+            killStats: document.querySelector(".ui-kill-stats"),
+            ammoInfo: document.querySelector(".ui-ammo-info")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -1101,6 +1256,18 @@
           weaponSwitch: function() {
             utils.ui.elements.primaryWeaponDisplay.style = "opacity: 1; filter: saturate(0) brightness(100%) contrast(4)";
             utils.options.addTmpObject(utils.ui.elements.primaryWeaponDisplay, "resetStyle", 400);
+          },
+          outOfAmmo: function(outOfAmmo, bothWeapons) {
+            if (outOfAmmo) {
+              if (bothWeapons) {
+                utils.ui.elements.ammoInfo.textContent = "NO AMMO LEFT. FIND MORE WEAPONS ON THE BATTLEFIELD.";
+              } else {
+                utils.ui.elements.ammoInfo.textContent = "NO AMMO LEFT IN WEAPON. PRESS [Y] TO SWITCH WEAPON.";
+              }
+              utils.ui.elements.ammoInfo.style.opacity = 1;
+            } else {
+              utils.ui.elements.ammoInfo.style.opacity = 0;
+            }
           },
           setVignette: function(mode = 0) {
             if (mode == 0) {
@@ -1234,12 +1401,18 @@
               if (value < 1) {
                 utils.ui.elements.healthBar.classList.remove("value-low");
                 utils.ui.elements.healthBar.classList.add("value-danger");
+                if (!utils.options.get("DeathTime")) audio.shieldsWarning();
+                audio.stopShieldsLow();
               } else if (value < 50) {
                 utils.ui.elements.healthBar.classList.remove("value-danger");
                 utils.ui.elements.healthBar.classList.add("value-low");
+                if (!utils.options.get("DeathTime")) audio.shieldsLow();
+                audio.stopShieldsWarning();
               } else {
                 utils.ui.elements.healthBar.classList.remove("value-danger");
                 utils.ui.elements.healthBar.classList.remove("value-low");
+                audio.stopShieldsWarning();
+                audio.stopShieldsLow();
               }
             }
           },
@@ -1386,12 +1559,12 @@
                 }
               }
               const distance = worldPosition.distanceTo(camera.position);
-              if (distance > 4) return;
+              if (distance > 5) return;
               const realDamage = Math.min(weapon.damage / (distance / 1.3), weapon.damage);
               utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null, weapon);
             } else if (weapon == "melee") {
               const realDamage = 100;
-              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid]);
+              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, false]);
             } else if (weapon.seats) {
               let realDamage = null;
               if (weapon.speed < 8) {
@@ -1404,7 +1577,7 @@
               utils.health.subtract(realDamage, utils.players.objects[weapon.lastUsedBy] || null, null);
             } else {
               const realDamage = (shield.shieldType == "head" ? weapon.headshotDamage : weapon.damage) / Math.max(camera.position.distanceTo(player.scene.position) / weapon.range, 1);
-              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid]);
+              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, shield.shieldType == "head"]);
             }
           },
           update: function() {
@@ -1558,6 +1731,7 @@
                 utils.effects.muzzleFlash(player.weapon);
               }
               utils.players.effects.bulletHole(point, spreadX, spreadY, bulletHole);
+              audio.fire3D(player.weapon.name, player.scene.position);
             },
             reload: function(player) {
               utils.players.animations.start(player, player.weapon.type + "_reload", { loop: THREE.LoopOnce, reset: true, weight: 10 });
@@ -1672,10 +1846,11 @@
             },
             hit: function(player, vehicle, damage) {
               vehicle.condition += -damage;
+              if (Math.floor(Math.random() * 3) == 0) audio.ricochet(vehicle.body.position);
             }
           },
           health: {
-            die: function(player, killer) {
+            die: function(player, killer, isHeadshot) {
               player.isDead = true;
               utils.players.animations.stop(player, "rifle_idle");
               utils.players.animations.stop(player, "pistol_idle");
@@ -1688,6 +1863,7 @@
               });
               utils.ui.addKillStatsRow(killer, player.uuid);
               audio.dying(player.scene.position);
+              if (isHeadshot) audio.hitHeadshot();
             },
             respawn: function(player, spawnPoint) {
               player.isDead = false;
@@ -1809,7 +1985,7 @@
               const grenade = grenades[i];
               if (grenade.available) continue;
               if (grenade.collider.center.y < -40 && grenade.collider.center.y > -1000) grenade.hits++;
-              if (grenade.smoke && time % 3 == 0 && loop == 0) particles.dust(grenade.mesh.position, 0.05);
+              if (grenade.smoke && time % 3 == 0 && loop == 0) particles.dust(grenade.mesh.position, .5);
               if (grenade.hits > 0 && time - grenade.timestamp > grenade.explodeTime && grenade.explode) utils.grenades.explode(grenade);
               if (grenade.type == "plasma") grenade.mesh.children[1].lookAt(camera.position);
               if (grenade.stuck) continue;
@@ -1978,7 +2154,7 @@
                   gametime.player.data.vehicle.position = [vehicle.body.velocity.x, vehicle.body.velocity.y, vehicle.body.velocity.z, vehicle.body.position.x, vehicle.body.position.y, vehicle.body.position.z, vehicle.body.quaternion.x, vehicle.body.quaternion.y, vehicle.body.quaternion.z, vehicle.body.quaternion.w, vehicle.physicsVariables.heading];
                   if (frameCount % 60 == 0 && speed < 1 && utils.vehicles.checkIfFlipped(vehicle)) utils.vehicles.exit();
                 }
-                if (vehicle.smoke && time % 6 == 0 && loop == 0) particles.dust(vehicle.mesh.position, 4);
+                if (vehicle.smoke && time % 6 == 0 && loop == 0) particles.dust(vehicle.mesh.position, 1);
                 function applyDamageLevel(level) {
                   if (level == 0) {
                     const windshield = vehicle.mesh.getObjectByName("Windshield");
@@ -2588,6 +2764,16 @@
             if (weapon.currentAmmo <= 0) {
               utils.weapons.reload(true);
             }
+            if (weapon.ammo <= 0 && weapon.currentAmmo <= 0) {
+              let secondWeapon = weapon == utils.weapons.getSecondaryEntry() ? utils.weapons.getPrimaryEntry() : utils.weapons.getSecondaryEntry();
+              if (secondWeapon.ammo <= 0 && secondWeapon.currentAmmo <= 0) {
+                utils.ui.outOfAmmo(true, true);
+              } else {
+                utils.ui.outOfAmmo(true, false);
+              }
+            } else {
+              utils.ui.outOfAmmo(false);
+            }
           }
         },
         grenades: {
@@ -2644,6 +2830,7 @@
               particles.plasma(worldPosition);
             } else {
               particles.explosion(worldPosition);
+              particles.dust(worldPosition, 6);
             }
             if (!grenade.stuck) {
               audio.grenadeExplosion(worldPosition, grenade.type);
@@ -2708,6 +2895,7 @@
                   const damage = weapon.damage / 10;
                   shield.vehicle.condition += -damage;
                   particles.dust(intersect.point);
+                  if (Math.floor(Math.random() * 3) == 0) audio.ricochet(intersect.point);
                   gametime.run("vehicleHit", [gametime.player.uuid, shield.vehicle.id, damage]);
                 } else {
                   utils.players.hit(utils.players.objects[shield.playerUUID], shield, weapon);
@@ -2727,7 +2915,12 @@
                 const decalGeometry = new THREE.DecalGeometry(intersect.object, intersect.point, rotation, size);
                 const decalMesh = new THREE.Mesh(decalGeometry, bulletHole.material);
                 scene.add(decalMesh);
-                particles.dust(intersect.point);
+                if (weapon) {
+                  particles.dust(intersect.point, .5 + (weapon.damage / 100));
+                } else {
+                  particles.dust(intersect.point);
+                }
+                if (Math.floor(Math.random() * 5) == 0) audio.ricochet(intersect.point);
                 utils.options.addTmpObject(decalMesh, "bulletHole", 20000);
               }
             }
@@ -2736,7 +2929,7 @@
             const flash = (model || sandbox.currentWeapon).getObjectByName("muzzleFlash");
             flash.rotateZ(Math.random());
             flash.material.opacity = 1;
-            utils.options.addTmpObject(flash.material, "muzzleFlash");
+            utils.options.addTmpObject(flash, "muzzleFlash");
           },
           shake: function(intensity = 2, startDuration = 200, endDuration = 700) {
             new TWEEN.Tween({ intensity: 0 }).to({ intensity: intensity }, startDuration).easing(TWEEN.Easing.Quadratic.InOut).start().onUpdate(function(value) {
@@ -2858,7 +3051,7 @@
             utils.effects.shake(shakeIntensity);
             if (distance < 6) utils.health.subtract(Math.min((2 / distance) * 100, 150), null);
             particles.explosion(vehicle.mesh.position, 3);
-            particles.dust(vehicle.mesh.position, 20);
+            particles.dust(vehicle.mesh.position, 8);
             audio.vehicleExplosion(vehicle);
             vehicle.despawnTime = Date.now();
             vehicle.physicsVariables.throttle = false;
@@ -3028,7 +3221,7 @@
               if (intensity > 14) utils.health.subtract(intensity / 2, null);
             }
             if (intensity > 0.5) {
-              particles.dust(point, Math.min(intensity * 2, 20));
+              if (intensity / 4 > .8) particles.dust(point, Math.min(intensity / 4, 3));
               if (intensity < 2) {
                 if (time - vehicle.lastCollision > 250) audio.vehicleCrash(vehicle, intensity);
               } else {
@@ -3083,9 +3276,9 @@
             utils.health.current = newHealth;
             utils.ui.setHealthBar(newHealth, "short");
           },
-          subtract: function(amount, killer, grenade) {
+          subtract: function(amount, killer, grenade, isHeadshot) {
             const newHealth = utils.health.current - Math.round(amount);
-            if (newHealth <= -25) utils.health.die(killer || "self");
+            if (newHealth <= -25) utils.health.die(killer || "self", isHeadshot);
             utils.health.current = newHealth;
             utils.ui.setHealthBar(Math.max(newHealth, 0), "short");
             utils.health.lastHitTimestamp = Date.now();
@@ -3095,6 +3288,7 @@
               utils.ui.hurtScreen(grenade.mesh.position, hurtIntensity);
             } else if (killer) {
               utils.ui.hurtScreen(killer.scene.position, hurtIntensity);
+              audio.hit();
             } else {
               utils.ui.hurtScreen(camera.position, hurtIntensity);
             }
@@ -3103,7 +3297,9 @@
             utils.health.current = 100;
             utils.ui.setHealthBar(100, "instant");
           },
-          die: function(killer) {
+          die: function(killer, isHeadshot = false) {
+            audio.stopShieldsWarning();
+            audio.stopShieldsLow();
             utils.vehicles.exit();
             utils.weapons.stopFire();
             utils.weapons.stopZoom();
@@ -3120,11 +3316,12 @@
                 body: deathPose
               });
               utils.ui.addKillStatsRow("self", "self");
-              gametime.run("playerDie", [gametime.player.uuid, gametime.player.uuid]);
+              gametime.run("playerDie", [gametime.player.uuid, gametime.player.uuid, false]);
             } else {
               utils.options.set("Killer", killer.uuid);
               utils.ui.addKillStatsRow(killer.uuid, "self");
-              gametime.run("playerDie", [gametime.player.uuid, killer.uuid]);
+              gametime.run("playerDie", [gametime.player.uuid, killer.uuid, isHeadshot]);
+              if (isHeadshot) audio.hitHeadshot();
             }
             camera.rotation.set(Math.PI / 2 - 0.8, 0, 0);
             deathScreen = true;
@@ -3351,11 +3548,11 @@
       gametime.on("stopCrouching", function(player) {
         if (player != gametime.player.uuid) utils.players.stopCrouching(utils.players.objects[player]);
       });
-      gametime.on("damage", function(player, damage, killer) {
-        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer]);
+      gametime.on("damage", function(player, damage, killer, isHeadshot) {
+        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot);
       });
-      gametime.on("playerDie", function(player, killer) {
-        if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer);
+      gametime.on("playerDie", function(player, killer, isHeadshot) {
+        if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer, isHeadshot);
       });
       gametime.on("playerRespawn", function(player, spawnPoint) {
         if (player != gametime.player.uuid) utils.players.health.respawn(utils.players.objects[player], spawnPoint);

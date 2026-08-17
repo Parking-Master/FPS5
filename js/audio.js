@@ -8,6 +8,7 @@ const AudioWrapper = function(src, alias = false) {
   if (alias) steps = 2;
   for (let i = 0; i < steps; i++) {
     const wrapper = {
+      src: src,
       buffer: null,
       source: null,
       sources: [],
@@ -158,6 +159,16 @@ audio = {
     sound.currentTime = 0;
     sound.play();
   },
+  fire3D: function(weaponName, position) {
+    let sound = audio.sounds[`3d.fire.${weaponName}`].sound;
+    if (sound.isPlaying) sound = audio.sounds[`3d.fire.${weaponName}`].sound.alias;
+    sound.position.copy(position);
+    sound.setMaxDistance(100);
+    if (sound.source) sound.setDetune(100 * (position.distanceTo(camera.position) / 10));
+    sound.setVolume(2);
+    if (sound.source) sound.stop();
+    sound.play();
+  },
   grenadeHit: function(position) {
     if (Date.now() - grenade.lastHitTimestamp < 200) return;
     grenade.lastHitTimestamp = Date.now();
@@ -260,6 +271,46 @@ audio = {
   },
   vehicleHornStop: function(horn) {
     if (horn.isPlaying && horn.source) horn.stop();
+  },
+  ricochet: function(position) {
+    let sound = audio.sounds["ricochet." + Math.floor(Math.random() * 3)].sound;
+    sound.position.set(position.x, position.y, position.z);
+    sound.setVolume(2);
+    sound.setMaxDistance(40);
+    if (sound.source) sound.stop();
+    sound.play();
+  },
+  shieldsLow: function() {
+    let sound = audio.sounds["shields.low"];
+    if (sound.playing) return;
+    sound.loop = true;
+    sound.currentTime = 0;
+    sound.play();
+  },
+  stopShieldsLow: function() {
+    let sound = audio.sounds["shields.low"];
+    sound.pause();
+  },
+  shieldsWarning: function() {
+    let sound = audio.sounds["shields.warning"];
+    if (sound.playing) return;
+    sound.loop = true;
+    sound.currentTime = 0;
+    sound.play();
+  },
+  stopShieldsWarning: function() {
+    let sound = audio.sounds["shields.warning"];
+    sound.pause();
+  },
+  hitHeadshot: function() {
+    let sound = audio.sounds["hit.headshot"];
+    sound.currentTime = 0;
+    sound.play();
+  },
+  hit: function() {
+    let sound = audio.sounds["hit"];
+    sound.currentTime = 0;
+    sound.play();
   }
 };
 
@@ -296,8 +347,20 @@ audio.sounds = {
   "vehicle.Jeep.big-crash": AudioWrapper3d("/sounds/vehicles/Jeep.big-crash.mp3"),
   "vehicle.Jeep.small-crash": AudioWrapper3d("/sounds/vehicles/Jeep.small-crash.mp3"),
   "vehicle.Jeep.explosion": AudioWrapper3d("/sounds/vehicles/Jeep.explosion.mp3"),
-  "vehicle.Jeep.horn": AudioWrapper3d("/sounds/vehicles/Jeep.horn.mp3", true)
+  "vehicle.Jeep.horn": AudioWrapper3d("/sounds/vehicles/Jeep.horn.mp3", true),
+  "ricochet.0": AudioWrapper3d("/sounds/weapons/ricochet/0.mp3"),
+  "ricochet.1": AudioWrapper3d("/sounds/weapons/ricochet/1.mp3"),
+  "ricochet.2": AudioWrapper3d("/sounds/weapons/ricochet/2.mp3"),
+  "shields.low": AudioWrapper("/sounds/shields/low.mp3"),
+  "shields.warning": AudioWrapper("/sounds/shields/warning.mp3"),
+  "hit.headshot": AudioWrapper("/sounds/shields/hit-headshot.mp3"),
+  "hit": AudioWrapper("/sounds/shields/hit.mp3")
 };
+for (sound in audio.sounds) {
+  if (sound.startsWith("fire.")) {
+    audio.sounds["3d." + sound] = AudioWrapper3d(audio.sounds[sound].src, true);
+  }
+}
 
 document.addEventListener("touchstart", () => {
   if (audio.ctx.state === "suspended") audio.ctx.resume();

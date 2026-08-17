@@ -11,7 +11,9 @@ const noiseTexture = new THREE.DataTexture(noiseData, noiseSize, noiseSize, THRE
 noiseTexture.needsUpdate = true;
 
 let dustMaterial = new THREE.ShaderMaterial({
-  uniforms: {},
+  uniforms: {
+    noiseTexture: { value: noiseTexture }
+  },
   vertexShader: `
     attribute float size;
     attribute vec3 customPosition;
@@ -21,7 +23,7 @@ let dustMaterial = new THREE.ShaderMaterial({
     void main() {
         vLife = life;
         vec4 pos = modelViewMatrix * vec4(customPosition, 1.0);
-        gl_PointSize = size * 40.0 * (300.0 / -pos.z);
+        gl_PointSize = size * 0.5 * (300.0 / -pos.z);
         gl_Position = projectionMatrix * pos;
     }`,
   fragmentShader: `
@@ -36,7 +38,7 @@ let dustMaterial = new THREE.ShaderMaterial({
       float noise = texture2D(noiseTexture, noiseCoord).r * 0.5 + 0.5;
       
       float alpha = 0.15 * vLife * noise * (1.0 - dist * 2.0);
-      vec3 dustColor = vec3(0.48, 0.45, 0.4);
+      vec3 dustColor = vec3(0.7, 0.65, 0.6);
       gl_FragColor = vec4(dustColor, alpha);
     }`,
   transparent: true,
@@ -45,7 +47,9 @@ let dustMaterial = new THREE.ShaderMaterial({
 });
 
 let bloodMaterial = new THREE.ShaderMaterial({
-  uniforms: {},
+  uniforms: {
+    noiseTexture: { value: noiseTexture }
+  },
   vertexShader: `
     attribute float size;
     attribute vec3 customPosition;
@@ -55,7 +59,7 @@ let bloodMaterial = new THREE.ShaderMaterial({
     void main() {
         vLife = life;
         vec4 pos = modelViewMatrix * vec4(customPosition, 1.0);
-        gl_PointSize = size * 40.0 * (300.0 / -pos.z);
+        gl_PointSize = size * 0.5 * (300.0 / -pos.z);
         gl_Position = projectionMatrix * pos;
     }`,
   fragmentShader: `
@@ -69,7 +73,7 @@ let bloodMaterial = new THREE.ShaderMaterial({
       vec2 noiseCoord = gl_PointCoord * 4.0 + fract(vLife * 10.0);
       float noise = texture2D(noiseTexture, noiseCoord).r * 0.5 + 0.5;
       
-      float alpha = 0.15 * vLife * noise * (1.0 - dist * 2.0) * 0.6;
+      float alpha = 0.15 * vLife * noise * (1.0 - dist * 2.0);
       vec3 dustColor = vec3(0.4, 0.1, 0.1);
       gl_FragColor = vec4(dustColor, alpha);
     }`,
@@ -231,47 +235,43 @@ let plasmaMaterial = new THREE.ShaderMaterial({
 });
 
 particles = {
-  dust: function(position, size = 1, life = 1) {
+  dust: function(position, size = 1) {
     const burst = { particles: [], material: dustMaterial };
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < Math.round(50 * size); i++) {
       const particle = {
-        x: position.x + (Math.random() - 0.5) * 0.12,
-        y: position.y + (Math.random() - 0.5) * 0.12,
+        x: position.x + ((Math.random() - 0.5) * .1),
+        y: position.y + ((Math.random() - 0.5) * .1),
         z: position.z + Math.random() * 0.1,
-        vx: (Math.random() - 0.5) * 0.08,
-        vy: (Math.random() - 0.4) * 0.05,
-        vz: (Math.random() - 0.4) * 0.06,
-        life: 2 * life,
-        maxLife: 2 * life,
-        size: 0.01 + Math.random() * 0.015 * size
+        vx: (Math.random() - 0.5) * 2 * (size / 10),
+        vy: (Math.random() - 0.1) * 2 * (size / 10),
+        vz: (Math.random() - 0.5) * 2 * (size / 10),
+        life: 2,
+        maxLife: 2,
+        size: Math.random() * size * 2
       };
       burst.particles.push(particle);
     }
     bursts.push(burst);
-    if (bursts.length > MAX_BURSTS) {
-      bursts.shift();
-    }
+    if (bursts.length > MAX_BURSTS) bursts.shift();
   },
-  blood: function(position) {
+  blood: function(position, size = .5) {
     const burst = { particles: [], material: bloodMaterial };
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < Math.round(50 * size); i++) {
       const particle = {
-        x: position.x + (Math.random() - 0.5) * 0.12,
-        y: position.y + (Math.random() - 0.5) * 0.12,
+        x: position.x + ((Math.random() - 0.5) * .1),
+        y: position.y + ((Math.random() - 0.5) * .1),
         z: position.z + Math.random() * 0.1,
-        vx: (Math.random() - 0.5) * 0.012,
-        vy: (Math.random() - 0.4) * 0.012,
-        vz: (Math.random() - 0.4) * 0.012,
-        life: 2.0,
-        maxLife: 2.0,
-        size: 0.001 + Math.random() * 0.015
+        vx: (Math.random() - 0.5) * 2 * (size / 10),
+        vy: (Math.random() - 0.1) * 2 * (size / 10),
+        vz: (Math.random() - 0.5) * 2 * (size / 10),
+        life: 2,
+        maxLife: 2,
+        size: Math.random() * size * 2
       };
       burst.particles.push(particle);
     }
     bursts.push(burst);
-    if (bursts.length > MAX_BURSTS) {
-      bursts.shift();
-    }
+    if (bursts.length > MAX_BURSTS) bursts.shift();
   },
   explosion: function(position, size = 1) {
     const burst = { particles: [], material: explosionMaterial };
