@@ -479,7 +479,7 @@
       sandbox = {
         setup: false,
         presets: {
-          map: "Standoff",
+          map: "Apex",
           character: "Raven",
           respawnTime: 5,
           loadout: ["Ace-35r", "FN-502"],
@@ -676,6 +676,47 @@
             }
           },
           {
+            id: "map",
+            path: "/models/maps/Apex.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            requiredMaps: ["Apex"],
+            callback: function(model) {
+              map = model.scene;
+              worldOctree.fromGraphNode(map);
+              if (sandbox.maps[sandbox.presets.map].vehicles.length > 0) physics.initialize(map);
+              new THREE.TextureLoader().load("/images/assets/skies/3.png", function(texture) {
+                directionalLight.position.set(-500,100,-500);
+                directionalLight.shadow.camera.far = 1000;
+                directionalLight.shadow.camera.updateProjectionMatrix();
+                directionalLight.intensity = .5;
+                directionalLight.color.setHex(0xffaa55);
+                directionalLight.shadow.camera.right = 50;
+                directionalLight.shadow.camera.left = -50;
+                directionalLight.shadow.camera.top = 50;
+                directionalLight.shadow.camera.bottom = -50;
+                directionalLight.shadow.radius = 1;
+                ambientLight.intensity = .2;
+                ambientLight.color.setHex(0xff5500);
+                renderer.shadowMap.needsUpdate = true;
+                map.traverse(child => {
+                  child.frustumCulled = false;
+                  if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                  }
+                });
+                sky = new THREE.Mesh(new THREE.SphereGeometry(800, 25, 25), new THREE.MeshBasicMaterial({
+                  color: 0xbb1500,
+                  map: texture,
+                  side: THREE.BackSide
+                }));
+                scene.add(sky);
+              });
+            }
+          },
+          {
             id: "pose",
             path: null,
             model: null,
@@ -828,9 +869,9 @@
             model: null,
             loaded: false,
             removeAfterLoaded: false,
-            requiredMaps: ["Cargo_Port"],
+            requiredMaps: ["Cargo_Port", "Apex"],
             callback: function(model) {
-              utils.vehicles.add(model, "Jeep");
+              utils.vehicles.add(model, "Jeep", sandbox.presets.map == "Apex" ? -.54 : 0);
             }
           },
         ],
@@ -911,6 +952,18 @@
               [16.1, 2.5, 15.4, 0, 0, 0]
             ],
             vehicles: []
+          },
+          "Apex": {
+            ambienceSound: 0,
+            spawnPoints: [
+              [0, 0, 0, 0, 0, 0]
+            ],
+            vehicles: [
+              {
+                type: "Jeep",
+                position: [26.7, 1, -1.3, 0, 0, 0]
+              }
+            ]
           }
         },
         weapons: {
@@ -1976,9 +2029,8 @@
               playerCollider.translate(result.normal.multiplyScalar(result.depth));
             }
             if (!utils.vehicles.check(true)) camera.position.copy(playerCollider.end);
-            if (camera.position.y <= -40) {
-              utils.health.die("self");
-            }
+            let worldPosition = camera.getWorldPosition(vectors[6]);
+            if (camera.position.y <= -40 || Math.abs(worldPosition.x) > 200 || Math.abs(worldPosition.z) > 200) utils.health.die("self");
           },
           updateGrenades: function(deltaTime, time, loop) {
             for (let i = 0; i < grenades.length; i++) {
@@ -2079,7 +2131,7 @@
               audio.updateVehicle(vehicle);
               if (vehicle.allowedToUpdate) {
                 for (let j = 0; j < vehicle.seats.length; j++) vehicle.seats[j].taken = false;
-                vehicle.shadow.position.set(vehicle.mesh.position.x, 0.05, vehicle.mesh.position.z);
+                vehicle.shadow.position.set(vehicle.mesh.position.x, vehicle.shadowLevel + 0.05, vehicle.mesh.position.z);
                 vehicle.shadow.rotation.set(-Math.PI / 2, 0, vehicle.mesh.rotation.y);
                 const shiftFactor = vehicle.physicsVariables.gear == "drive" ? 1 : -1;
                 if (vehicle.physicsVariables.throttle) {
@@ -2190,6 +2242,7 @@
                   utils.vehicles.respawn(vehicle);
                 }
               }
+              if (Math.abs(vehicle.body.position.x) > 200 || Math.abs(vehicle.body.position.z) > 200) utils.vehicles.explode(vehicle);
             }
           }
         },
@@ -2969,7 +3022,7 @@
         },
         vehicles: {
           shields: [],
-          add: function(model, type) {
+          add: function(model, type, shadowLevel = 0) {
             const amountOfVehicles = sandbox.maps[sandbox.presets.map].vehicles.length;
             for (let i = 0; i < amountOfVehicles; i++) {
               const mapVehicle = sandbox.maps[sandbox.presets.map].vehicles[i];
@@ -3007,6 +3060,7 @@
                 allowedToUpdate: true,
                 spawnPoint: mapVehicle.position,
                 shadow: vehicle.getObjectByName("Shadow"),
+                shadowLevel: shadowLevel,
                 seats: [
                   {
                     type: "driver",
