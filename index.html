@@ -270,7 +270,7 @@
       let playerAgainstWall = false;
       let deathScreen = false;
       let frameCount = 0;
-      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0)];
+      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3()];
       const keyStates = {};
       const grenades = [];
       const vehicles = [];
@@ -308,13 +308,11 @@
   
       const textureLoader = new THREE.TextureLoader();
       const lensflare = new THREE.Lensflare();
-      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/flare0.png"), 700, 0.0));
-      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/flare1.png"), 200, 0.25));
-      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/flare3.png"), 60, 0.6));
-      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/hexangle.png"), 70, 1.0));
+      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/lensflare/flare0.png"), 700, 0.0));
+      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/lensflare/flare1.png"), 200, 0.25));
+      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/lensflare/flare3.png"), 60, 0.6));
+      lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/lensflare/hexangle.png"), 70, 1.0));
       directionalLight.add(lensflare);
-
-      audio.initialize();
 
       function animate(now) {
         const clockDelta = clock.getDelta();
@@ -330,7 +328,7 @@
           utils.players.update();
         }
 
-        const cameraPosition = camera.getWorldPosition(vectors[6]);
+        const cameraPosition = camera.getWorldPosition(vectors[31]);
         const cameraRotation = vectors[9];
         camera.getWorldQuaternion(vectors[10]);
         cameraRotation.setFromQuaternion(vectors[10]);
@@ -443,8 +441,7 @@
             } else {
               target = utils.players.objects[killer].scene;
             }
-            const targetQuaternion = vectors[16];
-            targetQuaternion.set(0, 0, 0, 1);
+            const targetQuaternion = vectors[16].set(0, 0, 0, 1);
             const matrix = new THREE.Matrix4().lookAt(camera.position, target.position, camera.up);
             targetQuaternion.setFromRotationMatrix(matrix);
             camera.quaternion.slerp(targetQuaternion, 0.04);
@@ -546,23 +543,25 @@
             removeAfterLoaded: false,
             requiredMaps: ["Cargo_Port"],
             callback: function(model) {
-              map = model.scene;
-              worldOctree.fromGraphNode(map);
-              if (sandbox.maps[sandbox.presets.map].vehicles.length > 0) physics.initialize(map);
-              map.traverse(child => {
-                child.frustumCulled = false;
-                if (child.isMesh) {
-                  child.castShadow = true;
-                  child.receiveShadow = true;
-                  if (child.material.map) child.material.map.anisotropy = 4;
-                }
+              textureLoader.load("/images/assets/skies/0.png", function(skyTexture) {
+                map = model.scene;
+                worldOctree.fromGraphNode(map);
+                physics.initialize(map);
+                map.traverse(child => {
+                  child.frustumCulled = false;
+                  if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.material.map) child.material.map.anisotropy = 4;
+                  }
+                });
+                sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
+                  color: 0xffffff,
+                  map: skyTexture,
+                  side: THREE.BackSide
+                }));
+                scene.add(sky);
               });
-              sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
-                color: 0xffffff,
-                map: new THREE.TextureLoader().load("/images/assets/skies/0.png"),
-                side: THREE.BackSide
-              }));
-              scene.add(sky);
             }
           },
           {
@@ -573,27 +572,29 @@
             removeAfterLoaded: false,
             requiredMaps: ["Lihid"],
             callback: function(model) {
-              map = model.scene;
-              worldOctree.fromGraphNode(map);
-              directionalLight.position.set(50, 60, -35);
-              directionalLight.shadow.radius = 1;
-              directionalLight.shadow.bias = -0.00001;
-              directionalLight.shadow.normalBias = .3;
-              map.traverse(child => {
-                child.frustumCulled = false;
-                if (child.isMesh) {
-                  child.castShadow = true;
-                  child.receiveShadow = true;
-                  if (child.material.map) child.material.map.anisotropy = 4;
-                }
+              textureLoader.load("/images/assets/skies/1.png", function(skyTexture) {
+                map = model.scene;
+                worldOctree.fromGraphNode(map);
+                directionalLight.position.set(50, 60, -35);
+                directionalLight.shadow.radius = 1;
+                directionalLight.shadow.bias = -0.00001;
+                directionalLight.shadow.normalBias = .3;
+                map.traverse(child => {
+                  child.frustumCulled = false;
+                  if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.material.map) child.material.map.anisotropy = 4;
+                  }
+                });
+                sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
+                  color: 0xf9c886,
+                  map: skyTexture,
+                  side: THREE.BackSide
+                }));
+                sky.position.y = 2;
+                scene.add(sky);
               });
-              sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
-                color: 0xf9c886,
-                map: new THREE.TextureLoader().load("/images/assets/skies/1.png"),
-                side: THREE.BackSide
-              }));
-              sky.position.y = 2;
-              scene.add(sky);
             }
           },
           {
@@ -604,10 +605,10 @@
             removeAfterLoaded: false,
             requiredMaps: ["Haven"],
             callback: function(model) {
-              map = model.scene;
-              worldOctree.fromGraphNode(map);
-              new THREE.TextureLoader().load("/images/assets/skies/2.png", function(texture) {
-                let envMap = new THREE.PMREMGenerator(renderer).fromEquirectangular(texture).texture;
+              textureLoader.load("/images/assets/skies/2.png", function(skyTexture) {
+                map = model.scene;
+                worldOctree.fromGraphNode(map);
+                let envMap = new THREE.PMREMGenerator(renderer).fromEquirectangular(skyTexture).texture;
                 directionalLight.position.set(10, 40, -50);
                 directionalLight.intensity = 1.5;
                 directionalLight.shadow.camera.right = 50;
@@ -631,7 +632,7 @@
                 });
                 sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
                   color: 0xf9c886,
-                  map: texture,
+                  map: skyTexture,
                   side: THREE.BackSide
                 }));
                 sky.position.y = 2;
@@ -647,9 +648,9 @@
             removeAfterLoaded: false,
             requiredMaps: ["Standoff"],
             callback: function(model) {
-              map = model.scene;
-              worldOctree.fromGraphNode(map);
-              new THREE.TextureLoader().load("/images/assets/skies/0.png", function(texture) {
+              textureLoader.load("/images/assets/skies/0.png", function(skyTexture) {
+                map = model.scene;
+                worldOctree.fromGraphNode(map);
                 directionalLight.position.set(50, 60, -30);
                 directionalLight.intensity = 1.5;
                 directionalLight.shadow.camera.right = 50;
@@ -668,7 +669,7 @@
                 });
                 sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
                   color: 0xffffff,
-                  map: texture,
+                  map: skyTexture,
                   side: THREE.BackSide
                 }));
                 scene.add(sky);
@@ -683,10 +684,14 @@
             removeAfterLoaded: false,
             requiredMaps: ["Apex"],
             callback: function(model) {
-              map = model.scene;
-              worldOctree.fromGraphNode(map);
-              if (sandbox.maps[sandbox.presets.map].vehicles.length > 0) physics.initialize(map);
-              new THREE.TextureLoader().load("/images/assets/skies/3.png", function(texture) {
+              textureLoader.load("/images/assets/skies/3.png", function(skyTexture) {
+                map = model.scene;
+                let nocollisions = [];
+                nocollisions.push(map.getObjectByName("Mesher_MesherMat_0"), map.getObjectByName("Mesher_MesherMat_0_1"), map.getObjectByName("Mesher_MesherMat_0_2"), map.getObjectByName("Mesher_MesherMat_0_3"));
+                nocollisions.forEach(child => child.parent.remove(child));
+                worldOctree.fromGraphNode(map);
+                nocollisions.forEach(child => map.add(child));
+                physics.initialize(map);
                 directionalLight.position.set(-500,100,-500);
                 directionalLight.shadow.camera.far = 1000;
                 directionalLight.shadow.camera.updateProjectionMatrix();
@@ -707,9 +712,9 @@
                     child.receiveShadow = true;
                   }
                 });
-                sky = new THREE.Mesh(new THREE.SphereGeometry(800, 25, 25), new THREE.MeshBasicMaterial({
+                sky = new THREE.Mesh(new THREE.SphereGeometry(720, 25, 25), new THREE.MeshBasicMaterial({
                   color: 0xbb1500,
-                  map: texture,
+                  map: skyTexture,
                   side: THREE.BackSide
                 }));
                 scene.add(sky);
@@ -783,7 +788,7 @@
             removeAfterLoaded: false,
             requiredMaps: "all",
             callback: function(model) {
-              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xff8888, opacity: 0.6, map: new THREE.TextureLoader().load("/images/assets/glow/0.png"), sizeAttenuation: true, depthWrite: false }));
+              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xff8888, opacity: 0.6, map: textureLoader.load("/images/assets/glow/0.png"), sizeAttenuation: true, depthWrite: false }));
               glow.scale.set(0.3, 0.3, 0.3);
               model.scene.add(glow);
               for (let i = 0; i < 6; i++) {
@@ -801,7 +806,7 @@
             removeAfterLoaded: false,
             requiredMaps: "all",
             callback: function(model) {
-              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.TextureLoader().load("/images/assets/glow/2.png"), sizeAttenuation: true, depthWrite: false }));
+              const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: textureLoader.load("/images/assets/glow/2.png"), sizeAttenuation: true, depthWrite: false }));
               glow.scale.set(0.5, 0.5, 0.5);
               glow.position.z = 0.2;
               const group = new THREE.Group();
@@ -869,9 +874,20 @@
             model: null,
             loaded: false,
             removeAfterLoaded: false,
-            requiredMaps: ["Cargo_Port", "Apex"],
+            requiredMaps: ["Cargo_Port"],
             callback: function(model) {
-              utils.vehicles.add(model, "Jeep", sandbox.presets.map == "Apex" ? -.54 : 0);
+              utils.vehicles.add(model, "Jeep");
+            }
+          },
+          {
+            id: "vehicle.Warthog",
+            path: "/models/vehicles/Warthog.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            requiredMaps: ["Apex"],
+            callback: function(model) {
+              utils.vehicles.add(model, "Warthog", -.54);
             }
           },
         ],
@@ -960,7 +976,7 @@
             ],
             vehicles: [
               {
-                type: "Jeep",
+                type: "Warthog",
                 position: [26.7, 1, -1.3, 0, 0, 0]
               }
             ]
@@ -1423,7 +1439,7 @@
                 } else {
                   gametime.player.data.visibleOnRadar = false;
                 }
-                if (enemy && enemy.visibleOnRadar && camera.position.distanceTo(enemy.scene.position) < radarRange + 3) {
+                if (enemy && enemy.visibleOnRadar && camera.getWorldPosition(vectors[31]).distanceTo(enemy.scene.position) < radarRange + 3) {
                   const blip = computeRadarBlipForEnemy(enemy.scene);
                   if (!blip) return;
                   ctx.beginPath();
@@ -1629,7 +1645,7 @@
               }
               utils.health.subtract(realDamage, utils.players.objects[weapon.lastUsedBy] || null, null);
             } else {
-              const realDamage = (shield.shieldType == "head" ? weapon.headshotDamage : weapon.damage) / Math.max(camera.position.distanceTo(player.scene.position) / weapon.range, 1);
+              const realDamage = (shield.shieldType == "head" ? weapon.headshotDamage : weapon.damage) / Math.max(camera.getWorldPosition(vectors[31]).distanceTo(player.scene.position) / weapon.range, 1);
               gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, shield.shieldType == "head"]);
             }
           },
@@ -1649,7 +1665,7 @@
                   playerObject.weaponRotation = rotation[0];
                   playerObject.visibleOnRadar = gametime.players[player].data.visibleOnRadar;
                   playerObject.vehicle = gametime.players[player].data.vehicle;
-                  const distance = camera.position.distanceTo(playerObject.scene.position);
+                  const distance = camera.getWorldPosition(vectors[31]).distanceTo(playerObject.scene.position);
                   const usernamePointer = playerObject.scene.getObjectByName("UsernamePointer");
                   if (usernamePointer) {
                     if (distance < 2 || distance > 60 || playerObject.isDead || utils.options.get("Zoomed")) {
@@ -2029,7 +2045,7 @@
               playerCollider.translate(result.normal.multiplyScalar(result.depth));
             }
             if (!utils.vehicles.check(true)) camera.position.copy(playerCollider.end);
-            let worldPosition = camera.getWorldPosition(vectors[6]);
+            let worldPosition = camera.getWorldPosition(vectors[31]);
             if (camera.position.y <= -40 || Math.abs(worldPosition.x) > 200 || Math.abs(worldPosition.z) > 200) utils.health.die("self");
           },
           updateGrenades: function(deltaTime, time, loop) {
@@ -2171,10 +2187,17 @@
                 const wheel_fr = vehicle.mesh.getObjectByName("Wheel_FR");
                 const wheel_rl = vehicle.mesh.getObjectByName("Wheel_RL");
                 const wheel_rr = vehicle.mesh.getObjectByName("Wheel_RR");
-                wheel_fl.rotation.order = "ZXY";
-                wheel_fr.rotation.order = "ZXY";
-                wheel_fl.rotation.z = vehicle.physicsVariables.heading * 2;
-                wheel_fr.rotation.z = vehicle.physicsVariables.heading * 2;
+                if (vehicle.type == "Jeep") {
+                  wheel_fl.rotation.order = "ZXY";
+                  wheel_fr.rotation.order = "ZXY";
+                  wheel_fl.rotation.z = vehicle.physicsVariables.heading * 2;
+                  wheel_fr.rotation.z = vehicle.physicsVariables.heading * 2;
+                } else if (vehicle.type == "Warthog") {
+                  wheel_fl.rotation.order = "YXZ";
+                  wheel_fr.rotation.order = "YXZ";
+                  wheel_fl.rotation.y = vehicle.physicsVariables.heading * 2;
+                  wheel_fr.rotation.y = vehicle.physicsVariables.heading * 2;
+                }
                 wheel_fl.rotation.x += wheelVelocity;
                 wheel_fr.rotation.x += wheelVelocity;
                 wheel_rl.rotation.x += wheelVelocity;
@@ -2210,7 +2233,7 @@
                 function applyDamageLevel(level) {
                   if (level == 0) {
                     const windshield = vehicle.mesh.getObjectByName("Windshield");
-                    windshield.material = utils.options.get("materials").windshield;
+                    windshield.material = utils.options.get("materials")[vehicle.type + "_windshield"];
                   } else if (level == 1) {
                     const windshield = vehicle.mesh.getObjectByName("Windshield");
                     windshield.material = utils.options.get("materials").shattered_windshield;
@@ -2636,14 +2659,15 @@
               if (playerObject) {
                 const playerPosition = playerObject.scene.position.clone();
                 playerPosition.y += 0.8;
-                const distance = camera.position.distanceTo(playerPosition);
+                let cameraPosition = camera.getWorldPosition(vectors[31]);
+                const distance = cameraPosition.distanceTo(playerPosition);
                 if (distance < 2.5 && utils.options.get("Aiming")) {
                   const lungeDistance = Math.max(distance - 0.7, 0);
                   const initialPosition = camera.position.clone();
                   camera.lookAt(playerPosition);
                   function animation() {
                     playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(10));
-                    const currentDistance = camera.position.distanceTo(initialPosition);
+                    const currentDistance = cameraPosition.distanceTo(initialPosition);
                     if (currentDistance >= lungeDistance - 0.2) {
                       playerVelocity.set(0, 0, 0);
                       utils.players.hit(playerObject, null, "melee");
@@ -2790,7 +2814,7 @@
             const intersects = raycaster.intersectObjects(utils.players.shields);
             if (intersects.length > 0) {
               const intersect = intersects[0];
-              if (camera.position.distanceTo(intersect.point) < weapon.range) {
+              if (camera.getWorldPosition(vectors[31]).distanceTo(intersect.point) < weapon.range) {
                 if (sandbox.presets.options.teamGame) {
                   const player = utils.players.objects[intersect.object.playerUUID];
                   if (player.team == gametime.player.data.team) {
@@ -2889,7 +2913,7 @@
               audio.grenadeExplosion(worldPosition, grenade.type);
             }
             utils.players.hit(null, null, grenade);
-            const shakeIntensity = 2 / (Math.max(camera.position.distanceTo(worldPosition), 1) / 2);
+            const shakeIntensity = 2 / (Math.max(camera.getWorldPosition(vectors[31]).distanceTo(worldPosition), 1) / 2);
             utils.effects.shake(shakeIntensity);
             if (grenade.stuck) scene.add(grenade.mesh);
             if (!isMultiplayer) gametime.run("explodeGrenade", [gametime.player.uuid, grenade.id, [worldPosition.x, worldPosition.y, worldPosition.z]]);
@@ -3031,15 +3055,38 @@
               vehicle.position.set(mapVehicle.position[0], mapVehicle.position[1], mapVehicle.position[2]);
               vehicle.rotation.order = "YXZ";
               scene.add(vehicle);
-              const body = physics.add(vehicle, 5, [mapVehicle.position[3], mapVehicle.position[4], mapVehicle.position[5]]);
+              let mass = null;
+              if (type == "Jeep") {
+                mass = 5;
+              } else if (type == "Warthog") {
+                mass = 8;
+              }
+              const body = physics.add(vehicle, mass, [mapVehicle.position[3], mapVehicle.position[4], mapVehicle.position[5]]);
               const entry = {
                 id: vehicles.length,
-                type: "Jeep",
+                type: type,
                 mesh: vehicle,
                 body: body,
                 lastCollision: null,
                 lastPlayerCollision: null,
-                physicsVariables: {
+                physicsVariables: null,
+                currentSeat: null,
+                currentView: 1,
+                currentDamage: [],
+                damageLevel: 0,
+                defaultCondition: null,
+                condition: null,
+                despawnTime: null,
+                respawnTime: 60000,
+                horn: false,
+                allowedToUpdate: true,
+                spawnPoint: mapVehicle.position,
+                shadow: vehicle.getObjectByName("Shadow"),
+                shadowLevel: shadowLevel,
+                seats: null
+              };
+              if (type == "Jeep") {
+                entry.physicsVariables = {
                   enginePower: 0,
                   maxEnginePower: 3000,
                   maxEnginePowerReverse: 1000,
@@ -3048,20 +3095,10 @@
                   steeringSensitivity: 0.004,
                   throttle: false,
                   gear: "drive"
-                },
-                currentSeat: null,
-                currentView: 1,
-                currentDamage: [],
-                damageLevel: 0,
-                condition: 100,
-                despawnTime: null,
-                respawnTime: 60000,
-                horn: false,
-                allowedToUpdate: true,
-                spawnPoint: mapVehicle.position,
-                shadow: vehicle.getObjectByName("Shadow"),
-                shadowLevel: shadowLevel,
-                seats: [
+                };
+                entry.defaultCondition = 100;
+                entry.condition = entry.defaultCondition;
+                entry.seats = [
                   {
                     type: "driver",
                     seat: vehicle.getObjectByName("Driver_Seat")
@@ -3074,14 +3111,42 @@
                     type: "passenger2",
                     seat: vehicle.getObjectByName("Passenger_Seat2")
                   }
-                ]
-              };
+                ];
+              } else if (type == "Warthog") {
+                entry.physicsVariables = {
+                  enginePower: 0,
+                  maxEnginePower: 4000,
+                  maxEnginePowerReverse: 2500,
+                  heading: 0,
+                  maxHeading: 0.3,
+                  steeringSensitivity: 0.003,
+                  throttle: false,
+                  gear: "drive"
+                };
+                entry.defaultCondition = 200;
+                entry.condition = entry.defaultCondition;
+                entry.seats = [
+                  {
+                    type: "driver",
+                    seat: vehicle.getObjectByName("Driver_Seat")
+                  },
+                  {
+                    type: "passenger1",
+                    seat: vehicle.getObjectByName("Passenger_Seat")
+                  },
+                  {
+                    type: "gunner",
+                    seat: vehicle.getObjectByName("Gunner_Seat")
+                  }
+                ];
+              }
               scene.add(entry.shadow);
               body.oncollision = function(point, intensity, contact, body) {
                 if (body == physics.player) {
                   const time = Date.now();
                   const normal = new THREE.Vector3().copy(contact.ni);
-                  playerCollider.translate(normal.multiplyScalar(-0.1));
+                  playerCollider.translate(normal.multiplyScalar(0.1));
+                  console.log(normal)
                   if (time - entry.lastPlayerCollision > 500) {
                     entry.lastPlayerCollision = time;
                     utils.players.hit(null, null, entry);
@@ -3100,7 +3165,7 @@
           },
           explode: function(vehicle) {
             utils.vehicles.exit();
-            const distance = camera.position.distanceTo(vehicle.mesh.position);
+            const distance = camera.getWorldPosition(vectors[31]).distanceTo(vehicle.mesh.position);
             const shakeIntensity = 2 / (Math.max(distance, 1) / 5);
             utils.effects.shake(shakeIntensity);
             if (distance < 6) utils.health.subtract(Math.min((2 / distance) * 100, 150), null);
@@ -3115,6 +3180,7 @@
             vehicle.smoke = false;
             vehicle.horn = false;
             vehicle.allowedToUpdate = false;
+            vehicle.body.velocity.set(0, 0, 0);
             vehicle.body.position.set(0, -2000, 0);
             vehicle.shadow.position.y = -2000;
           },
@@ -3170,7 +3236,7 @@
             const vehicle = utils.options.get("CurrentVehicle");
             if (vehicle) {
               utils.vehicles.switchView(0);
-              const worldPosition = camera.getWorldPosition(vectors[6]);
+              const worldPosition = camera.getWorldPosition(vectors[31]);
               camera.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
               camera.rotation.set(0, vehicle.mesh.rotation.y, 0);
               if (vehicle.currentSeat.type == "driver") {
@@ -3286,7 +3352,6 @@
             if (intensity > 5) {
               vehicle.condition += -intensity / 8;
             }
-            if (intensity > 18) vehicle.horn = true;
           },
           checkIfFlipped: function(vehicle) {
             const up = vectors[27];
@@ -3466,7 +3531,9 @@
         sandbox.models.forEach(model => {
           if (typeof model.removeAfterLoaded == "undefined" && model.model) scene.remove(model.model.scene);
         });
-        sandbox.initialize();
+        audio.initialize(function() {
+          sandbox.initialize();
+        });
       };
 
       function onWindowResize() {
@@ -3534,20 +3601,21 @@
       utils.options.set("bulletHoles", {
         0: {
           size: vectors[23],
-          material: new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
+          material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
         },
         20: {
           size: vectors[23],
-          material: new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load("/images/assets/bullet-holes/20.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
+          material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/20.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
         }
       });
       utils.options.set("materials", {
-        windshield: new THREE.MeshBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.1, depthWrite: false }),
-        shattered_windshield: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, map: new THREE.TextureLoader().load("/images/assets/vehicles/shattered_glass.png") })
+        Jeep_windshield: new THREE.MeshBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.1, depthWrite: false }),
+        Warthog_windshield: new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide }),
+        shattered_windshield: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, map: textureLoader.load("/images/assets/vehicles/shattered_glass.png") })
       });
       utils.options.set("playerCamera", camera.clone());
       utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(250, 250));
-      utils.options.set("scopeCompass", new THREE.Mesh(new THREE.CircleGeometry(0.75, 30), new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load("/images/ui/compass.png"), transparent: true, opacity: 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide })));
+      utils.options.set("scopeCompass", new THREE.Mesh(new THREE.CircleGeometry(0.75, 30), new THREE.MeshBasicMaterial({ map: textureLoader.load("/images/ui/compass.png"), transparent: true, opacity: 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide })));
       utils.options.set("effectsRaycaster", new THREE.Raycaster());
       utils.options.set("aimRaycaster", new THREE.Raycaster());
       utils.options.set("globalZoomTween", null);
