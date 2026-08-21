@@ -438,6 +438,13 @@
             } else if (object.objectType == "resetStyle") {
               object.style = "";
               delete tmpObjects[uuid];
+            } else if (object.objectType == "gunCase") {
+              scene.remove(object);
+              object.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+              });
+              delete tmpObjects[uuid];
             }
           }
           if (object.objectType == "deathPose" && object.parentType == "camera") {
@@ -501,9 +508,9 @@
       sandbox = {
         setup: false,
         presets: {
-          map: "Lihid",
+          map: "Apex",
           character: "Raven",
-          loadout: ["Machine-Gun", "FN-502"],
+          loadout: ["AK-74", "FN-502"],
           grenades: {
             "mk2": 2,
             "plasma": 0
@@ -512,7 +519,7 @@
             gravity: 100, // Percent
             teamGame: false,
             teamSize: 2, // Players
-            playersNeeded: 2, // Players
+            playersNeeded: 1, // Players
             respawnTime: 4 // Seconds
           }
         },
@@ -532,6 +539,7 @@
           "crouch": ["KeyC"],
           "enterVehicle": ["KeyE", "KeyT"],
           "vehicleView": ["KeyV"],
+          "interact": ["KeyT"],
         },
         loadModels: function() {
           for (let i = 0; i < sandbox.models.length; i++) {
@@ -839,7 +847,7 @@
             path: "/models/weapons/Machine-Gun.glb",
             model: null,
             loaded: false,
-            requiredMaps: ["Apex"]
+            requiredMaps: ["Apex", "Lihid"]
           },
           {
             id: "propweapon.AK-74",
@@ -895,7 +903,7 @@
             path: "/models/characters/weapons/Machine-Gun.glb",
             model: null,
             loaded: false,
-            requiredMaps: []
+            requiredMaps: ["Lihid"]
           },
           {
             id: "grenade.MK2",
@@ -957,6 +965,13 @@
             callback: function(model) {
               utils.vehicles.add(model, "Warthog", -.54);
             }
+          },
+          {
+            id: "asset.gun-case",
+            path: "/models/assets/gun-case.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: "all"
           },
         ],
         maps: {
@@ -1058,6 +1073,7 @@
             defaultAmmo: 72,
             currentAmmo: 36,
             maxAmmo: 36,
+            maxTotalAmmo: 216,
             damage: 7,
             headshotDamage: 8,
             spread: 1.2,
@@ -1091,6 +1107,7 @@
             defaultAmmo: 24,
             currentAmmo: 12,
             maxAmmo: 12,
+            maxTotalAmmo: 48,
             damage: 10,
             headshotDamage: 16,
             spread: 0.4,
@@ -1124,6 +1141,7 @@
             defaultAmmo: 48,
             currentAmmo: 16,
             maxAmmo: 16,
+            maxTotalAmmo: 144,
             damage: 9,
             headshotDamage: 10,
             spread: 1.8,
@@ -1157,6 +1175,7 @@
             defaultAmmo: 100,
             currentAmmo: 50,
             maxAmmo: 50,
+            maxTotalAmmo: 200,
             damage: 5,
             headshotDamage: 5,
             spread: 2,
@@ -1190,6 +1209,7 @@
             defaultAmmo: 8,
             currentAmmo: 4,
             maxAmmo: 4,
+            maxTotalAmmo: 16,
             damage: 100,
             headshotDamage: 200,
             spread: 0.1,
@@ -1227,6 +1247,7 @@
             defaultAmmo: 5,
             currentAmmo: 1,
             maxAmmo: 1,
+            maxTotalAmmo: 10,
             damage: 18,
             headshotDamage: 24,
             spread: 4,
@@ -1260,6 +1281,7 @@
             defaultAmmo: 108,
             currentAmmo: 36,
             maxAmmo: 36,
+            maxTotalAmmo: 180,
             damage: 7,
             headshotDamage: 13,
             spread: 0.1,
@@ -1293,10 +1315,11 @@
           "Machine-Gun": {
             name: "Machine-Gun",
             displayName: ".50 Cal Machine Gun Turret",
-            ammo: 300,
-            defaultAmmo: 300,
+            ammo: 200,
+            defaultAmmo: 200,
             currentAmmo: 100,
             maxAmmo: 100,
+            maxTotalAmmo: 300,
             damage: 10,
             headshotDamage: 10,
             spread: 0.2,
@@ -2027,6 +2050,9 @@
                 utils.players.animations.stop(player, "driving");
               } else {
                 utils.players.animations.stop(player, "sitting");
+              }
+              if (seat == "gunner") {
+                vehicle.mesh.getObjectByName("Machine_Gun").rotation.y = 0;
               }
               if (player.isWalking) {
                 utils.players.animations.start(player, player.weapon.type + "_walk");
@@ -2908,14 +2934,14 @@
               utils.weapons.crouch();
             }
           },
-          startWalking: function() {
+          startWalking: function(updateMultiplayer = true) {
             if (utils.vehicles.check(true)) return;
             utils.options.set("Walking", true);
             if (!utils.options.get("Firing") && !utils.options.get("Reloading")) {
               utils.weapons.animations.stop("idle");
               utils.weapons.animations.start("walk");
             }
-            gametime.run("startWalking", [gametime.player.uuid]);
+            if (updateMultiplayer) gametime.run("startWalking", [gametime.player.uuid]);
           },
           stopWalking: function(updateMultiplayer = true) {
             if (utils.vehicles.check(true)) return;
@@ -2961,8 +2987,33 @@
               utils.options.set("Aiming", false);
             }
           },
-          spawn: function(weapon, position) {
+          setNew: function(slot = null, weapon) {
+            if (!slot) {
+              if (utils.weapons.getCurrentEntry() == utils.weapons.getPrimaryEntry()) {
+                slot = "primary";
+              } else {
+                slot = "secondary";
+              }
+            }
+            if (slot == "primary") {
+              sandbox.loadout[0] = weapon;
+              utils.weapons.setPrimary(sandbox.weapons[weapon].model.scene);
+              utils.weapons.switch("primary", true);
+              return utils.weapons.getPrimaryEntry();
+            } else if (slot == "secondary") {
+              sandbox.loadout[1] = weapon;
+              utils.weapons.setSecondary(sandbox.weapons[weapon].model.scene);
+              utils.weapons.switch("secondary", true);
+              return utils.weapons.getSecondaryEntry();
+            }
+          },
+          spawn: function(type, weapon, position, rotation, options, offset = false, customUUID = null) {
             let weaponMesh = utils.models.get("propweapon." + weapon).model.scene.clone();
+            if (customUUID) {
+              weaponMesh.uuid = customUUID;
+            } else {
+              gametime.run("spawnWeapon", [gametime.player.uuid, weaponMesh.uuid, type, weapon, position, rotation, options, offset]);
+            }
             weaponMesh.weapon = weapon;
             scene.add(weaponMesh);
             let spawnedWeapons = utils.options.get("SpawnedWeapons");
@@ -2977,11 +3028,73 @@
             if (intersects.length > 0) {
               let weaponSpawnPoint = intersects[0].point;
               weaponMesh.position.copy(weaponSpawnPoint);
-              weaponMesh.position.y += .05;
               weaponMesh.getObjectByName("weapon").position.set(0, 0, 0);
               weaponMesh.getObjectByName("weapon").rotation.set(0, 0, 0);
-              weaponMesh.rotation.set(0, Math.random(), Math.PI / 2);
               weaponMesh.scale.set(.06, .06, .06);
+              if (type == "drop") {
+                weaponMesh.position.y += .05;
+                if (offset) weaponMesh.position.x += .2, weaponMesh.position.z += .2;
+                weaponMesh.rotation.set(0, Math.random(), Math.PI / 2);
+                weaponMesh.ammoData = {
+                  ammo: options.ammo,
+                  currentAmmo: options.currentAmmo
+                };
+              } else if (type == "case") {
+                let gunCase = utils.models.get("asset.gun-case").model.scene.clone();
+                gunCase.position.copy(weaponSpawnPoint);
+                gunCase.rotation.set(0, rotation, 0);
+                scene.add(gunCase);
+                weaponMesh.gunCase = gunCase;
+                weaponMesh.rotation.set(0, Math.PI + rotation, Math.PI / 2);
+                weaponMesh.position.y += .06;
+                weaponMesh.ammoData = {
+                  ammo: sandbox.weapons[weapon].defaultAmmo,
+                  currentAmmo: sandbox.weapons[weapon].maxAmmo
+                };
+              }
+            }
+          },
+          pickup: function(spawnedWeapon = null, isMultiplayer = false) {
+            let spawnedWeapons = utils.options.get("SpawnedWeapons");
+            if (!spawnedWeapon && !isMultiplayer) spawnedWeapon = utils.options.get("CurrentWeaponHovering");
+            if (!spawnedWeapon) return;
+            scene.remove(spawnedWeapon);
+            function next() {
+              if (spawnedWeapon.gunCase) utils.options.addTmpObject(spawnedWeapon.gunCase, "gunCase", 2000);
+              delete spawnedWeapons[spawnedWeapon.uuid];
+              utils.options.set("SpawnedWeapons", spawnedWeapons);
+              utils.options.set("CurrentWeaponHovering", null);
+            }
+            if (isMultiplayer) {
+              next();
+            } else {
+              gametime.run("pickupWeapon", [gametime.player.uuid, spawnedWeapon.uuid]);
+              if (sandbox.loadout.indexOf(spawnedWeapon.weapon) > -1) {
+                if (sandbox.loadout[0] == spawnedWeapon.weapon) {
+                  let weapon = utils.weapons.getPrimaryEntry();
+                  weapon.ammo = Math.min(weapon.ammo + spawnedWeapon.ammoData.ammo, weapon.maxTotalAmmo);
+                } else {
+                  let weapon = utils.weapons.getSecondaryEntry();
+                  weapon.ammo = Math.min(weapon.ammo + spawnedWeapon.ammoData.ammo, weapon.maxTotalAmmo);
+                }
+              } else {
+                utils.weapons.stopFire();
+                utils.weapons.stopZoom();
+                utils.weapons.stopReload();
+                utils.weapons.stopMelee();
+                utils.weapons.stopSprint(false, true);
+                if (utils.options.get("Walking")) utils.weapons.animations.stop("walk");
+                let currentWeapon = utils.weapons.getCurrentEntry();
+                utils.weapons.spawn("drop", currentWeapon.name, camera.position, null, { ammo: currentWeapon.ammo, currentAmmo: currentWeapon.currentAmmo });
+                let newWeapon = utils.weapons.setNew(null, spawnedWeapon.weapon);
+                newWeapon.ammo = spawnedWeapon.ammoData.ammo;
+                newWeapon.currentAmmo = spawnedWeapon.ammoData.currentAmmo;
+                utils.weapons.getChild().position.set(0, -0.03, 0);
+                utils.weapons.getChild().rotation.set(0.5, 0, 0);
+                new TWEEN.Tween(utils.weapons.getChild().position).to({ x: 0, y: 0, z: 0 }, 200).easing(TWEEN.Easing.Quadratic.InOut).start();
+                new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0, y: 0, z: 0 }, 200).easing(TWEEN.Easing.Quadratic.InOut).start();
+              }
+              next();
             }
           },
           update: function() {
@@ -3001,17 +3114,26 @@
             }
           },
           updateSpawned: function() {
+            if (utils.options.get("DeathTime")) return;
             let spawnedWeapons = utils.options.get("SpawnedWeapons");
             let weaponHovered = false;
             for (uuid in spawnedWeapons) {
               if (camera.position.distanceTo(spawnedWeapons[uuid].position) < 1.5) {
-                if (!weaponHovered) {
-                  weaponHovered = true;
-                  utils.ui.showPickupWeapon(spawnedWeapons[uuid].weapon);
+                if (sandbox.loadout.indexOf(spawnedWeapons[uuid].weapon) > -1) {
+                  utils.weapons.pickup(spawnedWeapons[uuid]);
+                } else if (!weaponHovered) {
+                  utils.options.set("CurrentWeaponHovering", spawnedWeapons[uuid]);
+                  if (sandbox.loadout.indexOf(spawnedWeapons[uuid].weapon) > -1) {
+                    utils.weapons.pickup();
+                  } else {
+                    weaponHovered = true;
+                    utils.ui.showPickupWeapon(spawnedWeapons[uuid].weapon);
+                  }
                 }
               }
             }
             if (!weaponHovered) {
+              utils.options.set("CurrentWeaponHovering", null);
               utils.ui.hidePickupWeapon();
             }
           }
@@ -3418,6 +3540,7 @@
                 utils.ui.showCrosshair();
                 vehicle.physicsVariables.throttle = false;
               } else if (vehicle.currentSeat.type == "gunner") {
+                utils.weapons.setNew(null, utils.options.get("PreviousGunnerWeapon"));
                 scene.add(sandbox.currentWeapon);
               }
               utils.options.set("CurrentVehicle", null);
@@ -3453,6 +3576,10 @@
                     scene.remove(sandbox.currentWeapon);
                     utils.ui.hideCrosshair();
                   } else if (seat.type == "gunner") {
+                    utils.options.set("PreviousGunnerWeapon", utils.weapons.getCurrentEntry().name);
+                    utils.weapons.setNew(null, "Machine-Gun");
+                    utils.weapons.getCurrentEntry().ammo = Infinity;
+                    utils.weapons.getCurrentEntry().currentAmmo = Infinity;
                     scene.remove(sandbox.currentWeapon);
                   }
                   utils.vehicles.switchView(1);
@@ -3587,6 +3714,7 @@
             utils.ui.setHealthBar(100, "instant");
           },
           die: function(killer, isHeadshot = false) {
+            for (key in keyStates) keyStates[key] = false;
             audio.stopShieldsWarning();
             audio.stopShieldsLow();
             utils.vehicles.exit();
@@ -3598,6 +3726,10 @@
             utils.weapons.stopWalking(false);
             if (utils.options.get("DeathTime")) return;
             utils.options.set("DeathTime", Date.now());
+            let primaryWeapon = utils.weapons.getPrimaryEntry();
+            let secondaryWeapon = utils.weapons.getSecondaryEntry();
+            utils.weapons.spawn("drop", primaryWeapon.name, camera.position, null, { ammo: primaryWeapon.ammo, currentAmmo: primaryWeapon.currentAmmo });
+            utils.weapons.spawn("drop", secondaryWeapon.name, camera.position, null, { ammo: secondaryWeapon.ammo, currentAmmo: secondaryWeapon.currentAmmo }, true);
             const deathPose = utils.players.createDeathPose(camera);
             if (killer == "self") {
               utils.options.set("Killer", {
@@ -3634,10 +3766,8 @@
             camera.fov = 45;
             camera.updateProjectionMatrix();
             PointerControls.isLocked = true;
-            sandbox.loadout[0] = sandbox.presets.loadout[0];
-            sandbox.loadout[1] = sandbox.presets.loadout[1];
-            const primaryWeapon = utils.weapons.getPrimaryEntry();
-            const secondaryWeapon = utils.weapons.getSecondaryEntry();
+            const primaryWeapon = utils.weapons.setNew("primary", sandbox.presets.loadout[0]);
+            const secondaryWeapon = utils.weapons.setNew("secondary", sandbox.presets.loadout[1]);
             primaryWeapon.ammo = primaryWeapon.defaultAmmo;
             secondaryWeapon.ammo = secondaryWeapon.defaultAmmo;
             primaryWeapon.currentAmmo = primaryWeapon.maxAmmo;
@@ -3690,6 +3820,7 @@
           if (sandbox.controls.crouch.includes(event.code)) utils.weapons.crouch();
           if (sandbox.controls.enterVehicle.includes(event.code)) utils.vehicles.enter();
           if (sandbox.controls.vehicleView.includes(event.code)) utils.vehicles.switchView();
+          if (sandbox.controls.interact.includes(event.code)) utils.weapons.pickup();
         }
       });
       document.addEventListener("keyup", function(event) {
@@ -3757,6 +3888,7 @@
       utils.options.set("DeathTime", null);
       utils.options.set("Killer", null);
       utils.options.set("SpawnedWeapons", {});
+      utils.options.set("PreviousGunnerWeapon", null);
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -3765,6 +3897,12 @@
       });
       gametime.on("switchWeapon", function(player, weapon) {
         if (player != gametime.player.uuid) utils.players.weapons.set(utils.players.objects[player], weapon);
+      });
+      gametime.on("spawnWeapon", function(player, weaponUUID, type, weapon, position, rotation, options, offset) {
+        if (player != gametime.player.uuid) utils.weapons.spawn(type, weapon, position, rotation, options, offset, weaponUUID);
+      });
+      gametime.on("pickupWeapon", function(player, weaponUUID) {
+        if (player != gametime.player.uuid) utils.weapons.pickup(utils.options.get("SpawnedWeapons")[weaponUUID], true);
       });
       gametime.on("startWalking", function(player) {
         if (player != gametime.player.uuid) utils.players.startWalking(utils.players.objects[player]);
