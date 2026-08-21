@@ -117,6 +117,26 @@
         animation: health-flash .5s infinite;
         border: 2px solid rgba(255, 60, 60, 0.5);
       }
+      .ui-section.bottom-section {
+        position: absolute;
+        width: 350px;
+        bottom: 30px;
+        left: 50%;
+        margin-left: -175px;
+        transform: perspective(600px) rotateX(30deg);
+      }
+      .ui-section.bottom-section .ui-pickup-weapon .ui-pickup-weapon-icon {
+        width: 120px;
+      }
+      .ui-section.bottom-section .ui-pickup-weapon {
+        font-family: "Arame";
+        font-size: 20px;
+        font-weight: 600;
+        color: #67d4ff;
+        text-shadow: 2px 2px 20px rgb(50, 50, 50);
+        text-align: center;
+        opacity: 0;
+      }
       .ui-section.bottom-right-section {
         position: absolute;
         width: 150px;
@@ -168,12 +188,12 @@
         bottom: 40px;
         left: 90px;
         width: 150px;
-        height: 130px;
+        height: 150px;
         border-radius: 100%;
         background: rgba(100, 100, 150, 0.4);
         box-shadow: inset 0 0 50px rgba(210, 200, 200, 0.4);
         border: 2px solid rgba(100, 200, 255, 0.2);
-        transform: perspective(500px) rotateY(10deg) rotateX(10deg);
+        transform: perspective(500px) rotateY(5deg) rotateX(30deg);
         overflow: hidden;
       }
       .ui-section.bottom-right-section .ui-weapon .ui-ammo {
@@ -242,6 +262,12 @@
         </div>
         <div class="ui-ammo-info">NO AMMO LEFT IN WEAPON. PRESS [Y] TO SWITCH WEAPON.</div>
       </div>
+      <div class="ui-section bottom-section">
+        <div class="ui-pickup-weapon">
+          <img src="/images/weapons/AK-74.png" class="ui-pickup-weapon-icon">
+          <p>PRESS [T] TO PICK UP AK-74 ASSAULT RIFLE<p></p>
+        </div>
+      </div>
       <div class="ui-section bottom-left-section">
         <div class="ui-radar">
           <canvas style="width: 100%; height: 100%" width="150" height="150"></canvas>
@@ -265,29 +291,14 @@
       const clock = new THREE.Clock();
       const worldOctree = new THREE.Octree();
 
-      let map = null;
-      let playerOnFloor = false;
-      let playerAgainstWall = false;
-      let deathScreen = false;
-      let frameCount = 0;
-      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3()];
-      const keyStates = {};
-      const grenades = [];
-      const vehicles = [];
-      const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
-      const playerVelocity = vectors[7];
-      const playerDirection = vectors[8];
-      const playerSpeeds = [];
-      const STEPS_PER_FRAME = 4;
-
       camera.rotation.order = "YXZ";
       scene.add(camera);
       document.body.appendChild(renderer.domElement);
 
       const directionalLight = new THREE.DirectionalLight(0xf4e6bc, 1.1);
       const ambientLight = new THREE.AmbientLight(0xefe1a7, 0.4);
-      renderer.shadowMap.autoUpdate = false;
       renderer.shadowMap.enabled = true;
+      renderer.shadowMap.autoUpdate = false;
       renderer.shadowMap.type = THREE.VSMShadowMap;
       renderer.outputEncoding = THREE.sRGBEncoding;
       directionalLight.position.set(30, 60, -30);
@@ -306,21 +317,34 @@
       scene.add(directionalLight);
       scene.add(ambientLight);
   
-      const textureLoader = new THREE.TextureLoader();
-      const lensflare = new THREE.Lensflare();
+      let textureLoader = new THREE.TextureLoader();
+      let lensflare = new THREE.Lensflare();
       lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/lensflare/flare0.png"), 700, 0.0));
       lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/lensflare/flare1.png"), 200, 0.25));
       lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/lensflare/flare3.png"), 60, 0.6));
       lensflare.addElement(new THREE.LensflareElement(textureLoader.load("/images/assets/skies/lensflare/hexangle.png"), 70, 1.0));
       directionalLight.add(lensflare);
 
+      let map = null;
+      let playerOnFloor = false;
+      let playerAgainstWall = false;
+      let deathScreen = false;
+      let frameCount = 0;
+      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3()];
+      const keyStates = {};
+      const vehicles = [];
+      const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
+      const playerVelocity = vectors[7];
+      const playerDirection = vectors[8];
+      const playerSpeeds = [];
+
       function animate(now) {
         const clockDelta = clock.getDelta();
-        const deltaTime = Math.min(0.04, clockDelta) / STEPS_PER_FRAME;
+        const deltaTime = Math.min(0.04, clockDelta) / 4;
         const time = Date.now();
         const weapon = utils.weapons.getCurrentEntry();
 
-        for (let i = 0; i < STEPS_PER_FRAME; i++) {
+        for (let i = 0; i < 4; i++) {
           utils.physics.controls(deltaTime);
           utils.physics.updatePlayer(deltaTime);
           utils.physics.updateGrenades(deltaTime, time, i);
@@ -338,6 +362,7 @@
         utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle);
         audio.update(cameraPosition, cameraRotation);
         utils.weapons.position(cameraPosition, cameraRotation);
+        utils.weapons.updateSpawned();
 
         for (let i = 0; i < sandbox.models.length; i++) {
           if (sandbox.models[i].loaded && sandbox.models[i].model.animationMixer) {
@@ -418,7 +443,7 @@
           if (object.objectType == "deathPose" && object.parentType == "camera") {
             object.position.copy(camera.position);
             object.position.y += -1;
-            if (time - object.timestamp > sandbox.presets.respawnTime * 1000 - 10) {
+            if (time - object.timestamp > sandbox.presets.options.respawnTime * 1000 - 10) {
               object.parentType = "player";
             }
           }
@@ -430,7 +455,7 @@
 
         const deathTime = utils.options.get("DeathTime");
         if (deathTime) {
-          if (time - deathTime > sandbox.presets.respawnTime * 1000) {
+          if (time - deathTime > sandbox.presets.options.respawnTime * 1000) {
             utils.health.respawn();
           }
           const killer = utils.options.get("Killer");
@@ -476,19 +501,19 @@
       sandbox = {
         setup: false,
         presets: {
-          map: "Apex",
+          map: "Lihid",
           character: "Raven",
-          respawnTime: 5,
-          loadout: ["Ace-35r", "FN-502"],
+          loadout: ["Machine-Gun", "FN-502"],
           grenades: {
             "mk2": 2,
             "plasma": 0
           },
           options: {
-            gravity: 10,
+            gravity: 100, // Percent
             teamGame: false,
-            teamSize: 2,
-            teamOrder: null
+            teamSize: 2, // Players
+            playersNeeded: 2, // Players
+            respawnTime: 4 // Seconds
           }
         },
         loadout: [],
@@ -508,22 +533,52 @@
           "enterVehicle": ["KeyE", "KeyT"],
           "vehicleView": ["KeyV"],
         },
+        loadModels: function() {
+          for (let i = 0; i < sandbox.models.length; i++) {
+            const idSplit = sandbox.models[i].id.split(".");
+            const isWeapon = idSplit[0] == "weapon";
+            if (sandbox.models[i].requiredMaps.includes(sandbox.presets.map) || sandbox.models[i].requiredMaps == "all") {
+              if (sandbox.models[i].id == "pose") sandbox.models[i].path = `/models/characters/poses/${sandbox.presets.character}.glb`;
+              new THREE.GLTFLoader(sandbox.loadingManager).load(sandbox.models[i].path, async function(model) {
+                sandbox.models[i].model = model;
+                sandbox.models[i].loaded = true;
+                scene.add(model.scene);
+                if (model.animations) {
+                  sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
+                }
+                if (typeof sandbox.models[i].callback == "function") sandbox.models[i].callback(model);
+                if (isWeapon) {
+                  const name = idSplit[1];
+                  model.scene.traverse(child => child.frustumCulled = false);
+                  sandbox.weapons[name].model = model;
+                  sandbox.weapons[name].loaded = true;
+                  if (name == sandbox.loadout[0]) utils.weapons.setPrimary(model.scene);
+                  if (name == sandbox.loadout[1]) utils.weapons.setSecondary(model.scene);
+                  utils.images.preload("/images/crosshairs/" + sandbox.weapons[name].reticle + ".png");
+                  if (sandbox.weapons[name].muzzleFlash) {
+                    model.scene.getObjectByName("muzzleFlash").material.color.setHex(0xffaa55);
+                    utils.effects.muzzleFlash(model.scene);
+                  }
+                  if (sandbox.weapons[name].scope) {
+                    const lensCamera = model.scene.getObjectByName("LensCamera");
+                    lensCamera.aspect = 1;
+                    lensCamera.updateProjectionMatrix();
+                    sandbox.weapons[name].model.scene.getObjectByName("Lens").material.map = utils.options.get("scopeRenderTarget").texture;
+                  }
+                }
+                renderer.render(scene, camera);
+              });
+            }
+          }
+        },
         initialize: function() {
-          gametime.set("player", {
-            character: sandbox.presets.character,
-            position: [0, 0, 0],
-            rotation: [0, 0, 0],
-            loadout: sandbox.loadout,
-            visibleOnRadar: false,
-            team: null
-          });
-          gametime.set("username", generateName());
-          gametime.connect();
-          gametime.onconnect = function() {
-            if (sandbox.setup) return;
-            sandbox.setup = true;
+          audio.initialize(function() {
             if (sandbox.presets.options.teamGame) {
-              gametime.player.data.team = sandbox.presets.options.teamOrder[gametime.player.position - 1];
+              if (gametime.player.position > sandbox.presets.options.teamSize / 2) {
+                gametime.player.data.team = "blue";
+              } else {
+                gametime.player.data.team = "red";
+              }
               utils.players.setArmorColor("self");
             }
             utils.ui.radar.init();
@@ -531,7 +586,7 @@
             animate();
             renderer.shadowMap.needsUpdate = true;
             audio.ambience(sandbox.maps[sandbox.presets.map].ambienceSound);
-          };
+          });
         },
         loadingManager: new THREE.LoadingManager(),
         models: [
@@ -686,11 +741,10 @@
             callback: function(model) {
               textureLoader.load("/images/assets/skies/3.png", function(skyTexture) {
                 map = model.scene;
-                let nocollisions = [];
-                nocollisions.push(map.getObjectByName("Mesher_MesherMat_0"), map.getObjectByName("Mesher_MesherMat_0_1"), map.getObjectByName("Mesher_MesherMat_0_2"), map.getObjectByName("Mesher_MesherMat_0_3"));
+                let nocollisions = [map.getObjectByName("Mesher_MesherMat_0"), map.getObjectByName("Mesher_MesherMat_0_1"), map.getObjectByName("Mesher_MesherMat_0_2"), map.getObjectByName("Mesher_MesherMat_0_3")];
                 nocollisions.forEach(child => child.parent.remove(child));
                 worldOctree.fromGraphNode(map);
-                nocollisions.forEach(child => map.add(child));
+                nocollisions.forEach(child => scene.add(child));
                 physics.initialize(map);
                 directionalLight.position.set(-500,100,-500);
                 directionalLight.shadow.camera.far = 1000;
@@ -781,6 +835,69 @@
             requiredMaps: []
           },
           {
+            id: "weapon.Machine-Gun",
+            path: "/models/weapons/Machine-Gun.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: ["Apex"]
+          },
+          {
+            id: "propweapon.AK-74",
+            path: "/models/characters/weapons/AK-74.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.FN-502",
+            path: "/models/characters/weapons/FN-502.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.SCAR-H",
+            path: "/models/characters/weapons/SCAR-H.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.30-SST",
+            path: "/models/characters/weapons/30-SST.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.HK-G28",
+            path: "/models/characters/weapons/HK-G28.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.Phone-Gun",
+            path: "/models/characters/weapons/Phone-Gun.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.Ace-35r",
+            path: "/models/characters/weapons/Ace-35r.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.Machine-Gun",
+            path: "/models/characters/weapons/Machine-Gun.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
             id: "grenade.MK2",
             path: "/models/weapons/grenades/MK2.glb",
             model: null,
@@ -818,55 +935,6 @@
                 utils.grenades.add(grenade, "plasma");
               }
             }
-          },
-          {
-            id: "propweapon.AK-74",
-            path: "/models/characters/weapons/AK-74.glb",
-            model: null,
-            loaded: false,
-            requiredMaps: "all"
-          },
-          {
-            id: "propweapon.FN-502",
-            path: "/models/characters/weapons/FN-502.glb",
-            model: null,
-            loaded: false,
-            requiredMaps: "all"
-          },
-          {
-            id: "propweapon.SCAR-H",
-            path: "/models/characters/weapons/SCAR-H.glb",
-            model: null,
-            loaded: false,
-            requiredMaps: "all"
-          },
-          {
-            id: "propweapon.30-SST",
-            path: "/models/characters/weapons/30-SST.glb",
-            model: null,
-            loaded: false,
-            requiredMaps: "all"
-          },
-          {
-            id: "propweapon.HK-G28",
-            path: "/models/characters/weapons/HK-G28.glb",
-            model: null,
-            loaded: false,
-            requiredMaps: "all"
-          },
-          {
-            id: "propweapon.Phone-Gun",
-            path: "/models/characters/weapons/Phone-Gun.glb",
-            model: null,
-            loaded: false,
-            requiredMaps: "all"
-          },
-          {
-            id: "propweapon.Ace-35r",
-            path: "/models/characters/weapons/Ace-35r.glb",
-            model: null,
-            loaded: false,
-            requiredMaps: "all"
           },
           {
             id: "vehicle.Jeep",
@@ -1222,6 +1290,39 @@
               walk: [8, 1.2, 1]
             }
           },
+          "Machine-Gun": {
+            name: "Machine-Gun",
+            displayName: ".50 Cal Machine Gun Turret",
+            ammo: 300,
+            defaultAmmo: 300,
+            currentAmmo: 100,
+            maxAmmo: 100,
+            damage: 10,
+            headshotDamage: 10,
+            spread: 0.2,
+            muzzleFlash: false,
+            zoomPosition: [.039,-.0095,-.08,.01,-.028,.005],
+            zoomFov: 35,
+            zoomDuration: 600,
+            fireMode: "auto",
+            fireRate: 100,
+            range: 100,
+            recoil: .5,
+            reticle: 7,
+            bulletHole: 0,
+            type: "rifle",
+            model: null,
+            loaded: false,
+            animationStructure: {
+              shoot: [0, 1, 1],
+              idle: [1, 1, 1],
+              reload: [2, 0.7, 1],
+              reload_full: [3, 0.7, 1],
+              throw: [4, 1.4, 1],
+              walk: [5, 1, 1],
+              run: [5, .8, 1]
+            }
+          },
         }
       };
       utils = {
@@ -1256,7 +1357,8 @@
             reticle: 0,
             crosshairAimed: false,
             healthValue: 100,
-            healthTransition: "long"
+            healthTransition: "long",
+            currentPickupWeapon: null
           },
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
@@ -1273,7 +1375,10 @@
             primaryWeaponDisplay: document.querySelector(".ui .ui-primary-weapon-display"),
             secondaryWeaponDisplay: document.querySelector(".ui .ui-secondary-weapon-display"),
             killStats: document.querySelector(".ui-kill-stats"),
-            ammoInfo: document.querySelector(".ui-ammo-info")
+            ammoInfo: document.querySelector(".ui-ammo-info"),
+            pickupWeapon: document.querySelector(".ui .ui-pickup-weapon"),
+            pickupWeaponText: document.querySelector(".ui .ui-pickup-weapon p"),
+            pickupWeaponIcon: document.querySelector(".ui .ui-pickup-weapon .ui-pickup-weapon-icon")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -1300,11 +1405,25 @@
               utils.ui.cache.reticle = reticle;
             }
           },
+          showPickupWeapon: function(weapon) {
+            if (weapon != utils.ui.cache.currentPickupWeapon) {
+              utils.ui.cache.currentPickupWeapon = weapon;
+              utils.ui.elements.pickupWeaponIcon.src = "/images/weapons/" + weapon + ".png";
+              utils.ui.elements.pickupWeaponText.textContent = "PRESS [T] TO PICK UP " + sandbox.weapons[weapon].displayName.toUpperCase();
+              utils.ui.elements.pickupWeapon.style.opacity = 1;
+            }
+          },
+          hidePickupWeapon: function(weapon) {
+            if (utils.ui.cache.currentPickupWeapon != null) {
+              utils.ui.cache.currentPickupWeapon = null;
+              utils.ui.elements.pickupWeapon.style.opacity = 0;
+            }
+          },
           hideCrosshair: function() {
-            utils.ui.elements.crosshair.style.opacity = "0";
+            utils.ui.elements.crosshair.style.opacity = 0;
           },
           showCrosshair: function() {
-            utils.ui.elements.crosshair.style.opacity = "1";
+            utils.ui.elements.crosshair.style.opacity = 1;
           },
           unaimCrosshair: function() {
             if (utils.ui.cache.crosshairAimed) {
@@ -1524,40 +1643,42 @@
           shields: [],
           add: function(player) {
             utils.players.objects[player.uuid] = null;
-            utils.models.reload(`/models/characters/${player.data.character}.glb`, function(playerObject) {
-              playerObject.scene.traverse(child => child.frustumCulled = false);
-              scene.add(playerObject.scene);
-              playerObject.animationMixer = new THREE.AnimationMixer(playerObject.scene);
-              playerObject.animationStructure = {
-                "death": [0, 1.7, 1],
-                "throw_grenade": [1, 0.6, 1],
-                "pistol_idle": [2, 1, 1],
-                "pistol_jump": [3, 1, 1],
-                "pistol_shoot": [9, 1, 1],
-                "pistol_walk": [4, 1, 1],
-                "pistol_run": [13, 1.5, 1],
-                "pistol_reload": [11, 0.6, 1],
-                "rifle_idle": [5, 1, 1],
-                "rifle_jump": [6, 1, 1],
-                "rifle_shoot": [7, 1, 1],
-                "rifle_walk": [8, 1, 1],
-                "rifle_run": [12, 1.5, 1],
-                "rifle_reload": [10, 0.6, 1],
-                "crouch_idle": [14, 1, 1],
-                "driving": [15, 1, 1],
-                "sitting": [16, 1, 1]
-              };
-              playerObject.isWalking = false;
-              playerObject.isRunning = false;
-              playerObject.isCrouching = false;
-              playerObject.isDead = false;
-              playerObject.weapon = null;
-              playerObject.weaponRotation = 0;
-              playerObject.visibleOnRadar = false;
-              playerObject.allowedToUpdate = true;
-              playerObject.vehicle = null;
-              playerObject.uuid = player.uuid;
-              playerObject.team = player.data.team;
+            new THREE.GLTFLoader().load("/models/characters/" + player.data.character + ".glb", function(model) {
+              model.scene.traverse(child => child.frustumCulled = false);
+              scene.add(model.scene);
+              let playerObject = Object.assign(model, {
+                animationMixer: new THREE.AnimationMixer(model.scene),
+                animationStructure: {
+                  "death": [0, 1.7, 1],
+                  "throw_grenade": [1, 0.6, 1],
+                  "pistol_idle": [2, 1, 1],
+                  "pistol_jump": [3, 1, 1],
+                  "pistol_shoot": [9, 1, 1],
+                  "pistol_walk": [4, 1, 1],
+                  "pistol_run": [13, 1.5, 1],
+                  "pistol_reload": [11, 0.6, 1],
+                  "rifle_idle": [5, 1, 1],
+                  "rifle_jump": [6, 1, 1],
+                  "rifle_shoot": [7, 1, 1],
+                  "rifle_walk": [8, 1, 1],
+                  "rifle_run": [12, 1.5, 1],
+                  "rifle_reload": [10, 0.6, 1],
+                  "crouch_idle": [14, 1, 1],
+                  "driving": [15, 1, 1],
+                  "sitting": [16, 1, 1]
+                },
+                isWalking: false,
+                isRunning: false,
+                isCrouching: false,
+                isDead: false,
+                weapon: null,
+                weaponRotation: 0,
+                visibleOnRadar: false,
+                allowedToUpdate: true,
+                vehicle: null,
+                uuid: player.uuid,
+                team: player.data.team,
+              });
               utils.players.objects[player.uuid] = playerObject;
               utils.players.weapons.set(playerObject, player.data.loadout[0]);
               playerObject.scene.getObjectByName("Death_Pose").visible = false;
@@ -1815,11 +1936,11 @@
               camera.position.set(point.x, point.y, point.z);
               camera.rotation.set(position[3], position[4], position[5]);
               const id = utils.grenades.throw(type, true, camera, playerDirection, point);
-              grenades[id].multiplayerId = grenadeId;
-              grenades[id].playerUUID = player.uuid;
+              utils.grenades.objects[id].multiplayerId = grenadeId;
+              utils.grenades.objects[id].playerUUID = player.uuid;
             },
             explode: function(grenadeId, grenadePosition) {
-              const grenade = grenades.filter(grenade => grenade.multiplayerId == grenadeId)[0];
+              const grenade = utils.grenades.objects.filter(grenade => grenade.multiplayerId == grenadeId)[0];
               if (grenade) {
                 scene.add(grenade.mesh);
                 grenade.mesh.position.set(grenadePosition[0], grenadePosition[1], grenadePosition[2]);
@@ -2029,7 +2150,7 @@
           updatePlayer: function(deltaTime) {
             let damping = (Math.exp(-4 * deltaTime) - 1) * 2;
             if (!playerOnFloor) {
-              playerVelocity.y -= sandbox.presets.options.gravity * deltaTime;
+              playerVelocity.y -= (sandbox.presets.options.gravity / 10) * deltaTime;
               damping *= 0.1;
             }
             playerVelocity.addScaledVector(playerVelocity, damping);
@@ -2049,8 +2170,8 @@
             if (camera.position.y <= -40 || Math.abs(worldPosition.x) > 200 || Math.abs(worldPosition.z) > 200) utils.health.die("self");
           },
           updateGrenades: function(deltaTime, time, loop) {
-            for (let i = 0; i < grenades.length; i++) {
-              const grenade = grenades[i];
+            for (let i = 0; i < utils.grenades.objects.length; i++) {
+              const grenade = utils.grenades.objects[i];
               if (grenade.available) continue;
               if (grenade.collider.center.y < -40 && grenade.collider.center.y > -1000) grenade.hits++;
               if (grenade.smoke && time % 3 == 0 && loop == 0) particles.dust(grenade.mesh.position, .5);
@@ -2080,15 +2201,15 @@
                 grenade.angularVelocity.addScaledVector(rotationAxis, rotationSpeed);
                 grenade.collider.center.add(result.normal.multiplyScalar(result.depth));
               } else {
-                grenade.velocity.y -= (sandbox.presets.options.gravity * deltaTime + 0.01) * 1.8;
+                grenade.velocity.y -= ((sandbox.presets.options.gravity / 10) * deltaTime + 0.01) * 1.8;
                 grenade.didSound = false;
                 grenade.doSound = false;
               }
               const damping = (Math.exp(deltaTime * -2.3) - 1.003) / 1.2;
               grenade.velocity.addScaledVector(grenade.velocity, damping);
               grenade.angularVelocity.addScaledVector(grenade.angularVelocity, damping);
-              const grenade1 = grenades[i];
-              const grenade2 = grenades[i + 1];
+              const grenade1 = utils.grenades.objects[i];
+              const grenade2 = utils.grenades.objects[i + 1];
               if (grenade2) {
                 const d2 = grenade1.collider.center.distanceToSquared(grenade2.collider.center);
                 const r = grenade1.collider.radius + grenade2.collider.radius;
@@ -2192,17 +2313,26 @@
                   wheel_fr.rotation.order = "ZXY";
                   wheel_fl.rotation.z = vehicle.physicsVariables.heading * 2;
                   wheel_fr.rotation.z = vehicle.physicsVariables.heading * 2;
+                  wheel_fl.rotation.x += wheelVelocity;
+                  wheel_fr.rotation.x += wheelVelocity;
+                  wheel_rl.rotation.x += wheelVelocity;
+                  wheel_rr.rotation.x += wheelVelocity;
                 } else if (vehicle.type == "Warthog") {
                   wheel_fl.rotation.order = "YXZ";
                   wheel_fr.rotation.order = "YXZ";
                   wheel_fl.rotation.y = vehicle.physicsVariables.heading * 2;
                   wheel_fr.rotation.y = vehicle.physicsVariables.heading * 2;
+                  wheel_fl.rotation.x += -wheelVelocity;
+                  wheel_fr.rotation.x += wheelVelocity;
+                  wheel_rl.rotation.x += -wheelVelocity;
+                  wheel_rr.rotation.x += wheelVelocity;
                 }
-                wheel_fl.rotation.x += wheelVelocity;
-                wheel_fr.rotation.x += wheelVelocity;
-                wheel_rl.rotation.x += wheelVelocity;
-                wheel_rr.rotation.x += wheelVelocity;
                 if (vehicle.currentSeat) {
+                  if (vehicle.currentSeat.type == "gunner") {
+                    vehicle.mesh.getObjectByName("Machine_Gun").rotation.y = camera.rotation.y;
+                    let sittingPose = vehicle.mesh.getObjectByName("Sitting_Pose");
+                    if (sittingPose) sittingPose.rotation.y = camera.rotation.y;
+                  }
                   if (vehicle.currentView == 1) {
                     if (vehicle.currentSeat.type == "driver") {
                       const motion = vectors[5];
@@ -2272,11 +2402,6 @@
         models: {
           get: function(id) {
             return sandbox.models.filter(model => model.id == id)[0];
-          },
-          reload: function(path, callback) {
-            new THREE.GLTFLoader().load(path, function(model) {
-              callback(model);
-            });
           }
         },
         images: {
@@ -2401,7 +2526,7 @@
             }
           },
           switch: function(slot = null, instant = false) {
-            if (utils.vehicles.check()) return;
+            if (utils.vehicles.check() || utils.vehicles.check("gunner")) return;
             utils.options.set("Switching", true);
             utils.weapons.stopFire();
             utils.weapons.stopZoom();
@@ -2836,6 +2961,29 @@
               utils.options.set("Aiming", false);
             }
           },
+          spawn: function(weapon, position) {
+            let weaponMesh = utils.models.get("propweapon." + weapon).model.scene.clone();
+            weaponMesh.weapon = weapon;
+            scene.add(weaponMesh);
+            let spawnedWeapons = utils.options.get("SpawnedWeapons");
+            spawnedWeapons[weaponMesh.uuid] = weaponMesh;
+            let raycaster = utils.options.get("effectsRaycaster");
+            let weaponFallPoint = utils.options.get("playerCamera");
+            weaponFallPoint.position.set(position.x, position.y, position.z);
+            weaponFallPoint.rotation.set(-Math.PI / 2, 0, 0);
+            weaponFallPoint.updateMatrixWorld();
+            raycaster.setFromCamera(new THREE.Vector2(), weaponFallPoint);
+            let intersects = raycaster.intersectObjects(map.children);
+            if (intersects.length > 0) {
+              let weaponSpawnPoint = intersects[0].point;
+              weaponMesh.position.copy(weaponSpawnPoint);
+              weaponMesh.position.y += .05;
+              weaponMesh.getObjectByName("weapon").position.set(0, 0, 0);
+              weaponMesh.getObjectByName("weapon").rotation.set(0, 0, 0);
+              weaponMesh.rotation.set(0, Math.random(), Math.PI / 2);
+              weaponMesh.scale.set(.06, .06, .06);
+            }
+          },
           update: function() {
             const weapon = utils.weapons.getCurrentEntry();
             if (weapon.currentAmmo <= 0) {
@@ -2851,9 +2999,25 @@
             } else {
               utils.ui.outOfAmmo(false);
             }
+          },
+          updateSpawned: function() {
+            let spawnedWeapons = utils.options.get("SpawnedWeapons");
+            let weaponHovered = false;
+            for (uuid in spawnedWeapons) {
+              if (camera.position.distanceTo(spawnedWeapons[uuid].position) < 1.5) {
+                if (!weaponHovered) {
+                  weaponHovered = true;
+                  utils.ui.showPickupWeapon(spawnedWeapons[uuid].weapon);
+                }
+              }
+            }
+            if (!weaponHovered) {
+              utils.ui.hidePickupWeapon();
+            }
           }
         },
         grenades: {
+          objects: [],
           throw: function(type = null, isMultiplayer = false, point = camera, direction = playerDirection) {
             if (type == null) {
               if (sandbox.grenades["mk2"] > 0) {
@@ -2863,7 +3027,7 @@
               }
             }
             if (!type) return;
-            const grenade = grenades[utils.grenades.getAvailable(type)];
+            const grenade = utils.grenades.objects[utils.grenades.getAvailable(type)];
             if (isMultiplayer) {
               grenade.explode = false;
             } else {
@@ -2932,11 +3096,11 @@
             grenade.playerUUID = null;
           },
           getAvailable: function(type) {
-            return grenades.filter(grenade => grenade.type == type && grenade.available)[0].id;
+            return utils.grenades.objects.filter(grenade => grenade.type == type && grenade.available)[0].id;
           },
           add: function(mesh, type) {
             mesh.position.y = -2000;
-            grenades.push({
+            utils.grenades.objects.push({
               type: type,
               mesh: mesh,
               collider: new THREE.Sphere(new THREE.Vector3(0, -2000, 0), 0.1),
@@ -2951,7 +3115,7 @@
               explode: true,
               didSound: false,
               doSound: false,
-              id: grenades.length,
+              id: utils.grenades.objects.length,
               multiplayerId: null,
               playerUUID: null,
               damage: type == "mk2" ? 100 : 130,
@@ -3144,9 +3308,9 @@
               body.oncollision = function(point, intensity, contact, body) {
                 if (body == physics.player) {
                   const time = Date.now();
-                  const normal = new THREE.Vector3().copy(contact.ni);
-                  playerCollider.translate(normal.multiplyScalar(0.1));
+                  const normal = new THREE.Vector3().set(contact.ni.x, contact.ni.y, contact.ni.z);
                   console.log(normal)
+                  playerCollider.translate(normal.multiplyScalar(0.1));
                   if (time - entry.lastPlayerCollision > 500) {
                     entry.lastPlayerCollision = time;
                     utils.players.hit(null, null, entry);
@@ -3164,7 +3328,7 @@
             }
           },
           explode: function(vehicle) {
-            utils.vehicles.exit();
+            if (utils.vehicles.check(true) == vehicle) utils.vehicles.exit();
             const distance = camera.getWorldPosition(vectors[31]).distanceTo(vehicle.mesh.position);
             const shakeIntensity = 2 / (Math.max(distance, 1) / 5);
             utils.effects.shake(shakeIntensity);
@@ -3210,6 +3374,7 @@
               if (newView == 1) {
                 vehicle.currentView = 1;
                 const sittingPose = utils.models.get("pose").model.scene.getObjectByName("Sitting_Pose");
+                sittingPose.rotation.set(0, 0, 0);
                 vehicle.currentSeat.seat.add(sittingPose);
                 sandbox.primaryWeapon.visible = false;
                 sandbox.secondaryWeapon.visible = false;
@@ -3227,6 +3392,7 @@
           check: function(strict = false) {
             const vehicle = utils.options.get("CurrentVehicle");
             if (vehicle) {
+              if (strict == "gunner") return vehicle.currentSeat.type == "gunner";
               if (strict) return vehicle;
               if (vehicle.currentSeat.type == "driver") return vehicle;
               return false;
@@ -3251,6 +3417,8 @@
                 scene.add(sandbox.currentWeapon);
                 utils.ui.showCrosshair();
                 vehicle.physicsVariables.throttle = false;
+              } else if (vehicle.currentSeat.type == "gunner") {
+                scene.add(sandbox.currentWeapon);
               }
               utils.options.set("CurrentVehicle", null);
               gametime.run("exitVehicle", [gametime.player.uuid, vehicle.currentSeat.type, { index: gametime.player.data.vehicle.index, enginePower: vehicle.physicsVariables.enginePower }]);
@@ -3284,6 +3452,8 @@
                   if (seat.type == "driver") {
                     scene.remove(sandbox.currentWeapon);
                     utils.ui.hideCrosshair();
+                  } else if (seat.type == "gunner") {
+                    scene.remove(sandbox.currentWeapon);
                   }
                   utils.vehicles.switchView(1);
                   gametime.player.data.vehicle = {
@@ -3481,48 +3651,10 @@
         }
       };
 
-      sandbox.presets.options.teamOrder = Array(sandbox.presets.options.teamSize).fill("red").concat(Array(sandbox.presets.options.teamSize).fill("blue"));
       sandbox.loadout[0] = sandbox.presets.loadout[0];
       sandbox.loadout[1] = sandbox.presets.loadout[1];
       sandbox.grenades["mk2"] = sandbox.presets.grenades["mk2"];
       sandbox.grenades["plasma"] = sandbox.presets.grenades["plasma"];
-
-      for (let i = 0; i < sandbox.models.length; i++) {
-        const idSplit = sandbox.models[i].id.split(".");
-        const isWeapon = idSplit[0] == "weapon";
-        if (sandbox.models[i].requiredMaps.includes(sandbox.presets.map) || sandbox.models[i].requiredMaps == "all" || (isWeapon && sandbox.loadout.includes(idSplit[1]))) {
-          if (sandbox.models[i].id == "pose") sandbox.models[i].path = `/models/characters/poses/${sandbox.presets.character}.glb`;
-          new THREE.GLTFLoader(sandbox.loadingManager).load(sandbox.models[i].path, async function(model) {
-            sandbox.models[i].model = model;
-            sandbox.models[i].loaded = true;
-            scene.add(model.scene);
-            if (model.animations) {
-              sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
-            }
-            if (typeof sandbox.models[i].callback == "function") sandbox.models[i].callback(model);
-            if (isWeapon) {
-              const name = idSplit[1];
-              model.scene.traverse(child => child.frustumCulled = false);
-              sandbox.weapons[name].model = model;
-              sandbox.weapons[name].loaded = true;
-              if (name == sandbox.loadout[0]) utils.weapons.setPrimary(model.scene);
-              if (name == sandbox.loadout[1]) utils.weapons.setSecondary(model.scene);
-              utils.images.preload("/images/crosshairs/" + sandbox.weapons[name].reticle + ".png");
-              if (sandbox.weapons[name].muzzleFlash) {
-                model.scene.getObjectByName("muzzleFlash").material.color.setHex(0xffaa55);
-                utils.effects.muzzleFlash(model.scene);
-              }
-              if (sandbox.weapons[name].scope) {
-                const lensCamera = model.scene.getObjectByName("LensCamera");
-                lensCamera.aspect = 1;
-                lensCamera.updateProjectionMatrix();
-                sandbox.weapons[name].model.scene.getObjectByName("Lens").material.map = utils.options.get("scopeRenderTarget").texture;
-              }
-            }
-            renderer.render(scene, camera);
-          });
-        }
-      }
 
       sandbox.loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
         const progress = itemsLoaded / itemsTotal;
@@ -3531,9 +3663,7 @@
         sandbox.models.forEach(model => {
           if (typeof model.removeAfterLoaded == "undefined" && model.model) scene.remove(model.model.scene);
         });
-        audio.initialize(function() {
-          sandbox.initialize();
-        });
+        sandbox.initialize();
       };
 
       function onWindowResize() {
@@ -3546,7 +3676,7 @@
       onWindowResize();
 
       document.addEventListener("keydown", function(event) {
-        if (!PointerControls.isLocked) return;
+        if (!PointerControls.isLocked || !sandbox.setup) return;
         keyStates[event.code] = true;
         if (!event.repeat && !deathScreen) {
           if (!utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.startWalking();
@@ -3563,6 +3693,7 @@
         }
       });
       document.addEventListener("keyup", function(event) {
+        if (!PointerControls.isLocked || !sandbox.setup) return;
         keyStates[event.code] = false;
         if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) utils.weapons.stopWalking();
         if (!keyStates["KeyW"] && !keyStates["KeyS"] && !keyStates["ArrowUp"] && !keyStates["ArrowDown"]) {
@@ -3573,12 +3704,12 @@
         if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint();
       });
       document.addEventListener("mousedown", function(event) {
-        if (document.pointerLockElement != null) return;
+        if (document.pointerLockElement != null || !sandbox.setup) return;
         document.body.requestPointerLock();
         PointerControls.lock();
       });
       document.addEventListener("mouseup", (event) => {
-        if (!PointerControls.isLocked) return;
+        if (!PointerControls.isLocked || !sandbox.setup) return;
         PointerControls.lock();
       });
 
@@ -3625,15 +3756,10 @@
       utils.options.set("CameraShake", 0);
       utils.options.set("DeathTime", null);
       utils.options.set("Killer", null);
+      utils.options.set("SpawnedWeapons", {});
 
       scene.add(utils.options.get("playerCamera"));
 
-      gametime.onupdate = function(player) {
-        if (player.uuid == gametime.player.uuid) return;
-        if (typeof utils.players.objects[player.uuid] === "undefined" && (sandbox.presets.options.teamGame ? player.data.team : true)) {
-          utils.players.add(player);
-        }
-      };
       gametime.on("jump", function(player) {
         if (player != gametime.player.uuid) utils.players.animations.start(utils.players.objects[player], utils.players.objects[player].weapon.type + "_jump", { loop: THREE.LoopOnce, reset: true });
       });
@@ -3688,6 +3814,47 @@
       gametime.on("vehicleHit", function(player, vehicleIndex, damage) {
         if (player != gametime.player.uuid) utils.players.vehicles.hit(utils.players.objects[player], vehicles[vehicleIndex], damage);
       });
+
+      // Start order:
+      // - Players join
+      // - Models load
+      // - Sandbox initialized
+      // - Sounds loaded
+      // - Game starts
+      gametime.set("player", {
+        character: sandbox.presets.character,
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+        loadout: sandbox.presets.loadout,
+        visibleOnRadar: false,
+        team: null
+      });
+      gametime.set("username", generateName());
+      gametime.onconnect = function() {
+        if (sandbox.setup) return;
+        sandbox.setup = true;
+        function check() {
+          if (Object.values(gametime.players).length >= sandbox.presets.options.playersNeeded) {
+            for (player in gametime.players) {
+              gametime.players[player].data.loadout.forEach(weapon => {
+                if (utils.models.get("weapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("weapon." + weapon).requiredMaps.push(sandbox.presets.map);
+                if (utils.models.get("propweapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("propweapon." + weapon).requiredMaps.push(sandbox.presets.map);
+              });
+            }
+            sandbox.loadModels();
+          } else {
+            requestAnimationFrame(check);
+          }
+        }
+        check();
+        gametime.onupdate = function(player) {
+          if (player.uuid == gametime.player.uuid) return;
+          if (typeof utils.players.objects[player.uuid] === "undefined" && (sandbox.presets.options.teamGame ? player.data.team : true)) {
+            utils.players.add(player);
+          }
+        };
+      };
+      gametime.connect();
     </script>
   </body>
 </html>

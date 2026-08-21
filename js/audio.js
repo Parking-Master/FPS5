@@ -133,8 +133,8 @@ audio = {
         audio.sounds["reload." + weapons[i] + ".normal"] = AudioWrapper("/sounds/weapons/reloading/" + weapons[i] + ".mp3");
         audio.sounds["reload." + weapons[i] + ".full"] = AudioWrapper("/sounds/weapons/reloading/" + weapons[i] + ".full.mp3");
         audio.sounds["fire." + weapons[i]] = AudioWrapper("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true);
+        audio.sounds["3d.fire." + weapons[i]] = AudioWrapper3d("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true);
       }
-      audio.sounds["3d.fire." + weapons[i]] = AudioWrapper3d("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true);
     }
     if (sandbox.maps[sandbox.presets.map].vehicles.filter(vehicle => vehicle.type == "Warthog").length > 0) {
       audio.sounds["vehicle.Warthog.accelerate"] = AudioWrapper3d("/sounds/vehicles/Jeep.accelerate.mp3", true);

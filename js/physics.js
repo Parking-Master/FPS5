@@ -52,7 +52,6 @@ physics = {
     mesh.rotation.set(0, 0, 0);
     const box = new THREE.Box3().setFromObject(mesh);
     const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
     const shape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
     const body = new CANNON.Body({ mass: mass, shape: shape, material: physics.carMaterial });
     mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
