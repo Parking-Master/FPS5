@@ -139,7 +139,7 @@
       }
       .ui-section.bottom-right-section {
         position: absolute;
-        width: 150px;
+        width: 160px;
         bottom: 40px;
         right: 60px;
         transform: perspective(600px) rotateY(-20deg) rotatez(2deg);
@@ -156,11 +156,11 @@
         letter-spacing: 2px;
       }
       .ui-section.bottom-right-section .ui-weapon .current-value {
-        font-size: 24px;
+        font-size: 22px;
       }
       .ui-section.bottom-right-section .ui-weapon .remaining-value {
         color: rgba(170, 170, 200, 0.7);
-        font-size: 16px;
+        font-size: 14px;
       }
       .ui-section.bottom-right-section .ui-weapon .remaining-value {
         color: rgba(170, 170, 200, 0.7);
@@ -362,7 +362,7 @@
         utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle);
         audio.update(cameraPosition, cameraRotation);
         utils.weapons.position(cameraPosition, cameraRotation);
-        utils.weapons.updateSpawned();
+        utils.weapons.updateSpawned(deltaTime);
 
         for (let i = 0; i < sandbox.models.length; i++) {
           if (sandbox.models[i].loaded && sandbox.models[i].model.animationMixer) {
@@ -439,11 +439,22 @@
               object.style = "";
               delete tmpObjects[uuid];
             } else if (object.objectType == "gunCase") {
+              particles.dust(object.position, 2);
               scene.remove(object);
               object.traverse(child => {
                 if (child.geometry) child.geometry.dispose();
                 if (child.material) child.material.dispose();
               });
+              delete tmpObjects[uuid];
+            } else if (object.objectType == "droppedWeapon") {
+              scene.remove(object);
+              object.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+              });
+              let spawnedWeapons = utils.options.get("SpawnedWeapons");
+              delete spawnedWeapons[object.uuid];
+              utils.options.set("SpawnedWeapons", spawnedWeapons);
               delete tmpObjects[uuid];
             }
           }
@@ -508,7 +519,7 @@
       sandbox = {
         setup: false,
         presets: {
-          map: "Apex",
+          map: "Lihid",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
           grenades: {
@@ -903,7 +914,7 @@
             path: "/models/characters/weapons/Machine-Gun.glb",
             model: null,
             loaded: false,
-            requiredMaps: ["Lihid"]
+            requiredMaps: ["Apex", "Lihid"]
           },
           {
             id: "grenade.MK2",
@@ -1060,7 +1071,11 @@
             vehicles: [
               {
                 type: "Warthog",
-                position: [26.7, 1, -1.3, 0, 0, 0]
+                position: [11, 1, 0, 0, -Math.PI / 2, 0]
+              },
+              {
+                type: "Warthog",
+                position: [-19, 1, 0, 0, Math.PI / 2, 0]
               }
             ]
           }
@@ -1401,7 +1416,8 @@
             ammoInfo: document.querySelector(".ui-ammo-info"),
             pickupWeapon: document.querySelector(".ui .ui-pickup-weapon"),
             pickupWeaponText: document.querySelector(".ui .ui-pickup-weapon p"),
-            pickupWeaponIcon: document.querySelector(".ui .ui-pickup-weapon .ui-pickup-weapon-icon")
+            pickupWeaponIcon: document.querySelector(".ui .ui-pickup-weapon .ui-pickup-weapon-icon"),
+            bottomRightSection: document.querySelector(".ui-section.bottom-right-section")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -1427,6 +1443,12 @@
               utils.ui.elements.crosshair.src = "/images/crosshairs/" + reticle + ".png";
               utils.ui.cache.reticle = reticle;
             }
+          },
+          showBottomRightSection: function() {
+            utils.ui.elements.bottomRightSection.style.opacity = 1;
+          },
+          hideBottomRightSection: function() {
+            utils.ui.elements.bottomRightSection.style.opacity = 0;
           },
           showPickupWeapon: function(weapon) {
             if (weapon != utils.ui.cache.currentPickupWeapon) {
@@ -1772,12 +1794,12 @@
                 }
               }
               const distance = worldPosition.distanceTo(camera.position);
-              if (distance > 5) return;
-              const realDamage = Math.min(weapon.damage / (distance / 1.3), weapon.damage);
+              if (distance > weapon.distance) return;
+              const realDamage = Math.min(weapon.damage / (distance / 1.3 * (weapon.distance / 5)), weapon.damage);
               utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null, weapon);
             } else if (weapon == "melee") {
               const realDamage = 100;
-              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, false]);
+              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, false, true]);
             } else if (weapon.seats) {
               let realDamage = null;
               if (weapon.speed < 8) {
@@ -1843,11 +1865,16 @@
                         vehicle.physicsVariables.gear = playerObject.vehicle.gear;
                         vehicle.condition = playerObject.vehicle.condition;
                         vehicle.horn = playerObject.vehicle.horn;
+                        playerObject.scene.rotation.set(vehicle.mesh.rotation.x, vehicle.mesh.rotation.y, vehicle.mesh.rotation.z);
+                      } else if (seat.type == "gunner") {
+                        let machineGun = vehicle.mesh.getObjectByName("Machine_Gun");
+                        machineGun.rotation.order = "YXZ";
+                        machineGun.rotation.set(0, rotation[1], Math.min(Math.max(rotation[0], -.3), .3));
+                        playerObject.scene.rotation.set(vehicle.mesh.rotation.x, vehicle.mesh.rotation.y + rotation[1], vehicle.mesh.rotation.z);
                       }
                       vectors[25].set(0, 0, 0);
                       const worldPosition = seat.seat.getWorldPosition(vectors[25]);
                       playerObject.scene.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
-                      playerObject.scene.rotation.set(vehicle.mesh.rotation.x, vehicle.mesh.rotation.y, vehicle.mesh.rotation.z);
                       playerObject.scene.translateY(-1);
                     }
                   }
@@ -1939,10 +1966,8 @@
               }
             },
             fire: function(player, point, spreadX, spreadY, bulletHole) {
-              if (!player.isWalking && !player.isCrouching && !player.vehicle) utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
-              if (sandbox.weapons[player.weapon.name].muzzleFlash) {
-                utils.effects.muzzleFlash(player.weapon);
-              }
+              if (!player.isWalking && !player.isCrouching && (!player.vehicle || player.vehicle.seat == "gunner")) utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
+              if (sandbox.weapons[player.weapon.name].muzzleFlash) utils.effects.muzzleFlash(player.weapon);
               utils.players.effects.bulletHole(point, spreadX, spreadY, bulletHole);
               audio.fire3D(player.weapon.name, player.scene.position);
             },
@@ -2039,8 +2064,11 @@
               utils.players.animations.stop(player, player.weapon.type + "_run");
               if (seat == "driver") {
                 utils.players.animations.start(player, "driving");
-              } else {
+              } else if (seat != "gunner") {
                 utils.players.animations.start(player, "sitting");
+              }
+              if (seat == "gunner") {
+                player.weapon.visible = false;
               }
             },
             exit: function(player, seat, vehicleData) {
@@ -2052,7 +2080,8 @@
                 utils.players.animations.stop(player, "sitting");
               }
               if (seat == "gunner") {
-                vehicle.mesh.getObjectByName("Machine_Gun").rotation.y = 0;
+                player.weapon.visible = true;
+                vehicle.mesh.getObjectByName("Machine_Gun").rotation.set(0, 0, 0);
               }
               if (player.isWalking) {
                 utils.players.animations.start(player, player.weapon.type + "_walk");
@@ -2355,7 +2384,9 @@
                 }
                 if (vehicle.currentSeat) {
                   if (vehicle.currentSeat.type == "gunner") {
-                    vehicle.mesh.getObjectByName("Machine_Gun").rotation.y = camera.rotation.y;
+                    let machineGun = vehicle.mesh.getObjectByName("Machine_Gun");
+                    machineGun.rotation.order = "YXZ";
+                    machineGun.rotation.set(0, camera.rotation.y, Math.min(Math.max(camera.rotation.x, -.3), .3));
                     let sittingPose = vehicle.mesh.getObjectByName("Sitting_Pose");
                     if (sittingPose) sittingPose.rotation.y = camera.rotation.y;
                   }
@@ -2551,14 +2582,15 @@
               return sandbox.currentWeapon.children[0];
             }
           },
-          switch: function(slot = null, instant = false) {
-            if (utils.vehicles.check() || utils.vehicles.check("gunner")) return;
+          switch: function(slot = null, instant = false, ignoreVehicles = false) {
+            if (!ignoreVehicles && (utils.vehicles.check() || utils.vehicles.check("gunner"))) return;
             utils.options.set("Switching", true);
             utils.weapons.stopFire();
             utils.weapons.stopZoom();
             utils.weapons.stopReload();
             utils.weapons.stopMelee();
             utils.weapons.stopSprint(false);
+            audio.weaponSwitch();
             if (!slot) {
               if (sandbox.currentWeapon == sandbox.secondaryWeapon) {
                 slot = "primary";
@@ -2652,7 +2684,16 @@
                   roundsFired++;
                   weapon.currentAmmo--;
                   utils.weapons.update();
-                  gametime.run("fireWeapon", [gametime.player.uuid, [camera.position.x, camera.position.y, camera.position.z, camera.rotation.x, camera.rotation.y, camera.rotation.z], spreadX, spreadY, weapon.bulletHole]);
+
+                  let cameraPosition = camera.position;
+                  let cameraRotation = camera.rotation;
+                  if (utils.vehicles.check(true)) {
+                    cameraPosition = camera.getWorldPosition(vectors[31]);
+                    cameraRotation = vectors[9];
+                    camera.getWorldQuaternion(vectors[10]);
+                    cameraRotation.setFromQuaternion(vectors[10]);
+                  }
+                  gametime.run("fireWeapon", [gametime.player.uuid, [cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotation.x, cameraRotation.y, cameraRotation.z], spreadX, spreadY, weapon.bulletHole]);
                 }
                 requestAnimationFrame(animation);
               } else {
@@ -2792,7 +2833,7 @@
             }
           },
           melee: function() {
-            if (utils.vehicles.check()) return;
+            if (utils.vehicles.check(true)) return;
             if (utils.options.get("Melee")) return;
             utils.options.set("Melee", true);
             utils.options.set("CancelMelee", false);
@@ -2822,6 +2863,7 @@
                     if (currentDistance >= lungeDistance - 0.2) {
                       playerVelocity.set(0, 0, 0);
                       utils.players.hit(playerObject, null, "melee");
+                      audio.punch(true);
                       return;
                     }
                     requestAnimationFrame(animation);
@@ -2833,7 +2875,10 @@
             utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: -0.8, y: 0.1, z: -0.2 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start().onComplete(function() {
               if (utils.options.get("CancelMelee")) return reset();
               if (playerAgainstWall) {
-                utils.effects.bulletHole(0, 0, 20, camera, null, true);
+                let impact = utils.effects.bulletHole(0, 0, 20, camera, null, true);
+                audio.punch(impact);
+              } else {
+                audio.punch();
               }
               utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0.5, y: 0.1, z: -0.2 }, 200).easing(TWEEN.Easing.Quadratic.Out).start().onComplete(function() {
                 if (utils.options.get("CancelMelee")) return reset();
@@ -2998,17 +3043,18 @@
             if (slot == "primary") {
               sandbox.loadout[0] = weapon;
               utils.weapons.setPrimary(sandbox.weapons[weapon].model.scene);
-              utils.weapons.switch("primary", true);
+              utils.weapons.switch("primary", true, true);
               return utils.weapons.getPrimaryEntry();
             } else if (slot == "secondary") {
               sandbox.loadout[1] = weapon;
               utils.weapons.setSecondary(sandbox.weapons[weapon].model.scene);
-              utils.weapons.switch("secondary", true);
+              utils.weapons.switch("secondary", true, true);
               return utils.weapons.getSecondaryEntry();
             }
           },
           spawn: function(type, weapon, position, rotation, options, offset = false, customUUID = null) {
             let weaponMesh = utils.models.get("propweapon." + weapon).model.scene.clone();
+            if (weaponMesh.getObjectByName("muzzleFlash")) weaponMesh.getObjectByName("muzzleFlash").visible = false;
             if (customUUID) {
               weaponMesh.uuid = customUUID;
             } else {
@@ -3039,6 +3085,7 @@
                   ammo: options.ammo,
                   currentAmmo: options.currentAmmo
                 };
+                utils.options.addTmpObject(weaponMesh, "droppedWeapon", 30000);
               } else if (type == "case") {
                 let gunCase = utils.models.get("asset.gun-case").model.scene.clone();
                 gunCase.position.copy(weaponSpawnPoint);
@@ -3051,10 +3098,12 @@
                   ammo: sandbox.weapons[weapon].defaultAmmo,
                   currentAmmo: sandbox.weapons[weapon].maxAmmo
                 };
+                text.createWeapon(weapon, weaponPointer => weaponMesh.add(weaponPointer));
               }
             }
           },
           pickup: function(spawnedWeapon = null, isMultiplayer = false) {
+            if (utils.vehicles.check(true)) return;
             let spawnedWeapons = utils.options.get("SpawnedWeapons");
             if (!spawnedWeapon && !isMultiplayer) spawnedWeapon = utils.options.get("CurrentWeaponHovering");
             if (!spawnedWeapon) return;
@@ -3068,6 +3117,7 @@
             if (isMultiplayer) {
               next();
             } else {
+              audio.weaponPickup();
               gametime.run("pickupWeapon", [gametime.player.uuid, spawnedWeapon.uuid]);
               if (sandbox.loadout.indexOf(spawnedWeapon.weapon) > -1) {
                 if (sandbox.loadout[0] == spawnedWeapon.weapon) {
@@ -3077,6 +3127,7 @@
                   let weapon = utils.weapons.getSecondaryEntry();
                   weapon.ammo = Math.min(weapon.ammo + spawnedWeapon.ammoData.ammo, weapon.maxTotalAmmo);
                 }
+                utils.weapons.update();
               } else {
                 utils.weapons.stopFire();
                 utils.weapons.stopZoom();
@@ -3113,22 +3164,33 @@
               utils.ui.outOfAmmo(false);
             }
           },
-          updateSpawned: function() {
-            if (utils.options.get("DeathTime")) return;
+          updateSpawned: function(deltaTime) {
+            if (utils.options.get("DeathTime") || utils.vehicles.check(true)) return;
             let spawnedWeapons = utils.options.get("SpawnedWeapons");
             let weaponHovered = false;
             for (uuid in spawnedWeapons) {
-              if (camera.position.distanceTo(spawnedWeapons[uuid].position) < 1.5) {
-                if (sandbox.loadout.indexOf(spawnedWeapons[uuid].weapon) > -1) {
-                  utils.weapons.pickup(spawnedWeapons[uuid]);
-                } else if (!weaponHovered) {
-                  utils.options.set("CurrentWeaponHovering", spawnedWeapons[uuid]);
+              if (camera.position.distanceTo(spawnedWeapons[uuid].position) < 3.5) {
+                if (spawnedWeapons[uuid].gunCase) {
+                  let cover = spawnedWeapons[uuid].gunCase.getObjectByName("Cover");
+                  if (cover.rotation.x > -Math.PI / 6) cover.rotation.x += -deltaTime * 10;
+                }
+                if (camera.position.distanceTo(spawnedWeapons[uuid].position) < 1.5) {
                   if (sandbox.loadout.indexOf(spawnedWeapons[uuid].weapon) > -1) {
-                    utils.weapons.pickup();
-                  } else {
-                    weaponHovered = true;
-                    utils.ui.showPickupWeapon(spawnedWeapons[uuid].weapon);
+                    utils.weapons.pickup(spawnedWeapons[uuid]);
+                  } else if (!weaponHovered) {
+                    utils.options.set("CurrentWeaponHovering", spawnedWeapons[uuid]);
+                    if (sandbox.loadout.indexOf(spawnedWeapons[uuid].weapon) > -1) {
+                      utils.weapons.pickup();
+                    } else {
+                      weaponHovered = true;
+                      utils.ui.showPickupWeapon(spawnedWeapons[uuid].weapon);
+                    }
                   }
+                }
+              } else {
+                if (spawnedWeapons[uuid].gunCase) {
+                  let cover = spawnedWeapons[uuid].gunCase.getObjectByName("Cover");
+                  if (cover.rotation.x < 0) cover.rotation.x += deltaTime * 10;
                 }
               }
             }
@@ -3240,7 +3302,8 @@
               id: utils.grenades.objects.length,
               multiplayerId: null,
               playerUUID: null,
-              damage: type == "mk2" ? 100 : 130,
+              damage: type == "mk2" ? 100 : 125,
+              distance: type == "mk2" ? 5 : 3,
               smoke: type == "mk2" ? true : false
             });
           }
@@ -3265,7 +3328,7 @@
                   particles.blood(intersect.point);
                 }
               } else {
-                if (checkDistance && camera.position.distanceTo(intersect.point) > 1) return;
+                if (checkDistance && camera.position.distanceTo(intersect.point) > 1) return false;
                 const bulletHole = utils.options.get("bulletHoles")[type];
                 const size = bulletHole.size;
                 const normal = intersect.face.normal;
@@ -3283,8 +3346,9 @@
                 } else {
                   particles.dust(intersect.point);
                 }
-                if (Math.floor(Math.random() * 5) == 0) audio.ricochet(intersect.point);
                 utils.options.addTmpObject(decalMesh, "bulletHole", 20000);
+                if (checkDistance) return true;
+                if (Math.floor(Math.random() * 5) == 0) audio.ricochet(intersect.point);
               }
             }
           },
@@ -3431,7 +3495,6 @@
                 if (body == physics.player) {
                   const time = Date.now();
                   const normal = new THREE.Vector3().set(contact.ni.x, contact.ni.y, contact.ni.z);
-                  console.log(normal)
                   playerCollider.translate(normal.multiplyScalar(0.1));
                   if (time - entry.lastPlayerCollision > 500) {
                     entry.lastPlayerCollision = time;
@@ -3474,7 +3537,7 @@
             vehicle.despawnTime = null;
             vehicle.currentDamage = [];
             vehicle.damageLevel = 0;
-            vehicle.condition = 100;
+            vehicle.condition = vehicle.defaultCondition;
             vehicle.allowedToUpdate = true;
             vehicle.body.velocity.set(0, 0, 0);
             vehicle.body.angularVelocity.set(0, 0, 0);
@@ -3505,7 +3568,7 @@
                 sandbox.secondaryWeapon.visible = true;
                 vehicle.currentView = 0;
                 camera.position.set(0, 0, 0);
-                camera.rotation.set(0, 0, 0);
+                if (vehicle.currentSeat.type == "driver") camera.rotation.set(0, 0, 0);
                 const sittingPose = vehicle.currentSeat.seat.getObjectByName("Sitting_Pose");
                 if (sittingPose) utils.models.get("pose").model.scene.add(sittingPose);
               }
@@ -3523,6 +3586,7 @@
           exit: function() {
             const vehicle = utils.options.get("CurrentVehicle");
             if (vehicle) {
+              utils.weapons.stopFire();
               utils.vehicles.switchView(0);
               const worldPosition = camera.getWorldPosition(vectors[31]);
               camera.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
@@ -3539,9 +3603,12 @@
                 scene.add(sandbox.currentWeapon);
                 utils.ui.showCrosshair();
                 vehicle.physicsVariables.throttle = false;
+                utils.ui.showBottomRightSection();
               } else if (vehicle.currentSeat.type == "gunner") {
                 utils.weapons.setNew(null, utils.options.get("PreviousGunnerWeapon"));
                 scene.add(sandbox.currentWeapon);
+                vehicle.mesh.getObjectByName("Machine_Gun").rotation.set(0, 0, 0);
+                utils.ui.showBottomRightSection();
               }
               utils.options.set("CurrentVehicle", null);
               gametime.run("exitVehicle", [gametime.player.uuid, vehicle.currentSeat.type, { index: gametime.player.data.vehicle.index, enginePower: vehicle.physicsVariables.enginePower }]);
@@ -3560,7 +3627,8 @@
               for (let j = 0; j < vehicle.seats.length; j++) {
                 const seat = vehicle.seats[j];
                 const worldPosition = seat.seat.getWorldPosition(vectors[6]);
-                if (camera.position.distanceTo(worldPosition) < 0.9 && !seat.taken) {
+                let radius = seat.type == "gunner" ? 1.3 : .9;
+                if (camera.position.distanceTo(worldPosition) < radius && !seat.taken) {
                   utils.weapons.stopFire();
                   utils.weapons.stopZoom();
                   utils.weapons.stopReload();
@@ -3575,12 +3643,14 @@
                   if (seat.type == "driver") {
                     scene.remove(sandbox.currentWeapon);
                     utils.ui.hideCrosshair();
+                    utils.ui.hideBottomRightSection();
                   } else if (seat.type == "gunner") {
                     utils.options.set("PreviousGunnerWeapon", utils.weapons.getCurrentEntry().name);
                     utils.weapons.setNew(null, "Machine-Gun");
                     utils.weapons.getCurrentEntry().ammo = Infinity;
                     utils.weapons.getCurrentEntry().currentAmmo = Infinity;
                     scene.remove(sandbox.currentWeapon);
+                    utils.ui.hideBottomRightSection();
                   }
                   utils.vehicles.switchView(1);
                   gametime.player.data.vehicle = {
@@ -3692,7 +3762,7 @@
             utils.health.current = newHealth;
             utils.ui.setHealthBar(newHealth, "short");
           },
-          subtract: function(amount, killer, grenade, isHeadshot) {
+          subtract: function(amount, killer, grenade, isHeadshot, isMelee = false) {
             const newHealth = utils.health.current - Math.round(amount);
             if (newHealth <= -25) utils.health.die(killer || "self", isHeadshot);
             utils.health.current = newHealth;
@@ -3708,6 +3778,7 @@
             } else {
               utils.ui.hurtScreen(camera.position, hurtIntensity);
             }
+            if (isMelee) audio.punch(true);
           },
           reset: function() {
             utils.health.current = 100;
@@ -3728,8 +3799,8 @@
             utils.options.set("DeathTime", Date.now());
             let primaryWeapon = utils.weapons.getPrimaryEntry();
             let secondaryWeapon = utils.weapons.getSecondaryEntry();
-            utils.weapons.spawn("drop", primaryWeapon.name, camera.position, null, { ammo: primaryWeapon.ammo, currentAmmo: primaryWeapon.currentAmmo });
-            utils.weapons.spawn("drop", secondaryWeapon.name, camera.position, null, { ammo: secondaryWeapon.ammo, currentAmmo: secondaryWeapon.currentAmmo }, true);
+            if (primaryWeapon.ammo > 0 || primaryWeapon.currentAmmo > 0) utils.weapons.spawn("drop", primaryWeapon.name, camera.position, null, { ammo: primaryWeapon.ammo, currentAmmo: primaryWeapon.currentAmmo });
+            if (secondaryWeapon.ammo > 0 || secondaryWeapon.currentAmmo > 0) utils.weapons.spawn("drop", secondaryWeapon.name, camera.position, null, { ammo: secondaryWeapon.ammo, currentAmmo: secondaryWeapon.currentAmmo }, true);
             const deathPose = utils.players.createDeathPose(camera);
             if (killer == "self") {
               utils.options.set("Killer", {
@@ -3934,8 +4005,8 @@
       gametime.on("stopCrouching", function(player) {
         if (player != gametime.player.uuid) utils.players.stopCrouching(utils.players.objects[player]);
       });
-      gametime.on("damage", function(player, damage, killer, isHeadshot) {
-        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot);
+      gametime.on("damage", function(player, damage, killer, isHeadshot, isMelee) {
+        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee);
       });
       gametime.on("playerDie", function(player, killer, isHeadshot) {
         if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer, isHeadshot);

@@ -126,7 +126,12 @@ audio = {
       "shields.warning": AudioWrapper("/sounds/shields/warning.mp3"),
       "dying.0": AudioWrapper3d("/sounds/dying/0.mp3"),
       "hit.headshot": AudioWrapper("/sounds/shields/hit-headshot.mp3"),
-      "hit": AudioWrapper("/sounds/shields/hit.mp3")
+      "hit": AudioWrapper("/sounds/shields/hit.mp3"),
+      "weapon.pickup": AudioWrapper("/sounds/weapons/pickup.mp3"),
+      "weapon.switch": AudioWrapper("/sounds/weapons/switch.mp3"),
+      "weapon.punch.0": AudioWrapper("/sounds/weapons/punching/0.mp3"),
+      "weapon.punch.1": AudioWrapper("/sounds/weapons/punching/1.mp3"),
+      "weapon.punch.2": AudioWrapper("/sounds/weapons/punching/2.mp3"),
     };
     for (let i = 0; i < weapons.length; i++) {
       if (sandbox.weapons[weapons[i]].loaded) {
@@ -136,26 +141,16 @@ audio = {
         audio.sounds["3d.fire." + weapons[i]] = AudioWrapper3d("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true);
       }
     }
-    if (sandbox.maps[sandbox.presets.map].vehicles.filter(vehicle => vehicle.type == "Warthog").length > 0) {
-      audio.sounds["vehicle.Warthog.accelerate"] = AudioWrapper3d("/sounds/vehicles/Jeep.accelerate.mp3", true);
-      audio.sounds["vehicle.Warthog.decelerate"] = AudioWrapper3d("/sounds/vehicles/Jeep.decelerate.mp3", true);
-      audio.sounds["vehicle.Warthog.idle"] = AudioWrapper3d("/sounds/vehicles/Jeep.idle.mp3", true);
-      audio.sounds["vehicle.Warthog.major-crash"] = AudioWrapper3d("/sounds/vehicles/Jeep.major-crash.mp3");
-      audio.sounds["vehicle.Warthog.big-crash"] = AudioWrapper3d("/sounds/vehicles/Jeep.big-crash.mp3");
-      audio.sounds["vehicle.Warthog.small-crash"] = AudioWrapper3d("/sounds/vehicles/Jeep.small-crash.mp3");
-      audio.sounds["vehicle.Warthog.explosion"] = AudioWrapper3d("/sounds/vehicles/Jeep.explosion.mp3");
-      audio.sounds["vehicle.Warthog.horn"] = AudioWrapper3d("/sounds/vehicles/Jeep.horn.mp3", true);
-    }
-    if (sandbox.maps[sandbox.presets.map].vehicles.filter(vehicle => vehicle.type == "Jeep").length > 0) {
-      audio.sounds["vehicle.Jeep.accelerate"] = AudioWrapper3d("/sounds/vehicles/Jeep.accelerate.mp3", true);
-      audio.sounds["vehicle.Jeep.decelerate"] = AudioWrapper3d("/sounds/vehicles/Jeep.decelerate.mp3", true);
-      audio.sounds["vehicle.Jeep.idle"] = AudioWrapper3d("/sounds/vehicles/Jeep.idle.mp3", true);
-      audio.sounds["vehicle.Jeep.major-crash"] = AudioWrapper3d("/sounds/vehicles/Jeep.major-crash.mp3");
-      audio.sounds["vehicle.Jeep.big-crash"] = AudioWrapper3d("/sounds/vehicles/Jeep.big-crash.mp3");
-      audio.sounds["vehicle.Jeep.small-crash"] = AudioWrapper3d("/sounds/vehicles/Jeep.small-crash.mp3");
-      audio.sounds["vehicle.Jeep.explosion"] = AudioWrapper3d("/sounds/vehicles/Jeep.explosion.mp3");
-      audio.sounds["vehicle.Jeep.horn"] = AudioWrapper3d("/sounds/vehicles/Jeep.horn.mp3", true);
-    }
+    [...new Set(sandbox.maps[sandbox.presets.map].vehicles.map(vehicle => vehicle.type))].forEach(vehicle => {
+      audio.sounds["vehicle." + vehicle + ".accelerate"] = AudioWrapper3d("/sounds/vehicles/" + vehicle + "/accelerate.mp3", true);
+      audio.sounds["vehicle." + vehicle + ".decelerate"] = AudioWrapper3d("/sounds/vehicles/" + vehicle + "/decelerate.mp3", true);
+      audio.sounds["vehicle." + vehicle + ".horn"] = AudioWrapper3d("/sounds/vehicles/" + vehicle + "/horn.mp3", true);
+      audio.sounds["vehicle." + vehicle + ".idle"] = AudioWrapper3d("/sounds/vehicles/idle.mp3", true);
+      audio.sounds["vehicle." + vehicle + ".major-crash"] = AudioWrapper3d("/sounds/vehicles/major-crash.mp3");
+      audio.sounds["vehicle." + vehicle + ".big-crash"] = AudioWrapper3d("/sounds/vehicles/big-crash.mp3");
+      audio.sounds["vehicle." + vehicle + ".small-crash"] = AudioWrapper3d("/sounds/vehicles/small-crash.mp3");
+      audio.sounds["vehicle." + vehicle + ".explosion"] = AudioWrapper3d("/sounds/vehicles/explosion.mp3");
+    });
   },
   update: function(cameraPosition, cameraRotation) {
     if (typeof camera.audioListener != "undefined") {
@@ -369,6 +364,29 @@ audio = {
   },
   hit: function() {
     let sound = audio.sounds["hit"];
+    sound.currentTime = 0;
+    sound.play();
+  },
+  weaponPickup: function() {
+    if (audio.sounds["weapon.switch"].playing) audio.sounds["weapon.switch"].pause();
+    let sound = audio.sounds["weapon.pickup"];
+    sound.currentTime = 0;
+    sound.play();
+  },
+  weaponSwitch: function() {
+    if (audio.sounds["weapon.pickup"].playing) return;
+    let sound = audio.sounds["weapon.switch"];
+    sound.currentTime = 0;
+    sound.play();
+  },
+  punch: function(impact = false) {
+    let sound;
+    if (impact) {
+      sound = audio.sounds["weapon.punch.2"];
+    } else {
+      sound = audio.sounds["weapon.punch." + Math.floor(Math.random() * 2)];
+    }
+    sound.pause();
     sound.currentTime = 0;
     sound.play();
   }

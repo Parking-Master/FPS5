@@ -26,5 +26,34 @@ text = {
     sprite.position.y = 1.25;
     sprite.name = "UsernamePointer";
     return sprite;
+  },
+  createWeapon: function(weapon, callback = () => {}) {
+    let weaponIcon = new Image();
+    weaponIcon.src = "/images/weapons/" + weapon + ".png";
+    weaponIcon.onload = function() {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = 600;
+      canvas.height = 192;
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#ffffff";
+      ctx.font = "15px Arial";
+      ctx.fontWeight = "600";
+      ctx.textAlign = "left";
+      ctx.shadowColor = "#baebff";
+      ctx.shadowBlur = 1;
+      ctx.drawImage(weaponIcon, (canvas.width / 2) - 50, 0, 100, 50);
+      ctx.fillText(sandbox.weapons[weapon].displayName.toUpperCase(), (canvas.width / 2) + 60, 25);
+      ctx.moveTo(canvas.width / 2, 40);
+      ctx.lineTo(canvas.width / 2, canvas.height / 2);
+      ctx.stroke();
+      const texture = new THREE.Texture(canvas);
+      texture.needsUpdate = true;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, sizeAttenuation: false, depthTest: false, depthWrite: false }));
+      sprite.scale.set(10, 3.8, 1);
+      sprite.position.y = 1.25;
+      sprite.name = "WeaponPointer";
+      callback(sprite);
+    }
   }
 };
