@@ -461,9 +461,6 @@
           if (object.objectType == "deathPose" && object.parentType == "camera") {
             object.position.copy(camera.position);
             object.position.y += -1;
-            if (time - object.timestamp > sandbox.presets.options.respawnTime * 1000 - 10) {
-              object.parentType = "player";
-            }
           }
         }
 
@@ -521,7 +518,7 @@
         presets: {
           map: "Lihid",
           character: "Raven",
-          loadout: ["AK-74", "FN-502"],
+          loadout: ["Ruger-RPR", "FN-502"],
           grenades: {
             "mk2": 2,
             "plasma": 0
@@ -861,6 +858,13 @@
             requiredMaps: ["Apex", "Lihid"]
           },
           {
+            id: "weapon.Ruger-RPR",
+            path: "/models/weapons/Ruger-RPR.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
             id: "propweapon.AK-74",
             path: "/models/characters/weapons/AK-74.glb",
             model: null,
@@ -915,6 +919,13 @@
             model: null,
             loaded: false,
             requiredMaps: ["Apex", "Lihid"]
+          },
+          {
+            id: "propweapon.Ruger-RPR",
+            path: "/models/characters/weapons/Ruger-RPR.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
           },
           {
             id: "grenade.MK2",
@@ -1359,6 +1370,44 @@
               throw: [4, 1.4, 1],
               walk: [5, 1, 1],
               run: [5, .8, 1]
+            }
+          },
+          "Ruger-RPR": {
+            name: "Ruger-RPR",
+            displayName: "Ruger .50 Cal Sniper Rifle",
+            ammo: 12,
+            defaultAmmo: 12,
+            currentAmmo: 6,
+            maxAmmo: 6,
+            maxTotalAmmo: 18,
+            damage: 60,
+            headshotDamage: 200,
+            spread: 0.15,
+            muzzleFlash: false,
+            zoomPosition: [.0384,.0147,-.04,.055,-.019,0],
+            zoomFov: 25,
+            zoomDuration: 200,
+            fireMode: "semi",
+            fireRate: 200,
+            range: 30,
+            recoil: 1,
+            reticle: 8,
+            bulletHole: 0,
+            scope: true,
+            scopeRendered: false,
+            delayBetweenShots: 300,
+            lastShot: null,
+            type: "rifle",
+            model: null,
+            loaded: false,
+            animationStructure: {
+              shoot: [0, 0.8, 1],
+              idle: [1, 1, 1],
+              reload: [2, 0.8, 1],
+              reload_full: [3, 0.8, 1],
+              walk: [4, 1, 0.5],
+              run: [4, 1.2, 0.5],
+              throw: [5, 1.4, 1]
             }
           },
         }
@@ -3144,6 +3193,7 @@
                 utils.weapons.getChild().rotation.set(0.5, 0, 0);
                 new TWEEN.Tween(utils.weapons.getChild().position).to({ x: 0, y: 0, z: 0 }, 200).easing(TWEEN.Easing.Quadratic.InOut).start();
                 new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0, y: 0, z: 0 }, 200).easing(TWEEN.Easing.Quadratic.InOut).start();
+                utils.weapons.update();
               }
               next();
             }
@@ -3829,6 +3879,8 @@
             utils.options.set("DeathTime", null);
             utils.options.set("Killer", null);
             deathScreen = false;
+            let deathPose = scene.children.filter(x => x.name == "Death_Pose" && x.isFirstPerson)[0];
+            if (deathPose) deathPose.parentType = "player";
             const spawnPoint = sandbox.maps[sandbox.presets.map].spawnPoints[Math.floor(Math.random() * sandbox.maps[sandbox.presets.map].spawnPoints.length)];
             playerCollider.start.set(spawnPoint[0], spawnPoint[1] + 0.35, spawnPoint[2]);
             playerCollider.end.set(spawnPoint[0], spawnPoint[1] + 1, spawnPoint[2]);
