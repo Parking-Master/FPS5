@@ -97,6 +97,7 @@ const AudioWrapper3d = function(src, alias = false) {
 }
 
 let currentExplodeSound = 0;
+let roundsFired = 0;
 
 audio = {
   ctx: new (window.AudioContext || window.webkitAudioContext)(),
@@ -203,9 +204,9 @@ audio = {
     sound1.pause();
     sound2.pause();
   },
-  fire: function(weapon, roundsFired) {
+  fire: function(weapon) {
     let sound = null;
-    if ((weapon.fireMode == "auto" || weapon.fireMode == "burst") && (roundsFired + 1) % 2 == 0) {
+    if ((roundsFired + 1) % 2 == 0) {
       sound = audio.sounds[`fire.${weapon.name}`].alias;
     } else {
       sound = audio.sounds[`fire.${weapon.name}`];
@@ -213,6 +214,7 @@ audio = {
     sound.pause();
     sound.currentTime = 0;
     sound.play();
+    roundsFired++;
   },
   fire3D: function(weaponName, position) {
     let sound = audio.sounds[`3d.fire.${weaponName}`].sound;
