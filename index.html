@@ -284,7 +284,7 @@
       </div>
     </div>
     <script>
-      if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
+      // if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -349,6 +349,7 @@
           utils.physics.updatePlayer(deltaTime);
           utils.physics.updateGrenades(deltaTime, time, i);
           utils.physics.updateVehicles(deltaTime, time, i);
+          utils.physics.updateGravityLifts(deltaTime);
           utils.players.update();
         }
 
@@ -687,6 +688,7 @@
                 directionalLight.shadow.camera.top = 50;
                 directionalLight.shadow.camera.bottom = -50;
                 ambientLight.intensity = 1;
+                let gravityLifts = [];
                 map.traverse(child => {
                   child.frustumCulled = false;
                   if (child.isMesh) {
@@ -700,7 +702,9 @@
                       child.material.color.setHex(0xffddaa);
                     }
                   }
+                  if (child.name.includes("Gravity_Lift")) gravityLifts.push(child);
                 });
+                utils.options.set("GravityLifts", gravityLifts);
                 sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
                   color: 0xf9c886,
                   map: skyTexture,
@@ -1054,7 +1058,23 @@
           "Haven": {
             ambienceSound: 0,
             spawnPoints: [
-              [0, 0, 0, 0, 0, 0]
+              [-9,-.1,-21.1,0,-2.4,0],
+              [9,-.1,-21.1,0,2.4,0],
+              [0,-.1,-25,0,Math.PI,0],
+              [-27.7,1,-6.6,0,-Math.PI/2,0],
+              [27.7,1,-6.6,0,Math.PI/2,0],
+              [-23.6,-.75,-6.6,0,-Math.PI/2,0],
+              [23.6,-.75,-6.6,0,Math.PI/2,0],
+              [19.4,-.75,6.4,0,2.5,0],
+              [-19.4,-.75,6.4,0,-2.5,0],
+              [21,-.75,14.8,0,.87,0],
+              [-21,-.75,14.8,0,-.87,0],
+              [0,-.75,21,0,0,0],
+              [0,1,26.6,0,0,0],
+              [-12.5,2.8,14.8,0,.71,0],
+              [12.5,2.8,14.8,0,-.71,0],
+              [-21,2.8,1.9,0,-2.7,0],
+              [21,2.8,1.9,0,2.7,0]
             ],
             vehicles: []
           },
@@ -1077,7 +1097,19 @@
           "Apex": {
             ambienceSound: 0,
             spawnPoints: [
-              [0, 0, 0, 0, 0, 0]
+              [2.7,-.25,9.2,0,0,0],
+              [-1.4,-.25,9.2,0,0,0],
+              [-14.8,-.5,-8,0,-Math.PI/2,0],
+              [6.6,-.5,7.7,0,Math.PI/2,0],
+              [8.2,.25,-7.8,0,Math.PI/2,0],
+              [8.2,.25,-10.8,0,Math.PI/2,0],
+              [8.2,.25,-7.8,0,Math.PI/2,0],
+              [-16.1,.25,6,0,-Math.PI/2,0],
+              [-16.1,.25,9,0,-Math.PI/2,0],
+              [-15.9,4.4,-7.9,0,-Math.PI/2,0],
+              [8.1,4.4,7.2,0,Math.PI/2,0],
+              [11.8,-.5,6.4,0,-Math.PI/2],
+              [-19.8,-.5,-7.3,0,Math.PI/2]
             ],
             vehicles: [
               {
@@ -2503,6 +2535,20 @@
               }
               if (Math.abs(vehicle.body.position.x) > 200 || Math.abs(vehicle.body.position.z) > 200) utils.vehicles.explode(vehicle);
             }
+          },
+          updateGravityLifts: function(deltaTime) {
+            let gravityLifts = utils.options.get("GravityLifts");
+            if (gravityLifts.length > 0) {
+              for (let i = 0; i < gravityLifts.length; i++) {
+                let gravityLift = gravityLifts[i];
+                if (playerCollider.start.distanceTo(gravityLift.position) < 2) {
+                  let power = (2 - playerCollider.start.distanceTo(gravityLift.position)) / 1.5;
+                  let vector = new THREE.Vector3();
+                  vector.copy(new THREE.Vector3(0, 0, -1)).applyQuaternion(gravityLift.quaternion);
+                  playerVelocity.add(vector.multiplyScalar(power));
+                }
+              }
+            }
           }
         },
         models: {
@@ -3109,10 +3155,6 @@
             } else {
               gametime.run("spawnWeapon", [gametime.player.uuid, weaponMesh.uuid, type, weapon, position, rotation, options, offset]);
             }
-            weaponMesh.weapon = weapon;
-            scene.add(weaponMesh);
-            let spawnedWeapons = utils.options.get("SpawnedWeapons");
-            spawnedWeapons[weaponMesh.uuid] = weaponMesh;
             let raycaster = utils.options.get("effectsRaycaster");
             let weaponFallPoint = utils.options.get("playerCamera");
             weaponFallPoint.position.set(position.x, position.y, position.z);
@@ -3121,6 +3163,10 @@
             raycaster.setFromCamera(new THREE.Vector2(), weaponFallPoint);
             let intersects = raycaster.intersectObjects(map.children);
             if (intersects.length > 0) {
+              weaponMesh.weapon = weapon;
+              scene.add(weaponMesh);
+              let spawnedWeapons = utils.options.get("SpawnedWeapons");
+              spawnedWeapons[weaponMesh.uuid] = weaponMesh;
               let weaponSpawnPoint = intersects[0].point;
               weaponMesh.position.copy(weaponSpawnPoint);
               weaponMesh.getObjectByName("weapon").position.set(0, 0, 0);
@@ -4012,6 +4058,7 @@
       utils.options.set("Killer", null);
       utils.options.set("SpawnedWeapons", {});
       utils.options.set("PreviousGunnerWeapon", null);
+      utils.options.set("GravityLifts", []);
 
       scene.add(utils.options.get("playerCamera"));
 

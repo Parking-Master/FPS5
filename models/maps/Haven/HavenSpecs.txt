@@ -1,6 +1,0 @@
-ambient light color: 0x718e96
-ambient light intensity: 4
-directional light color: 0xf8f7f2
-directional light intensity: 3
-directional light position: (-5, 25, -20)
-bloomPass strength: 0.3
