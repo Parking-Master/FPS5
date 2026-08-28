@@ -133,6 +133,7 @@ audio = {
       "weapon.punch.0": AudioWrapper("/sounds/weapons/punching/0.mp3"),
       "weapon.punch.1": AudioWrapper("/sounds/weapons/punching/1.mp3"),
       "weapon.punch.2": AudioWrapper("/sounds/weapons/punching/2.mp3"),
+      "weapon.walk": AudioWrapper("/sounds/weapons/walking/walking.mp3"),
     };
     for (let i = 0; i < weapons.length; i++) {
       if (sandbox.weapons[weapons[i]].loaded) {
@@ -391,7 +392,31 @@ audio = {
     sound.pause();
     sound.currentTime = 0;
     sound.play();
-  }
+  },
+  walk: function() {
+    let sound = audio.sounds["weapon.walk"];
+    if (sound.playing) return;
+    sound.loop = true;
+    sound.currentTime = 0;
+    sound.play();
+    sound.source.playbackRate.value = 1;
+  },
+  stopWalk: function() {
+    let sound = audio.sounds["weapon.walk"];
+    sound.pause();
+  },
+  run: function() {
+    let sound = audio.sounds["weapon.walk"];
+    if (sound.playing) sound.source.playbackRate.value = 1.5;
+  },
+  stopRun: function() {
+    let sound = audio.sounds["weapon.walk"];
+    if (!utils.options.get("Walking")) {
+      sound.pause();
+    } else {
+      if (sound.source) sound.source.playbackRate.value = 1;
+    }
+  },
 };
 
 document.addEventListener("touchstart", () => {

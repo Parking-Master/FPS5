@@ -2298,7 +2298,16 @@
             if (result) {
               playerOnFloor = result.normal.y > 0;
               playerAgainstWall = (result.normal.x > 0) || (result.normal.z > 0);
-              if (!playerOnFloor) playerVelocity.addScaledVector(result.normal, -result.normal.dot(playerVelocity));
+              if (playerOnFloor) {
+                if (utils.options.get("Jumping")) {
+                  utils.options.set("Jumping", false);
+                  utils.effects.shake(.5, 100, 400);
+                  if (utils.options.get("Walking")) audio.walk();
+                  if (utils.options.get("CheckRunningAfterJump")) utils.weapons.sprint();
+                }
+              } else {
+                playerVelocity.addScaledVector(result.normal, -result.normal.dot(playerVelocity));
+              }
               playerCollider.translate(result.normal.multiplyScalar(result.depth));
             }
             if (!utils.vehicles.check(true)) camera.position.copy(playerCollider.end);
@@ -3010,9 +3019,11 @@
                 rotation: new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0.2, y: 0.3, z: -0.3 }, 400).easing(TWEEN.Easing.Quadratic.Out).start()
               }
             });
+            audio.run();
             gametime.run("startRunning", [gametime.player.uuid]);
           },
           stopSprint: function(animation = true, force = false) {
+            utils.options.set("CheckRunningAfterJump", false);
             if (!utils.options.get("Sprinting") && !force) return;
             utils.options.set("Sprinting", false);
             utils.ui.showCrosshair();
@@ -3044,6 +3055,7 @@
               utils.weapons.animations.start("idle");
             }
             utils.weapons.update();
+            audio.stopRun();
             gametime.run("stopRunning", [gametime.player.uuid]);
           },
           crouch: function() {
@@ -3081,6 +3093,7 @@
               utils.weapons.animations.stop("idle");
               utils.weapons.animations.start("walk");
             }
+            audio.walk();
             if (updateMultiplayer) gametime.run("startWalking", [gametime.player.uuid]);
           },
           stopWalking: function(updateMultiplayer = true) {
@@ -3091,10 +3104,14 @@
               utils.weapons.animations.stop("walk");
               utils.weapons.animations.start("idle");
             }
+            audio.stopWalk();
             if (updateMultiplayer) gametime.run("stopWalking", [gametime.player.uuid]);
           },
           jump: function() {
             if (utils.vehicles.check(true)) return;
+            utils.options.set("Jumping", true);
+            if (utils.options.get("Walking")) audio.stopWalk();
+            if (utils.options.get("Sprinting")) utils.weapons.stopSprint(), utils.options.set("CheckRunningAfterJump", true);
             utils.weapons.stopCrouch();
             playerVelocity.y = 4;
             gametime.run("jump", [gametime.player.uuid]);
@@ -4059,6 +4076,7 @@
       utils.options.set("SpawnedWeapons", {});
       utils.options.set("PreviousGunnerWeapon", null);
       utils.options.set("GravityLifts", []);
+      utils.options.set("CheckRunningAfterJump", false);
 
       scene.add(utils.options.get("playerCamera"));
 
