@@ -284,7 +284,7 @@
       </div>
     </div>
     <script>
-      // if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
+      if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -519,7 +519,7 @@
         presets: {
           map: "Lihid",
           character: "Raven",
-          loadout: ["Machine-Gun", "FN-502"],
+          loadout: ["Ruger-RPR", "Desert-Eagle"],
           grenades: {
             "mk2": 2,
             "plasma": 0
@@ -869,6 +869,13 @@
             requiredMaps: []
           },
           {
+            id: "weapon.Desert-Eagle",
+            path: "/models/weapons/Desert-Eagle.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
             id: "propweapon.AK-74",
             path: "/models/characters/weapons/AK-74.glb",
             model: null,
@@ -927,6 +934,13 @@
           {
             id: "propweapon.Ruger-RPR",
             path: "/models/characters/weapons/Ruger-RPR.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.Desert-Eagle",
+            path: "/models/characters/weapons/Desert-Eagle.glb",
             model: null,
             loaded: false,
             requiredMaps: []
@@ -1284,7 +1298,6 @@
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 700,
-            lastShot: null,
             type: "rifle",
             model: null,
             loaded: false,
@@ -1356,7 +1369,6 @@
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 200,
-            lastShot: null,
             type: "rifle",
             model: null,
             loaded: false,
@@ -1428,7 +1440,6 @@
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 300,
-            lastShot: null,
             type: "rifle",
             model: null,
             loaded: false,
@@ -1440,6 +1451,41 @@
               walk: [4, 1, 0.5],
               run: [4, 1.2, 0.5],
               throw: [5, 1.4, 1]
+            }
+          },
+          "Desert-Eagle": {
+            name: "Desert-Eagle",
+            displayName: "Desert Eagle",
+            ammo: 16,
+            defaultAmmo: 16,
+            currentAmmo: 8,
+            maxAmmo: 8,
+            maxTotalAmmo: 32,
+            damage: 15,
+            headshotDamage: 20,
+            spread: 0.8,
+            muzzleFlash: true,
+            zoomPosition: [.0349,.007,-.015,.05,-.035,.15],
+            zoomFov: 30,
+            zoomDuration: 220,
+            fireMode: "semi",
+            fireRate: 200,
+            range: 30,
+            recoil: 2,
+            reticle: 9,
+            bulletHole: 0,
+            delayBetweenShots: 200,
+            type: "pistol",
+            model: null,
+            loaded: false,
+            animationStructure: {
+              reload: [0, 1, 1],
+              reload_full: [1, 1, 1],
+              idle: [2, 0.5, 0.2],
+              run: [5, 2.5, 1],
+              shoot: [3, 1, 1],
+              throw: [4, 0.5, 1],
+              walk: [5, 1.6, 1]
             }
           },
         }
@@ -3234,10 +3280,10 @@
               if (sandbox.loadout.indexOf(spawnedWeapon.weapon) > -1) {
                 if (sandbox.loadout[0] == spawnedWeapon.weapon) {
                   let weapon = utils.weapons.getPrimaryEntry();
-                  weapon.ammo = Math.min(weapon.ammo + spawnedWeapon.ammoData.ammo, weapon.maxTotalAmmo);
+                  weapon.ammo = Math.min(weapon.ammo + spawnedWeapon.ammoData.ammo + spawnedWeapon.ammoData.currentAmmo, weapon.maxTotalAmmo);
                 } else {
                   let weapon = utils.weapons.getSecondaryEntry();
-                  weapon.ammo = Math.min(weapon.ammo + spawnedWeapon.ammoData.ammo, weapon.maxTotalAmmo);
+                  weapon.ammo = Math.min(weapon.ammo + spawnedWeapon.ammoData.ammo + spawnedWeapon.ammoData.currentAmmo, weapon.maxTotalAmmo);
                 }
                 utils.weapons.update();
               } else {
