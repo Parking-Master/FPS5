@@ -133,7 +133,9 @@ audio = {
       "weapon.punch.0": AudioWrapper("/sounds/weapons/punching/0.mp3"),
       "weapon.punch.1": AudioWrapper("/sounds/weapons/punching/1.mp3"),
       "weapon.punch.2": AudioWrapper("/sounds/weapons/punching/2.mp3"),
-      "weapon.walk": AudioWrapper("/sounds/weapons/walking/walking.mp3"),
+      "weapon.walk": AudioWrapper("/sounds/weapons/walking.mp3"),
+      "weapon.zoom-in": AudioWrapper("/sounds/weapons/zoom-in.mp3"),
+      "weapon.zoom-out": AudioWrapper("/sounds/weapons/zoom-out.mp3"),
     };
     for (let i = 0; i < weapons.length; i++) {
       if (sandbox.weapons[weapons[i]].loaded) {
@@ -416,6 +418,20 @@ audio = {
     } else {
       if (sound.source) sound.source.playbackRate.value = 1;
     }
+  },
+  zoomIn: function(weapon) {
+    let sound = audio.sounds["weapon.zoom-in"];
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
+    sound.source.playbackRate.value = Math.min(.6 / (weapon.zoomDuration / 1000), 2.5);
+  },
+  zoomOut: function(weapon) {
+    let sound = audio.sounds["weapon.zoom-out"];
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
+    sound.source.playbackRate.value = Math.min(.5 / (weapon.zoomDuration / 1000), 2.5);
   },
 };
 

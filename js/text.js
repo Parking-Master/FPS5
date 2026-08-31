@@ -37,12 +37,22 @@ text = {
       canvas.height = 192;
       ctx.fillStyle = "#ffffff";
       ctx.strokeStyle = "#ffffff";
-      ctx.font = "15px Arial";
+      if (sandbox.weapons[weapon].displayName.length < 15) {
+        ctx.font = "15px Arial";
+      } else {
+        ctx.font = "18px Arial";
+      }
       ctx.fontWeight = "600";
       ctx.textAlign = "left";
       ctx.shadowColor = "#baebff";
       ctx.shadowBlur = 1;
-      ctx.drawImage(weaponIcon, (canvas.width / 2) - 50, 0, 100, 50);
+      let imagePosition = [(canvas.width / 2) - 50, 0];
+      let imageSize = [100, 50];
+      if (sandbox.weapons[weapon].type == "pistol") {
+        imagePosition = [(canvas.width / 2) - 38, 0];
+        imageSize = [75, 75];
+      }
+      ctx.drawImage(weaponIcon, imagePosition[0], imagePosition[1], imageSize[0], imageSize[1]);
       ctx.fillText(sandbox.weapons[weapon].displayName.toUpperCase(), (canvas.width / 2) + 60, 25);
       ctx.moveTo(canvas.width / 2, 40);
       ctx.lineTo(canvas.width / 2, canvas.height / 2);
