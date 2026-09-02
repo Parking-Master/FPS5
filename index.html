@@ -9,6 +9,11 @@
         font-family: "Aperture";
         src: url(/fonts/Aperture.ttf);
       }
+      @keyframes active-animation {
+        50% {
+          box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.4);
+        }
+      }
       html, body {
         margin: 0 !important;
         font-family: Arial, Helvetica, sans-serif;
@@ -60,6 +65,13 @@
         color: #5aace1;
         margin-top: 20px;
       }
+      .buttons-wrapper button.button:hover {
+        transform: scale(1.1);
+      }
+      .button.menu-button:focus {
+        animation: active-animation .15s step-start;
+        animation-iteration-count: 4;
+      }
       img.sniper {
         position: relative;
         width: 350px;
@@ -77,6 +89,132 @@
       a {
         color: #5aace1 !important;
       }
+      .login-buttons {
+        position: absolute;
+        width: 100%;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 30px;
+        box-sizing: border-box;
+      }
+      .button.menu-button {
+        display: block;
+        width: 90px;
+        height: 65px;
+        background: #a7bbcc;
+        border: none;
+        border-radius: 0;
+        border-bottom: 5px solid #6c9abf;
+        color: #2b78aa;
+        font-weight: bold;
+        font-size: 15px;
+      }
+      .button.menu-button:hover {
+        background: #9eb1c0;
+      }
+      .button.menu-button.signup-button {
+        margin-top: 10px !important;
+      }
+      .button.menu-button.options-button {
+        position: relative;
+        width: 65px;
+        float: right;
+        top: 0;
+        right: 0;
+        background-image: url(/images/menu/options.png);
+        background-size: 55%;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+      .loadout-wrapper {
+        position: absolute;
+        width: 250px;
+        height: 200px;
+        background: #a7bbcc;
+        border-top: 5px solid #6c9abf;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 15px;
+        padding-bottom: 0;
+        box-sizing: border-box;
+        bottom: 50px;
+        left: 100px;
+      }
+      .loadout-header {
+        font-family: "Aperture";
+        font-size: 26px;
+        color: #2b78aa;
+        text-align: center;
+      }
+      .loadout-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+      }
+      .loadout-container .loadout-item {
+        background: #cdd3d8;
+        box-sizing: border-box;
+        margin: 10px;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+      .loadout-container .loadout-character {
+        flex-basis: calc(100% - 20px);
+        background-image: url(/images/characters/Raven.png);
+        background-size: 65%;
+      }
+      .loadout-container .loadout-primary-weapon {
+        flex-basis: calc(50% - 20px);
+        background-image: url(/images/weapons/AK-74.png);
+        background-size: 90%;
+      }
+      .loadout-container .loadout-secondary-weapon {
+        flex-basis: calc(50% - 20px);
+        background-image: url(/images/weapons/FN-502.png);
+        background-size: 45%;
+      }
+      .loadout-container .loadout-secondary-weapon::after {
+        content: "";
+        position: absolute;
+        width: 35px;
+        height: 35px;
+        display: inline-block;
+        margin-left: 27px;
+        margin-top: -46px;
+        background-image: url(/images/menu/loadout.png);
+        background-size: 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+      .loadout-container .loadout-item-tag {
+        position: relative;
+        width: 40px;
+        margin: 0 auto;
+        background: #cdd3d8;
+        font-family: "Aperture";
+        font-size: 9px;
+        color: #2b78aa;
+        padding: 2px;
+        border: 3px solid #a7bbcc;
+        text-align: center;
+        bottom: calc(-100% + 12px);
+      }
+      .loadout-container .loadout-primary-weapon .loadout-item-tag {
+        top: -6px;
+      }
+      .points {
+        position: absolute;
+        margin-top: 220px;
+        font-family: "Aperture";
+        font-size: 22px;
+        color: #2b78aa;
+      }
     </style>
   </head>
   <body>
@@ -84,6 +222,26 @@
       <h1 class="header">FPS 5</h1>
       <p class="subheader">MULTIPLAYER SHOOTER</p>
       <img class="sniper" src="/images/menu/sniper.png">
+      <div class="login-buttons">
+        <button class="button menu-button options-button"></button>
+        <button class="button menu-button login-button" onclick="location.href = '/login.html'">LOG IN</button>
+        <button class="button menu-button signup-button" onclick="location.href = '/signup.html'">SIGN UP</button>
+      </div>
+      <div class="loadout-wrapper">
+        <div class="loadout-header">YOUR LOADOUT</div>
+        <div class="loadout-container">
+          <div class="loadout-item loadout-character">
+            <div class="loadout-item-tag">RAVEN</div>
+          </div>
+          <div class="loadout-item loadout-primary-weapon">
+            <div class="loadout-item-tag">AK-74</div>
+          </div>
+          <div class="loadout-item loadout-secondary-weapon">
+            <div class="loadout-item-tag">FN-502</div>
+          </div>
+        </div>
+        <div class="points">0 PTS</div>
+      </div>
       <div class="buttons-wrapper">
         <button class="button">FIND LOBBY</button>
         <button class="button">PREFERENCES</button>

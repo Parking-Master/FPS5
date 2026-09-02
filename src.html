@@ -239,6 +239,7 @@
         color: #eee;
         left: 50%;
         margin-left: -100px;
+        bottom: -20px;
       }
       .ui-section.bottom-section .scores .scoreboard {
         background: rgba(20, 20, 20, 0.7);
@@ -260,14 +261,16 @@
         background: rgba(20, 100, 200, 0.7);
       }
       .ui-section.bottom-section .scores .scoreboard .score-username {
-        font-size: 12px;
+        font-size: 10px;
         max-width: 90px;
         text-overflow: ellipsis;
         overflow-x: hidden;
         padding-bottom: 1px;
+        margin-left: 2px;
+        margin-bottom: -4px;
       }
       .ui-section.bottom-section .scores .scoreboard .score-value {
-        font-size: 20px;
+        font-size: 16px;
       }
     </style>
   </head>
@@ -571,7 +574,7 @@
           },
           options: {
             gravity: 100, // Percent
-            teamGame: true,
+            teamGame: false,
             teamSize: 2, // Players
             playersNeeded: 1, // Players
             respawnTime: 4 // Seconds
@@ -636,11 +639,6 @@
         initialize: function() {
           audio.initialize(function() {
             if (sandbox.presets.options.teamGame) {
-              if (gametime.player.position > sandbox.presets.options.teamSize) {
-                gametime.player.data.team = "blue";
-              } else {
-                gametime.player.data.team = "red";
-              }
               utils.players.setArmorColor("self");
               document.querySelector(".scores").classList.add("team-game");
             }
@@ -649,6 +647,7 @@
             animate();
             renderer.shadowMap.needsUpdate = true;
             audio.ambience(sandbox.maps[sandbox.presets.map].ambienceSound);
+            gametime.player.data.ready = true;
           });
         },
         loadingManager: new THREE.LoadingManager(),
@@ -1569,7 +1568,11 @@
             crosshairAimed: false,
             healthValue: 100,
             healthTransition: "long",
-            currentPickupWeapon: null
+            currentPickupWeapon: null,
+            leftTeamUsername: null,
+            leftTeamScore: null,
+            rightTeamUsername: null,
+            rightTeamScore: null
           },
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
@@ -1590,7 +1593,11 @@
             pickupWeapon: document.querySelector(".ui .ui-pickup-weapon"),
             pickupWeaponText: document.querySelector(".ui .ui-pickup-weapon p"),
             pickupWeaponIcon: document.querySelector(".ui .ui-pickup-weapon .ui-pickup-weapon-icon"),
-            bottomRightSection: document.querySelector(".ui-section.bottom-right-section")
+            bottomRightSection: document.querySelector(".ui-section.bottom-right-section"),
+            leftTeamUsername: document.querySelector(".ui-section.bottom-section .scores .scoreboard-left .score-username"),
+            leftTeamScore: document.querySelector(".ui-section.bottom-section .scores .scoreboard-left .score-value"),
+            rightTeamUsername: document.querySelector(".ui-section.bottom-section .scores .scoreboard-right .score-username"),
+            rightTeamScore: document.querySelector(".ui-section.bottom-section .scores .scoreboard-right .score-value")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -1615,6 +1622,24 @@
             if (utils.ui.cache.reticle != reticle) {
               utils.ui.elements.crosshair.src = "/images/crosshairs/" + reticle + ".png";
               utils.ui.cache.reticle = reticle;
+            }
+          },
+          updateScores: function(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore) {
+            if (leftTeamUsername != utils.ui.cache.leftTeamUsername) {
+              utils.ui.cache.leftTeamUsername = leftTeamUsername;
+              utils.ui.elements.leftTeamUsername.textContent = leftTeamUsername;
+            }
+            if (leftTeamScore != utils.ui.cache.leftTeamScore) {
+              utils.ui.cache.leftTeamScore = leftTeamScore;
+              utils.ui.elements.leftTeamScore.textContent = leftTeamScore;
+            }
+            if (rightTeamUsername != utils.ui.cache.rightTeamUsername) {
+              utils.ui.cache.rightTeamUsername = rightTeamUsername;
+              utils.ui.elements.rightTeamUsername.textContent = rightTeamUsername;
+            }
+            if (rightTeamScore != utils.ui.cache.rightTeamScore) {
+              utils.ui.cache.rightTeamScore = rightTeamScore;
+              utils.ui.elements.rightTeamScore.textContent = rightTeamScore;
             }
           },
           showBottomRightSection: function() {
@@ -1780,7 +1805,11 @@
                   const blip = computeRadarBlipForEnemy(enemy.scene);
                   if (!blip) return;
                   ctx.beginPath();
-                  ctx.fillStyle = "rgba(255, 20, 20, 0.8)";
+                  if (sandbox.presets.options.teamGame && gametime.players[enemy.uuid].data.team == gametime.player.data.team) {
+                    ctx.fillStyle = "rgba(242, 218, 60, 0.8)";
+                  } else {
+                    ctx.fillStyle = "rgba(255, 20, 20, 0.8)";
+                  }
                   ctx.arc(blip.x, blip.y, enemy.vehicle ? 8 : 4, 0, Math.PI * 2);
                   ctx.fill();
                   ctx.restore();
@@ -1928,17 +1957,14 @@
                 armor1.material.emissive.setHex(0x220000);
                 armor2.material.color.setHex(0xff0000);
                 armor2.material.emissive.setHex(0x220000);
-                for (weapon in sandbox.weapons) {
-                  if (sandbox.weapons[weapon].model) sandbox.weapons[weapon].model.scene.getObjectByName("Arms").material.emissive.setHex(0x220000);
-                }
               } else if (gametime.player.data.team == "blue") {
                 armor1.material.color.setHex(0x18b6dd);
                 armor1.material.emissive.setHex(0x000011);
                 armor2.material.color.setHex(0x18b6dd);
                 armor2.material.emissive.setHex(0x000011);
-                for (weapon in sandbox.weapons) {
-                  if (sandbox.weapons[weapon].model) sandbox.weapons[weapon].model.scene.getObjectByName("Arms").material.emissive.setHex(0x000011);
-                }
+              }
+              for (weapon in sandbox.weapons) {
+                if (sandbox.weapons[weapon].model) sandbox.weapons[weapon].model.scene.getObjectByName("Arms").material.map = textureLoader.load("/images/assets/textures/" + gametime.player.data.team + "-armor-color.png"), sandbox.weapons[weapon].model.scene.getObjectByName("Arms").material.map.flipY = false;
               }
             } else {
               const armor1 = player.scene.getObjectByName("Armor");
@@ -1988,11 +2014,40 @@
               gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, shield.shieldType == "head"]);
             }
           },
+          incrementScore: function() {
+            gametime.player.data.kills++;
+          },
           update: function() {
             gametime.player.data.position = [camera.position.x, camera.position.y - 1, camera.position.z];
             gametime.player.data.rotation = [camera.rotation.x, camera.rotation.y, camera.rotation.z];
             gametime.update();
+            let leftTeamUsername = null;
+            let rightTeamUsername = null;
+            let leftTeamScore = 0;
+            let rightTeamScore = 0;
             for (player in gametime.players) {
+              if (sandbox.presets.options.teamGame) {
+                if (gametime.player.data.team == "red") {
+                  leftTeamUsername = "YOUR TEAM";
+                  rightTeamUsername = "ENEMY TEAM";
+                } else {
+                  leftTeamUsername = "ENEMY TEAM";
+                  rightTeamUsername = "YOUR TEAM";
+                }
+                if (gametime.players[player].data.team == "red") {
+                  leftTeamScore += gametime.players[player].data.kills;
+                } else {
+                  rightTeamScore += gametime.players[player].data.kills;
+                }
+              } else {
+                leftTeamUsername = "YOU";
+                leftTeamScore = gametime.player.data.kills;
+                if (player != gametime.player.uuid && gametime.players[player].data.kills >= rightTeamScore) {
+                  rightTeamUsername = gametime.players[player].username;
+                  rightTeamScore = gametime.players[player].data.kills;
+                }
+              }
+              utils.ui.updateScores(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore);
               const playerObject = utils.players.objects[player];
               if (player != gametime.player.uuid && typeof playerObject !== "undefined" && playerObject != null) {
                 if (playerObject.allowedToUpdate) {
@@ -2279,6 +2334,9 @@
                   player.scene.position.set(0, -1000, 0);
                 }
               });
+              if (killer == gametime.player.uuid) {
+                if (sandbox.presets.options.teamGame ? gametime.players[player.uuid].data.team != gametime.player.data.team : true) utils.players.incrementScore();
+              }
               utils.ui.addKillStatsRow(killer, player.uuid);
               audio.dying(player.scene.position);
               if (isHeadshot) audio.hitHeadshot();
@@ -4249,7 +4307,10 @@
         rotation: [0, 0, 0],
         loadout: sandbox.presets.loadout,
         visibleOnRadar: false,
-        team: null
+        team: null,
+        score: 0,
+        kills: 0,
+        ready: false
       });
       gametime.set("username", generateName());
       gametime.onconnect = function() {
@@ -4263,6 +4324,13 @@
                 if (utils.models.get("propweapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("propweapon." + weapon).requiredMaps.push(sandbox.presets.map);
               });
             }
+            if (sandbox.presets.options.teamGame) {
+              if (gametime.player.position > sandbox.presets.options.teamSize) {
+                gametime.player.data.team = "blue";
+              } else {
+                gametime.player.data.team = "red";
+              }
+            }
             sandbox.loadModels();
           } else {
             requestAnimationFrame(check);
@@ -4271,7 +4339,7 @@
         check();
         gametime.onupdate = function(player) {
           if (player.uuid == gametime.player.uuid) return;
-          if (typeof utils.players.objects[player.uuid] === "undefined" && (sandbox.presets.options.teamGame ? player.data.team : true)) {
+          if (typeof utils.players.objects[player.uuid] === "undefined" && player.data.ready) {
             utils.players.add(player);
           }
         };
