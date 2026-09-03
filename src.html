@@ -272,6 +272,16 @@
       .ui-section.bottom-section .scores .scoreboard .score-value {
         font-size: 16px;
       }
+      .ui-section.bottom-section .scores .time {
+        position: absolute;
+        width: 100%;
+        color: #eee;
+        text-align: center;
+        margin-top: -30px;
+        text-shadow: 1px 1px 0 #333;
+        font-family: "Arame";
+        font-size: 16px;
+      }
     </style>
   </head>
   <body>
@@ -308,6 +318,7 @@
           <p>PRESS [T] TO PICK UP AK-74 ASSAULT RIFLE<p></p>
         </div>
         <div class="scores">
+          <div class="time">12:00</div>
           <div class="scoreboard scoreboard-left">
             <div class="score-username">You</div>
             <div class="score-value">0</div>
@@ -379,6 +390,8 @@
       let playerAgainstWall = false;
       let deathScreen = false;
       let frameCount = 0;
+      let lastTimerUpdate = null;
+      let gameStartTime = null;
       const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3()];
       const keyStates = {};
       const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
@@ -408,7 +421,7 @@
 
         TWEEN.update();
         particles.update();
-        utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle);
+        utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle, time);
         audio.update(cameraPosition, cameraRotation);
         utils.weapons.position(cameraPosition, cameraRotation);
         utils.weapons.updateSpawned(deltaTime);
@@ -577,7 +590,8 @@
             teamGame: false,
             teamSize: 2, // Players
             playersNeeded: 1, // Players
-            respawnTime: 4 // Seconds
+            respawnTime: 4, // Seconds
+            timeLimit: null // Seconds
           }
         },
         loadout: [],
@@ -648,6 +662,7 @@
             renderer.shadowMap.needsUpdate = true;
             audio.ambience(sandbox.maps[sandbox.presets.map].ambienceSound);
             gametime.player.data.ready = true;
+            gameStartTime = Date.now(); // This will be moved to the actual game start function later on
           });
         },
         loadingManager: new THREE.LoadingManager(),
@@ -1572,7 +1587,8 @@
             leftTeamUsername: null,
             leftTeamScore: null,
             rightTeamUsername: null,
-            rightTeamScore: null
+            rightTeamScore: null,
+            timeInitiallyUpdated: false
           },
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
@@ -1597,9 +1613,10 @@
             leftTeamUsername: document.querySelector(".ui-section.bottom-section .scores .scoreboard-left .score-username"),
             leftTeamScore: document.querySelector(".ui-section.bottom-section .scores .scoreboard-left .score-value"),
             rightTeamUsername: document.querySelector(".ui-section.bottom-section .scores .scoreboard-right .score-username"),
-            rightTeamScore: document.querySelector(".ui-section.bottom-section .scores .scoreboard-right .score-value")
+            rightTeamScore: document.querySelector(".ui-section.bottom-section .scores .scoreboard-right .score-value"),
+            time: document.querySelector(".time")
           },
-          update: function(currentAmmo, remainingAmmo, grenades, reticle) {
+          update: function(currentAmmo, remainingAmmo, grenades, reticle, time) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
               utils.ui.elements.ammoCurrentValue.textContent = currentAmmo;
               utils.ui.cache.ammoCurrentValue = currentAmmo;
@@ -1622,6 +1639,18 @@
             if (utils.ui.cache.reticle != reticle) {
               utils.ui.elements.crosshair.src = "/images/crosshairs/" + reticle + ".png";
               utils.ui.cache.reticle = reticle;
+            }
+            if (sandbox.presets.options.timeLimit == null) {
+              if (!utils.ui.cache.timeInitiallyUpdated) {
+                utils.ui.cache.timeInitiallyUpdated = true;
+                utils.ui.elements.time.textContent = "NO TIME LIMIT";
+              }
+            } else if (time - lastTimerUpdate >= 1000) {
+              lastTimerUpdate = time;
+              let secondsLeft = sandbox.presets.options.timeLimit - ((time - gameStartTime) / 1000);
+              let formattedSeconds = Math.floor(secondsLeft % 60);
+              let formattedTime = Math.floor((secondsLeft % 3600) / 60) + ":" + (formattedSeconds < 10 ? "0" : "") + formattedSeconds;
+              utils.ui.elements.time.textContent = formattedTime;
             }
           },
           updateScores: function(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore) {
