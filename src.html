@@ -587,9 +587,9 @@
           },
           options: {
             gravity: 100, // Percent
-            teamGame: false,
-            teamSize: 2, // Players
-            playersNeeded: 1, // Players
+            teamGame: true,
+            teamSize: 1, // Players
+            playersNeeded: 2, // Players
             respawnTime: 4, // Seconds
             timeLimit: null // Seconds
           }
@@ -1977,7 +1977,7 @@
                 allowedToUpdate: true,
                 vehicle: null,
                 uuid: player.uuid,
-                team: player.data.team,
+                team: player.data.team
               });
               utils.players.objects[player.uuid] = playerObject;
               utils.players.weapons.set(playerObject, player.data.loadout[0]);
