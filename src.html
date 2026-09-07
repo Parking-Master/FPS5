@@ -324,7 +324,7 @@
             <div class="score-value">0</div>
           </div>
           <div class="scoreboard scoreboard-right">
-            <div class="score-username">Mike51177</div>
+            <div class="score-username">Enemy</div>
             <div class="score-value">0</div>
           </div>
         </div>
@@ -392,7 +392,7 @@
       let frameCount = 0;
       let lastTimerUpdate = null;
       let gameStartTime = null;
-      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3()];
+      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
       const keyStates = {};
       const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
       const playerVelocity = vectors[7];
@@ -580,7 +580,7 @@
         presets: {
           map: "Lihid",
           character: "Raven",
-          loadout: ["Ruger-RPR", "Desert-Eagle"],
+          loadout: ["HK-G28", "Desert-Eagle"],
           grenades: {
             "mk2": 2,
             "plasma": 0
@@ -589,7 +589,7 @@
             gravity: 100, // Percent
             teamGame: false,
             teamSize: 2, // Players
-            playersNeeded: 2, // Players
+            playersNeeded: 1, // Players
             respawnTime: 4, // Seconds
             timeLimit: null // Seconds
           }
@@ -622,9 +622,7 @@
                 sandbox.models[i].model = model;
                 sandbox.models[i].loaded = true;
                 scene.add(model.scene);
-                if (model.animations) {
-                  sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
-                }
+                if (model.animations) sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
                 if (typeof sandbox.models[i].callback == "function") sandbox.models[i].callback(model);
                 if (isWeapon) {
                   const name = idSplit[1];
@@ -654,7 +652,7 @@
           audio.initialize(function() {
             if (sandbox.presets.options.teamGame) {
               utils.players.setArmorColor("self");
-              document.querySelector(".scores").classList.add("team-game");
+              utils.ui.elements.scores.classList.add("team-game");
             }
             utils.ui.radar.init();
             utils.health.respawn();
@@ -755,7 +753,7 @@
                     child.castShadow = true;
                     child.receiveShadow = true;
                     if (child.material) {
-                    if (child.material.map) child.material.map.anisotropy = 4;
+                      if (child.material.map) child.material.map.anisotropy = 4;
                       child.material.envMap = envMap;
                       child.material.roughness = .2;
                       child.material.metalness = .3;
@@ -851,6 +849,45 @@
                   map: skyTexture,
                   side: THREE.BackSide
                 }));
+                scene.add(sky);
+              });
+            }
+          },
+          {
+            id: "map",
+            path: "/models/maps/Abandoned_City.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            requiredMaps: ["Abandoned_City"],
+            callback: function(model) {
+              textureLoader.load("/images/assets/skies/0.png", function(skyTexture) {
+                map = model.scene;
+                worldOctree.fromGraphNode(map);
+                directionalLight.position.set(-20, 50, 5);
+                directionalLight.shadow.radius = 6;
+                directionalLight.intensity = 1.2;
+                directionalLight.shadow.camera.right = 50;
+                directionalLight.shadow.camera.left = -50;
+                directionalLight.shadow.camera.top = 50;
+                directionalLight.shadow.camera.bottom = -50;
+                ambientLight.intensity = .3;
+                let gravityLifts = [];
+                map.traverse(child => {
+                  if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.material && child.material.map) child.material.map.anisotropy = 4, child.material.map.needsUpdate = true;
+                  }
+                  if (child.name.includes("Gravity_Lift")) gravityLifts.push(child);
+                });
+                utils.options.set("GravityLifts", gravityLifts);
+                sky = new THREE.Mesh(new THREE.SphereGeometry(250, 25, 25), new THREE.MeshBasicMaterial({
+                  color: 0xffeecc,
+                  map: skyTexture,
+                  side: THREE.BackSide
+                }));
+                // sky.position.y = 2;
                 scene.add(sky);
               });
             }
@@ -1195,6 +1232,13 @@
                 position: [-19, 1, 0, 0, Math.PI / 2, 0]
               }
             ]
+          },
+          "Abandoned_City": {
+            ambienceSound: 0,
+            spawnPoints: [
+              [0,0,0,0,0,0]
+            ],
+            vehicles: []
           }
         },
         weapons: {
@@ -1614,7 +1658,8 @@
             leftTeamScore: document.querySelector(".ui-section.bottom-section .scores .scoreboard-left .score-value"),
             rightTeamUsername: document.querySelector(".ui-section.bottom-section .scores .scoreboard-right .score-username"),
             rightTeamScore: document.querySelector(".ui-section.bottom-section .scores .scoreboard-right .score-value"),
-            time: document.querySelector(".time")
+            time: document.querySelector(".time"),
+            scores: document.querySelector(".scores")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle, time) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -2259,8 +2304,8 @@
           grenades: {
             throw: function(player, type, position, grenadeId) {
               utils.players.animations.start(player, "throw_grenade", { reset: true, loop: THREE.LoopOnce });
-              const playerDirection = new THREE.Vector3(position[0], position[1], position[2]);
-              const point = new THREE.Vector3(position[6], position[7], position[8]);
+              const playerDirection = vectors[33].set(position[0], position[1], position[2]);
+              const point = vectors[34](position[6], position[7], position[8]);
               const camera = utils.options.get("playerCamera");
               camera.position.set(point.x, point.y, point.z);
               camera.rotation.set(position[3], position[4], position[5]);
@@ -2755,8 +2800,8 @@
                 let gravityLift = gravityLifts[i];
                 if (playerCollider.start.distanceTo(gravityLift.position) < 2) {
                   let power = (2 - playerCollider.start.distanceTo(gravityLift.position)) / 1.5;
-                  let vector = new THREE.Vector3();
-                  vector.copy(new THREE.Vector3(0, 0, -1)).applyQuaternion(gravityLift.quaternion);
+                  let vector = vectors[35];
+                  vector.set(0, 0, -1).applyQuaternion(gravityLift.quaternion);
                   playerVelocity.add(vector.multiplyScalar(power));
                 }
               }
@@ -3813,7 +3858,7 @@
               body.oncollision = function(point, intensity, contact, body) {
                 if (body == physics.player) {
                   const time = Date.now();
-                  const normal = new THREE.Vector3().set(contact.ni.x, contact.ni.y, contact.ni.z);
+                  const normal = vectors[32].set(contact.ni.x, contact.ni.y, contact.ni.z);
                   playerCollider.translate(normal.multiplyScalar(0.1));
                   if (time - entry.lastPlayerCollision > 500) {
                     entry.lastPlayerCollision = time;
