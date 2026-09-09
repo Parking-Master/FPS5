@@ -33,7 +33,7 @@ user = {
   data: null,
   loggedIn: false,
   login: function(username, password, callback = () => {}) {
-    fetch(user.serverURL + "/user/login", {
+    fetch(user.serverURL + "/users/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -59,7 +59,7 @@ user = {
     });
   },
   signup: function(email, username, password, callback = () => {}) {
-    fetch(user.serverURL + "/user/signup", {
+    fetch(user.serverURL + "/users/signup", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -79,7 +79,7 @@ user = {
     });
   },
   verify: function(email, verificationKey, callback = () => {}) {
-    fetch(user.serverURL + "/user/verify", {
+    fetch(user.serverURL + "/users/verify", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -97,7 +97,7 @@ user = {
     });
   },
   sendPasswordReset: function(email, callback = () => {}) {
-    fetch(user.serverURL + "/user/reset-password-request", {
+    fetch(user.serverURL + "/users/reset-password-request", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -115,7 +115,7 @@ user = {
     });
   },
   resetPassword: function(email, verificationKey, newPassword, callback = () => {}) {
-    fetch(user.serverURL + "/user/reset-password", {
+    fetch(user.serverURL + "/users/reset-password", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -136,7 +136,7 @@ user = {
   logout: function() {
     if (user.loggedIn) {
       let sessionKey = getCookie("s");
-      fetch(user.serverURL + "/user/logout", {
+      fetch(user.serverURL + "/users/logout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -158,7 +158,7 @@ user = {
     if (sessionKey) {
       user.loggedIn = true;
       if (localStorage["user-cache"]) user.data = JSON.parse(localStorage["user-cache"]);
-      fetch(user.serverURL + "/user/get/" + sessionKey).then(function(response) {
+      fetch(user.serverURL + "/users/get/" + sessionKey).then(function(response) {
         if (response.status == 200) {
           response.json().then(function(data) {
             user.data = data;
@@ -173,7 +173,7 @@ user = {
     user.data[key] = value;
     if (user.loggedIn) {
       let sessionKey = getCookie("s");
-      fetch(user.serverURL + "/user/set", {
+      fetch(user.serverURL + "/users/set", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -215,7 +215,7 @@ user = {
     });
   },
   getAllUsers: function(callback = () => {}) {
-    fetch(user.serverURL + "/user").then(response => response.json()).then(function(allUsers) {
+    fetch(user.serverURL + "/users").then(response => response.json()).then(function(allUsers) {
       callback(allUsers);
     });
   }
