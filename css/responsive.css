@@ -1,0 +1,117 @@
+      @media only screen and (max-width:1100px) {
+        .loadout-wrapper {
+          left: 30px;
+        }
+      }
+      @media only screen and (max-width:1000px) {
+        .loadout-wrapper {
+          transform: scale(.8);
+        }
+      }
+      @media only screen and (max-height:700px) {
+        .buttons-wrapper {
+          width: 350px;
+          margin-left: -175px;
+          display: flex;
+          flex-wrap: wrap;
+        }
+        .buttons-wrapper button.button {
+          flex-basis: calc(50% - 10px);
+          flex-grow: 0;
+          flex-shrink: 0;
+          margin: 5px;
+          font-size: 15px;
+        }
+        .buttons-wrapper button.button#help-button {
+          display: none;
+        }
+      }
+      @media only screen and (max-height:520px) {
+        .copyright {
+          display: inline-block;
+          width: auto;
+          right: 10px;
+          font-size: 12px;
+        }
+        .copyright > #copyright-text {
+          display: none;
+        }
+        .buttons-wrapper {
+          bottom: 10px;
+        }
+      }
+      @media only screen and (max-height:480px) {
+        .header {
+          margin-top: 20px;
+          font-size: 60px;
+        }
+      }
+      @media only screen and (max-height:460px) {
+        img.sniper {
+          width: 290px;
+          left: 50%;
+          margin-left: -145px;
+          margin-top: 15px;
+        }
+        .loadout-wrapper {
+          transform: scale(.6) !important;
+          bottom: 30px;
+        }
+      }
+      @media only screen and (max-width:850px) {
+        .loadout-wrapper {
+          transform: scale(.5) !important;
+          bottom: 50px;
+        }
+      }
+      @media only screen and (max-height:460px) {
+        img.sniper {
+          width: 290px;
+          left: 50%;
+          margin-left: -145px;
+          margin-top: 15px;
+        }
+        .loadout-wrapper {
+          transform: scale(.6) !important;
+          bottom: 30px;
+        }
+      }
+      @media only screen and (max-height:460px) and (max-width:750px) {
+        .buttons-wrapper {
+          width: 300px;
+          margin-left: -150px;
+          display: flex;
+          flex-wrap: wrap;
+        }
+        .buttons-wrapper button.button {
+          flex-basis: calc(50% - 8px);
+          margin: 4px;
+          font-size: 14px;
+        }
+        .buttons-wrapper button.button#help-button {
+          display: none;
+        }
+      }
+      @media only screen and (max-width:700px) {
+        .loadout-wrapper {
+          display: none;
+        }
+      }
+      @media only screen and (max-height:380px) {
+        .subheader {
+          font-size: 24px;
+        }
+        img.sniper {
+          width: 250px;
+          margin-left: -125px;
+        }
+        .loadout-wrapper {
+          display: none;
+        }
+      }
+      @media only screen and (max-width:700px) and (max-height:520px) {
+        .copyright {
+          left: 10px;
+          right: auto;
+        }
+      }

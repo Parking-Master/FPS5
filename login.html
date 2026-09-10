@@ -172,6 +172,7 @@
       </div>
     </div>
     <script>
+      if (user.loggedIn) location.replace("/");
       let params = new URLSearchParams(location.search);
       if (params.get("s") == "1") {
         swal({
@@ -216,7 +217,8 @@
             if (success) {
               if (reason == 0) {
                 swal({
-                  text: "Logged in! Redirecting..."
+                  text: "Logged in! Redirecting...",
+                  button: false
                 });
               } else {
                 let redirect = new URLSearchParams(location.search).get("r");

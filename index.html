@@ -31,6 +31,18 @@
         background-position: center;
         background-size: 70%;
       }
+      body.auto-resize {
+        background: #d9d9d9;
+      }
+      body.auto-resize > .wrapper {
+        position: fixed;
+        width: 1920px;
+        height: 1080px;
+        left: 50%;
+        top: 50%;
+        margin-left: -960px;
+        margin-top: -540px;
+      }
       .header {
         font-family: "Aperture", monospace, Arial;
         font-size: 80px;
@@ -168,17 +180,17 @@
       .loadout-container .loadout-character {
         flex-basis: calc(100% - 20px);
         background-image: url(/images/characters/Raven.png);
-        background-size: 65%;
+        background-size: auto 90%;
       }
       .loadout-container .loadout-primary-weapon {
         flex-basis: calc(50% - 20px);
         background-image: url(/images/weapons/AK-74.png);
-        background-size: 90%;
+        background-size: auto 70%;
       }
       .loadout-container .loadout-secondary-weapon {
         flex-basis: calc(50% - 20px);
         background-image: url(/images/weapons/FN-502.png);
-        background-size: 45%;
+        background-size: auto 90%;
       }
       .loadout-container .loadout-secondary-weapon::after {
         content: "";
@@ -216,19 +228,21 @@
         font-size: 22px;
         color: #2b78aa;
       }
-      @media only screen and (max-width:1100px) {
-        .loadout-wrapper {
-          left: 30px;
-        }
-      }
-      @media only screen and (max-width:850px) {
-        .loadout-wrapper {
-          transform: scale(.8);
-        }
+      .profile-picture {
+        width: 30px;
+        background-color: #fff;
+        border-radius: 100%;
+        margin-bottom: -6px;
+        box-shadow: 3px 2px 0 #2b78aa;
+        border: 2px solid #999;
       }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="/css/responsive.css" id="responsive-stylesheet">
   </head>
   <body>
+    <script src="https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js"></script>
+    <script src="/js/user.js"></script>
     <div class="wrapper">
       <h1 class="header">FPS 5</h1>
       <p class="subheader">MULTIPLAYER SHOOTER</p>
@@ -254,13 +268,75 @@
         <div class="points">0 PTS</div>
       </div>
       <div class="buttons-wrapper">
-        <button class="button">FIND LOBBY</button>
-        <button class="button">PREFERENCES</button>
-        <button class="button">WORLD CHAT</button>
-        <button class="button">FORGE</button>
-        <button class="button">HELP</button>
+        <button class="button" id="lobby-button">FIND LOBBY</button>
+        <button class="button" id="preferences-button">PREFERENCES</button>
+        <button class="button" id="chat-button">WORLD CHAT</button>
+        <button class="button" id="forge-button">FORGE</button>
+        <button class="button" id="help-button">HELP</button>
       </div>
-      <div class="copyright">Copyright &copy; 2026 <a href="https://github.com/Parking-Master">Parking-Master</a></div>
+      <div class="copyright"><span id="copyright-text">Copyright </span>&copy; 2026 <a href="https://github.com/Parking-Master">Parking-Master</a></div>
     </div>
+    <script>
+      if (user.loggedIn) {
+        document.querySelector(".login-button").textContent = "LOG OUT";
+        document.querySelector(".login-button").onclick = null;
+        document.querySelector(".login-button").onmousedown = function() {
+          user.logout();
+          this.innerHTML = "<i class='fa fa-check' style='font-size:30px'></i>";
+          setTimeout(() => {
+            this.textContent = "LOG IN";
+            this.onclick = () => location.href = "/login.html";
+            this.onmousedown = null;
+            document.querySelector(".signup-button").style.display = "";
+            document.querySelector(".loadout-header").textContent = "YOUR LOADOUT";
+          }, 700);
+        };
+        document.querySelector(".signup-button").style.display = "none";
+        let displayUsername = user.data.username;
+        if (displayUsername.length > 11) displayUsername = displayUsername = displayUsername.slice(0, 10) + "...";
+        document.querySelector(".loadout-header").innerHTML = `<p style="margin:0!important" title="${user.data.username}"><img src="${user.data.profilePicture}" class="profile-picture"> ${displayUsername}</p><span style="font-size:14px">YOUR LOADOUT</span>`;
+        document.querySelector(".loadout-character .loadout-item-tag").textContent = user.data.character;
+        document.querySelector(".loadout-character").style.backgroundImage = `url(/images/characters/${user.data.character}.png)`;
+        document.querySelector(".loadout-primary-weapon .loadout-item-tag").textContent = user.data.loadout[0];
+        document.querySelector(".loadout-primary-weapon").style.backgroundImage = `url(/images/weapons/${user.data.loadout[0]}.png)`;
+        document.querySelector(".loadout-secondary-weapon .loadout-item-tag").textContent = user.data.loadout[1];
+        document.querySelector(".loadout-secondary-weapon").style.backgroundImage = `url(/images/weapons/${user.data.loadout[1]}.png)`;
+      }
+      let responsiveDisabled = false;
+      function onWindowResize() {
+        if (window.innerWidth > 1920 && window.innerHeight > 1080) {
+          if (!responsiveDisabled) {
+            responsiveDisabled = true;
+            document.querySelector("#responsive-stylesheet").setAttribute("disabled", "disabled");
+            document.querySelector("body").classList.add("auto-resize");
+          }
+          let averageScale = window.innerHeight / 1080;
+          let minWidth = 1920 * averageScale;
+          if (window.innerWidth < minWidth) {
+            let wrapperScale = (window.innerWidth / 1920);
+            document.querySelector(".wrapper").style.transform = `scale(${wrapperScale})`;
+            if (document.querySelector(".swal-modal")) {
+              document.querySelector(".swal-modal").style.scale = wrapperScale * 1.5;
+            }
+          } else {
+            let wrapperScale = (window.innerHeight / 1080);
+            document.querySelector(".wrapper").style.transform = `scale(${wrapperScale})`;
+            if (document.querySelector(".swal-modal")) {
+              document.querySelector(".swal-modal").style.scale = wrapperScale * 1.5;
+            }
+          }
+        } else {
+          if (responsiveDisabled) {
+            responsiveDisabled = false;
+            document.querySelector("#responsive-stylesheet").removeAttribute("disabled");
+            document.querySelector("body").classList.remove("auto-resize");
+            document.querySelector(".wrapper").style.transform = "";
+            document.querySelector(".swal-modal").style.scale = "";
+          }
+        }
+      }
+      window.addEventListener("resize", onWindowResize);
+      onWindowResize();
+    </script>
   </body>
 </html>

@@ -148,7 +148,8 @@ user = {
         if (response.status == 200) {
           deleteAllCookies();
           localStorage.removeItem("user-cache");
-          location.reload(true);
+          user.data = null;
+          user.loggedIn = false;
         }
       });
     }
