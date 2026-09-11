@@ -144,14 +144,11 @@ user = {
         body: JSON.stringify({
           sessionKey: sessionKey
         })
-      }).then(function(response) {
-        if (response.status == 200) {
-          deleteAllCookies();
-          localStorage.removeItem("user-cache");
-          user.data = null;
-          user.loggedIn = false;
-        }
       });
+      deleteAllCookies();
+      localStorage.removeItem("user-cache");
+      user.data = null;
+      user.loggedIn = false;
     }
   },
   load: function(callback = () => {}) {

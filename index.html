@@ -277,6 +277,24 @@
       <div class="copyright"><span id="copyright-text">Copyright </span>&copy; 2026 <a href="https://github.com/Parking-Master">Parking-Master</a></div>
     </div>
     <script>
+      function formatNumber(number) {
+        return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
+      }
+      if (!localStorage["points"]) localStorage.setItem("points", 0);
+      function updateLoadout() {
+        let character = "Raven";
+        let loadout = ["AK-74", "FN-502"];
+        let points = localStorage["points"];
+        if (user.loggedIn) character = user.data.character, loadout = user.data.loadout, points = user.data.points;
+        document.querySelector(".loadout-character .loadout-item-tag").textContent = character;
+        document.querySelector(".loadout-character").style.backgroundImage = `url(/images/characters/${character}.png)`;
+        document.querySelector(".loadout-primary-weapon .loadout-item-tag").textContent = loadout[0];
+        document.querySelector(".loadout-primary-weapon").style.backgroundImage = `url(/images/weapons/${loadout[0]}.png)`;
+        document.querySelector(".loadout-secondary-weapon .loadout-item-tag").textContent = loadout[1];
+        document.querySelector(".loadout-secondary-weapon").style.backgroundImage = `url(/images/weapons/${loadout[1]}.png)`;
+        document.querySelector(".points").textContent = formatNumber(points) + " PTS";
+      }
+      updateLoadout();
       if (user.loggedIn) {
         document.querySelector(".login-button").textContent = "LOG OUT";
         document.querySelector(".login-button").onclick = null;
@@ -289,18 +307,13 @@
             this.onmousedown = null;
             document.querySelector(".signup-button").style.display = "";
             document.querySelector(".loadout-header").textContent = "YOUR LOADOUT";
+            updateLoadout();
           }, 700);
         };
         document.querySelector(".signup-button").style.display = "none";
         let displayUsername = user.data.username;
         if (displayUsername.length > 11) displayUsername = displayUsername = displayUsername.slice(0, 10) + "...";
         document.querySelector(".loadout-header").innerHTML = `<p style="margin:0!important" title="${user.data.username}"><img src="${user.data.profilePicture}" class="profile-picture"> ${displayUsername}</p><span style="font-size:14px">YOUR LOADOUT</span>`;
-        document.querySelector(".loadout-character .loadout-item-tag").textContent = user.data.character;
-        document.querySelector(".loadout-character").style.backgroundImage = `url(/images/characters/${user.data.character}.png)`;
-        document.querySelector(".loadout-primary-weapon .loadout-item-tag").textContent = user.data.loadout[0];
-        document.querySelector(".loadout-primary-weapon").style.backgroundImage = `url(/images/weapons/${user.data.loadout[0]}.png)`;
-        document.querySelector(".loadout-secondary-weapon .loadout-item-tag").textContent = user.data.loadout[1];
-        document.querySelector(".loadout-secondary-weapon").style.backgroundImage = `url(/images/weapons/${user.data.loadout[1]}.png)`;
       }
       let responsiveDisabled = false;
       function onWindowResize() {

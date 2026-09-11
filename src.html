@@ -299,6 +299,7 @@
     <script src="/js/PointerLockControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Parking-Master/Gametime.js/js/username-generator.js"></script>
+    <script src="/js/user.js"></script>
     <div class="hurt-screen"></div>
     <div class="ui-section left-section">
       <div class="ui-kill-stats"></div>
@@ -973,6 +974,13 @@
             requiredMaps: []
           },
           {
+            id: "weapon.AR-15",
+            path: "/models/weapons/AR-15.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
             id: "propweapon.AK-74",
             path: "/models/characters/weapons/AK-74.glb",
             model: null,
@@ -1038,6 +1046,13 @@
           {
             id: "propweapon.Desert-Eagle",
             path: "/models/characters/weapons/Desert-Eagle.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.AR-15",
+            path: "/models/characters/weapons/AR-15.glb",
             model: null,
             loaded: false,
             requiredMaps: []
@@ -1596,6 +1611,43 @@
               shoot: [3, 1, 1],
               throw: [4, 0.5, 1],
               walk: [5, 1.6, 1]
+            }
+          },
+          "AR-15": {
+            name: "AR-15",
+            displayName: "AR-15 Long Range Rifle",
+            ammo: 28,
+            defaultAmmo: 28,
+            currentAmmo: 14,
+            maxAmmo: 14,
+            maxTotalAmmo: 42,
+            damage: 20,
+            headshotDamage: 40,
+            spread: .1,
+            muzzleFlash: true,
+            zoomPosition: [.0413,.01675,-.058,.061,0,.12],
+            zoomFov: 35,
+            zoomDuration: 150,
+            fireMode: "semi",
+            fireRate: 100,
+            range: 30,
+            recoil: 0.8,
+            reticle: 10,
+            bulletHole: 0,
+            scope: true,
+            scopeRendered: false,
+            delayBetweenShots: 100,
+            type: "rifle",
+            model: null,
+            loaded: false,
+            animationStructure: {
+              shoot: [0, 0.8, 1],
+              idle: [1, 1, 1],
+              reload: [2, 0.8, 1],
+              reload_full: [3, 0.8, 1],
+              throw: [4, 1.4, 1],
+              walk: [5, .9, .7],
+              run: [5, 1.2, 1]
             }
           },
         }
@@ -2311,7 +2363,7 @@
             throw: function(player, type, position, grenadeId) {
               utils.players.animations.start(player, "throw_grenade", { reset: true, loop: THREE.LoopOnce });
               const playerDirection = vectors[33].set(position[0], position[1], position[2]);
-              const point = vectors[34](position[6], position[7], position[8]);
+              const point = vectors[34].set(position[6], position[7], position[8]);
               const camera = utils.options.get("playerCamera");
               camera.position.set(point.x, point.y, point.z);
               camera.rotation.set(position[3], position[4], position[5]);
@@ -3737,6 +3789,18 @@
               }
             });
           },
+          shock: function(intensity) {
+            camera.rotateX(intensity);
+            let maxStep = 7;
+            let step = 0;
+            function animation() {
+              if (step > maxStep) return;
+              step++;
+              camera.rotateX(-intensity / maxStep);
+              requestAnimationFrame(animation);
+            }
+            animation();
+          },
           bob: function(type = 0, intensity = 1) {
             let maxStep = 10;
             let step = 0;
@@ -4192,7 +4256,7 @@
             utils.ui.hide();
             camera.fov = 70;
             camera.updateProjectionMatrix();
-            utils.effects.shake(3, 100, 800);
+            utils.effects.shake(10, 0, 1000);
             audio.dying(camera.position);
             PointerControls.isLocked = false;
           },
@@ -4225,6 +4289,16 @@
         }
       };
 
+      if (user.loggedIn) {
+        sandbox.presets.character = user.data.character;
+        sandbox.presets.loadout = user.data.loadout;
+        gametime.set("username", user.data.username);
+      } else {
+        // Later this will change based off of user preferences, even when not logged in
+        sandbox.presets.character = "Raven";
+        sandbox.presets.loadout = ["AK-74", "FN-502"];
+        gametime.set("username", generateName());
+      }
       sandbox.loadout[0] = sandbox.presets.loadout[0];
       sandbox.loadout[1] = sandbox.presets.loadout[1];
       sandbox.grenades["mk2"] = sandbox.presets.grenades["mk2"];
@@ -4381,7 +4455,7 @@
         if (player != gametime.player.uuid) utils.players.stopCrouching(utils.players.objects[player]);
       });
       gametime.on("damage", function(player, damage, killer, isHeadshot, isMelee) {
-        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee);
+        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee), utils.effects.shock(damage / 400);
       });
       gametime.on("playerDie", function(player, killer, isHeadshot) {
         if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer, isHeadshot);
@@ -4416,7 +4490,6 @@
         kills: 0,
         ready: false
       });
-      gametime.set("username", generateName());
       gametime.onconnect = function() {
         if (sandbox.setup) return;
         sandbox.setup = true;

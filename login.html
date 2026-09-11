@@ -156,6 +156,16 @@
       .swal-button:hover {
         background: #777 !important;
       }
+      .swal-content__input {
+        border: 1px solid #999;
+        border-radius: 0;
+        padding: 5px !important;
+        outline: none !important;
+        font-family: "Aperture", monospace, Arial;
+      }
+      .swal-content__input:focus {
+        border: 1px solid #555;
+      }
     </style>
   </head>
   <body>
@@ -168,25 +178,82 @@
         <input class="input password" type="password" placeholder="Password">
         <button type="button" class="password-toggle" id="passwordToggle" onclick="togglePassword(this)"><span class="eye-icon"></span></button>
         <input class="input submit" type="button" value="Continue >">
-        <a href="#">Reset password</a>
+        <a href="#" onclick="resetPassword()">Reset password</a>
       </div>
     </div>
     <script>
       if (user.loggedIn) location.replace("/");
       let params = new URLSearchParams(location.search);
-      if (params.get("s") == "1") {
-        swal({
-          title: "Success",
-          text: "Your account has been created! You can now log in.",
-          button: "Close"
-        });
-        window.history.replaceState({}, document.title, "/login.html");
-      } else if (params.get("s") == "0") {
-        swal({
-          title: "Error signing up",
-          text: "Your account could not be created. Make sure that link isn't expired.",
-          button: "Close"
-        });
+      if (params.get("p")) {
+        let email = params.get("e");
+        let verificationKey = params.get("v");
+        if (email && verificationKey) {
+          function next() {
+            swal({
+              title: "Reset password",
+              text: "Choose your new password (8-60 characters):",
+              content: "input",
+              buttons: ["Cancel", "Next"],
+              closeOnEnterKey: false,
+              closeOnSpaceKey: false,
+              closeOnEsc: false,
+              closeOnClickOutside: false
+            }).then(function(password) {
+              if (password && typeof password === "string" && password.trim() && password.trim().length >= 8 && password.trim().length <= 60) {
+                user.resetPassword(email, verificationKey, password, function(success) {
+                  if (success) {
+                    location.replace("/login.html?s=3");
+                  } else {
+                    location.replace("/login.html?s=2");
+                  }
+                });
+                swal({
+                  text: "Please wait...",
+                  button: false,
+                  closeOnEnterKey: false,
+                  closeOnSpaceKey: false,
+                  closeOnEsc: false,
+                  closeOnClickOutside: false
+                });
+              } else {
+                swal({
+                  title: "Error resetting password",
+                  text: "Please enter a valid password.",
+                  button: "Close",
+                  closeOnEnterKey: false
+                }).then(() => next());
+              }
+            });
+          }
+          next();
+        }
+      }
+      if (params.get("s")) {
+        if (params.get("s") == "3") {
+          swal({
+            title: "Success",
+            text: "Your password has been reset!",
+            button: "Close"
+          });
+        } else if (params.get("s") == "2") {
+          swal({
+            title: "Error resetting password",
+            text: "Your password could not be reset. Make sure that link isn't expired.",
+            button: "Close"
+          });
+        } else if (params.get("s") == "1") {
+          swal({
+            title: "Success",
+            text: "Your account has been created! You can now log in.",
+            button: "Close"
+          });
+        } else if (params.get("s") == "0") {
+          swal({
+            title: "Error signing up",
+            text: "Your account could not be created. Make sure that link isn't expired.",
+            button: "Close"
+          });
+        }
         window.history.replaceState({}, document.title, "/login.html");
       }
       let usernameInput = document.querySelector(".username");
@@ -248,6 +315,35 @@
         } else {
           resetButton();
         }
+      }
+      function resetPassword() {
+        swal({
+          title: "Reset password",
+          text: "Enter your email address:",
+          content: "input",
+          buttons: ["Cancel", "Next"],
+          closeOnEnterKey: false
+        }).then(function(email) {
+          if (email && typeof email === "string" && email.trim()) {
+            email = email.trim();
+            if (/^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i.test(email)) {
+              user.sendPasswordReset(email);
+              swal({
+                title: "Verify your email",
+                text: "We've sent you an email. Click the link in it to change your password.",
+                button: "Close"
+              });
+            } else {
+              swal({
+                title: "Error resetting password",
+                text: "Please enter a valid email address.",
+                button: "Close",
+                closeOnEnterKey: false
+              }).then(() => resetPassword());
+            }
+          }
+        })
+        document.querySelector(".swal-content__input").placeholder = "email@example.com";
       }
       submitButton.addEventListener("click", function(event) {
         event.preventDefault();
