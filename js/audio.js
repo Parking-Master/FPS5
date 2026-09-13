@@ -336,7 +336,8 @@ audio = {
     let sound = audio.sounds["ricochet." + Math.floor(Math.random() * 3)].sound;
     sound.position.set(position.x, position.y, position.z);
     sound.setVolume(2);
-    sound.setMaxDistance(40);
+    sound.setMaxDistance(6);
+    sound.setRolloffFactor(10);
     if (sound.source) sound.stop();
     sound.play();
   },

@@ -86,7 +86,7 @@
         top: 20px;
         left: 50%;
         margin-left: -200px;
-        transform: perspective(600px) rotateX(-30deg);
+        transform: perspective(50px) rotateX(-8deg);
       }
       .ui-section.top-section .ui-health-bar {
         position: relative;
@@ -126,7 +126,7 @@
         transform: perspective(600px) rotateX(30deg);
       }
       .ui-section.bottom-section .ui-pickup-weapon .ui-pickup-weapon-icon {
-        width: 120px;
+        height: 80px;
       }
       .ui-section.bottom-section .ui-pickup-weapon {
         font-family: "Arame";
@@ -141,8 +141,9 @@
         position: absolute;
         width: 160px;
         bottom: 40px;
-        right: 60px;
-        transform: perspective(600px) rotateY(-20deg) rotatez(2deg);
+        right: 140px;
+        transform: scale(1.2);
+        transform-origin: bottom right;
         font-family: Arial;
         filter: drop-shadow(1px 1px 0px #fff);
         text-shadow: 2px 2px 20px rgb(50, 50, 50);
@@ -186,14 +187,13 @@
       .ui-radar {
         position: absolute;
         bottom: 40px;
-        left: 90px;
-        width: 150px;
-        height: 150px;
+        left: 150px;
+        width: 200px;
+        height: 200px;
         border-radius: 100%;
         background: rgba(100, 100, 150, 0.4);
         box-shadow: inset 0 0 50px rgba(210, 200, 200, 0.4);
         border: 2px solid rgba(100, 200, 255, 0.2);
-        transform: perspective(500px) rotateY(5deg) rotateX(30deg);
         overflow: hidden;
       }
       .ui-section.bottom-right-section .ui-weapon .ui-ammo {
@@ -590,7 +590,7 @@
             gravity: 100, // Percent
             teamGame: false,
             teamSize: 2, // Players
-            playersNeeded: 1, // Players
+            playersNeeded: 2, // Players
             respawnTime: 4, // Seconds
             timeLimit: null // Seconds
           }
@@ -978,7 +978,11 @@
             path: "/models/weapons/AR-15.glb",
             model: null,
             loaded: false,
-            requiredMaps: []
+            requiredMaps: [],
+            callback: function(model) {
+              model.scene.getObjectByName("LensCover").material.blending = THREE.MultiplyBlending;
+              model.scene.getObjectByName("LensCover").material.color.setHex(0x22ff11);
+            }
           },
           {
             id: "propweapon.AK-74",
@@ -1643,7 +1647,7 @@
             animationStructure: {
               shoot: [0, 0.8, 1],
               idle: [1, 1, 1],
-              reload: [2, 0.8, 1],
+              reload: [2, 0.9, 1],
               reload_full: [3, 0.8, 1],
               throw: [4, 1.4, 1],
               walk: [5, .9, .7],
@@ -2491,11 +2495,11 @@
                 }
               });
               if (killer == gametime.player.uuid) {
+                if (isHeadshot) audio.hitHeadshot();
                 if (sandbox.presets.options.teamGame ? gametime.players[player.uuid].data.team != gametime.player.data.team : true) utils.players.incrementScore();
               }
               utils.ui.addKillStatsRow(killer, player.uuid);
               audio.dying(player.scene.position);
-              if (isHeadshot) audio.hitHeadshot();
             },
             respawn: function(player, spawnPoint) {
               player.isDead = false;
