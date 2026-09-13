@@ -403,6 +403,7 @@ audio = {
     sound.currentTime = 0;
     sound.play();
     sound.source.playbackRate.value = 1;
+    console.log("Walk sound started");
   },
   stopWalk: function() {
     let sound = audio.sounds["weapon.walk"];
@@ -411,6 +412,7 @@ audio = {
   run: function() {
     let sound = audio.sounds["weapon.walk"];
     if (sound.playing) sound.source.playbackRate.value = 1.5;
+    console.log("Run sound started");
   },
   stopRun: function() {
     let sound = audio.sounds["weapon.walk"];

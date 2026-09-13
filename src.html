@@ -240,13 +240,18 @@
         left: 50%;
         margin-left: -100px;
         bottom: -20px;
+        border: 2px solid rgba(100, 200, 255, 0.4);
+        border-radius: 8px;
+        box-sizing: border-box;
       }
       .ui-section.bottom-section .scores .scoreboard {
-        background: rgba(20, 20, 20, 0.7);
+        background: rgba(80, 80, 80, 0.6);
         width: 100%;
         text-align: center;
         font-family: "Arame";
         padding: 2px;
+        margin: 2px;
+        border-radius: 6px;
       }
       .ui-section.bottom-section .scores .scoreboard.scoreboard-left {
         border-right: 1px solid #999;
@@ -282,6 +287,56 @@
         font-family: "Arame";
         font-size: 16px;
       }
+      .ui.mobile-ui .ui-section.top-section {
+        transform: perspective(50px) rotateX(-8deg) scale(.8);
+        transform-origin: center top;
+        top: 15px;
+      }
+      .ui.mobile-ui .ui-radar {
+        transform: scale(.75);
+        transform-origin: bottom left;
+        left: 100px;
+        bottom: 20px;
+      }
+      .ui.mobile-ui .ui-section.bottom-right-section {
+        transform: scale(1);
+        right: 100px;
+      }
+      .ui.mobile-ui .ui-section.bottom-section {
+        transform: scale(.65);
+        transform-origin: center bottom;
+      }
+      .kill-popup-medals {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        font-family: "Arame";
+        color: #eee;
+        text-shadow: 2px 2px 0 #333;
+        width: 200px;
+        margin-left: -180px;
+        margin-top: -66px;
+      }
+      .kill-popup .kill-popup-points {
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        top: 50%;
+        margin-top: -70px;
+        margin-left: -10px;
+        font-size: 30px;
+        font-family: "Arame";
+        color: #eee;
+        text-shadow: 2px 2px 0 #333;
+      }
+      .kill-popup .kill-popup-medals .kill-popup-medal {
+        background-size: 30px;
+        background-repeat: no-repeat;
+        padding-left: 40px;
+        height: 30px;
+        font-size: 16px;
+        margin-top: 10px;
+      }
     </style>
   </head>
   <body>
@@ -306,6 +361,20 @@
     </div>
     <div class="ui" id="game-ui">
       <div class="vignette"></div>
+      <div class="kill-popup">
+        <div class="kill-popup-points">+<span id="value">10</span></div>
+        <div class="kill-popup-medals">
+          <div class="kill-popup-medal kill-popup-medal_kill" style="background-image:url(/images/medals/kill.png)">Kill</div>
+          <div class="kill-popup-medal kill-popup-medal_double-kill" style="background-image:url(/images/medals/double-kill.png)">Double Kill</div>
+          <div class="kill-popup-medal kill-popup-medal_triple-kill" style="background-image:url(/images/medals/triple-kill.png)">Triple Kill</div>
+          <div class="kill-popup-medal kill-popup-medal_melee-kill" style="background-image:url(/images/medals/melee-kill.png)">Melee Kill</div>
+          <div class="kill-popup-medal kill-popup-medal_vehicle-kill" style="background-image:url(/images/medals/vehicle-kill.png)">Vehicle Kill</div>
+          <div class="kill-popup-medal kill-popup-medal_grenade-kill" style="background-image:url(/images/medals/grenade-kill.png)">Grenade Kill</div>
+          <div class="kill-popup-medal kill-popup-medal_rocket-kill" style="background-image:url(/images/medals/rocket-kill.png)">Rocket Kill</div>
+          <div class="kill-popup-medal kill-popup-medal_headshot" style="background-image:url(/images/medals/headshot.png)">Headshot</div>
+          <div class="kill-popup-medal kill-popup-medal_snapshot" style="background-image:url(/images/medals/snapshot.png)">Snapshot</div>
+        </div>
+      </div>
       <img class="crosshair" src="/images/crosshairs/0.png">
       <div class="ui-section top-section">
         <div class="ui-health-bar">
@@ -590,7 +659,7 @@
             gravity: 100, // Percent
             teamGame: false,
             teamSize: 2, // Players
-            playersNeeded: 2, // Players
+            playersNeeded: 1, // Players
             respawnTime: 4, // Seconds
             timeLimit: null // Seconds
           }
@@ -2997,7 +3066,7 @@
             }
           },
           switch: function(slot = null, instant = false, ignoreVehicles = false) {
-            if (!ignoreVehicles && (utils.vehicles.check() || utils.vehicles.check("gunner"))) return;
+            if (!ignoreVehicles && (utils.vehicles.check() || utils.vehicles.check("gunner")) || deathScreen) return;
             utils.options.set("Switching", true);
             utils.weapons.stopFire();
             utils.weapons.stopZoom();
@@ -3315,6 +3384,7 @@
           },
           sprint: function() {
             if (utils.vehicles.check(true)) return;
+            if (!playerOnFloor) return utils.options.set("CheckRunningAfterJump", true);
             if (utils.options.get("Sprinting")) return;
             utils.options.set("Sprinting", true);
             utils.weapons.stopFire();
@@ -4323,6 +4393,11 @@
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth * 0.5, window.innerHeight * 0.5, false);
+        if (window.innerWidth < 1000 && window.innerHeight < 500) {
+          if (!utils.ui.elements.ui.className.includes("mobile-ui")) utils.ui.elements.ui.classList.add("mobile-ui");
+        } else {
+          if (utils.ui.elements.ui.className.includes("mobile-ui")) utils.ui.elements.ui.classList.remove("mobile-ui");
+        }
       }
       window.addEventListener("resize", onWindowResize);
       onWindowResize();
