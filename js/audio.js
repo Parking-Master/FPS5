@@ -136,6 +136,7 @@ audio = {
       "weapon.walk": AudioWrapper("/sounds/weapons/walking.mp3"),
       "weapon.zoom-in": AudioWrapper("/sounds/weapons/zoom-in.mp3"),
       "weapon.zoom-out": AudioWrapper("/sounds/weapons/zoom-out.mp3"),
+      "medal": AudioWrapper("/sounds/weapons/medal.mp3"),
     };
     for (let i = 0; i < weapons.length; i++) {
       if (sandbox.weapons[weapons[i]].loaded) {
@@ -403,7 +404,6 @@ audio = {
     sound.currentTime = 0;
     sound.play();
     sound.source.playbackRate.value = 1;
-    console.log("Walk sound started");
   },
   stopWalk: function() {
     let sound = audio.sounds["weapon.walk"];
@@ -412,7 +412,6 @@ audio = {
   run: function() {
     let sound = audio.sounds["weapon.walk"];
     if (sound.playing) sound.source.playbackRate.value = 1.5;
-    console.log("Run sound started");
   },
   stopRun: function() {
     let sound = audio.sounds["weapon.walk"];
@@ -435,6 +434,12 @@ audio = {
     sound.currentTime = 0;
     sound.play();
     sound.source.playbackRate.value = Math.min(.5 / (weapon.zoomDuration / 1000), 2.5);
+  },
+  medal: function() {
+    let sound = audio.sounds["medal"];
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
   },
 };
 

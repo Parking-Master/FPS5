@@ -20,6 +20,14 @@
           box-shadow: inset 0 0 40px rgba(220, 30, 20, 0.8);
         }
       }
+      @keyframes medal {
+        0% {
+          transform: scale(1.5);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
       html, body {
         margin: 0;
         overflow: hidden !important;
@@ -68,10 +76,17 @@
         margin-left: -17.5px;
         margin-top: -17.5px;
       }
+      .ui-container {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        z-index: 2147483645;
+      }
       .ui {
         position: fixed;
         width: 100%;
         height: 100%;
+        top: 0;
         pointer-events: none !important;
         z-index: 2147483645;
       }
@@ -287,25 +302,6 @@
         font-family: "Arame";
         font-size: 16px;
       }
-      .ui.mobile-ui .ui-section.top-section {
-        transform: perspective(50px) rotateX(-8deg) scale(.8);
-        transform-origin: center top;
-        top: 15px;
-      }
-      .ui.mobile-ui .ui-radar {
-        transform: scale(.75);
-        transform-origin: bottom left;
-        left: 100px;
-        bottom: 20px;
-      }
-      .ui.mobile-ui .ui-section.bottom-right-section {
-        transform: scale(1);
-        right: 100px;
-      }
-      .ui.mobile-ui .ui-section.bottom-section {
-        transform: scale(.65);
-        transform-origin: center bottom;
-      }
       .kill-popup-medals {
         position: absolute;
         left: 50%;
@@ -323,11 +319,13 @@
         text-align: center;
         top: 50%;
         margin-top: -70px;
-        margin-left: -10px;
+        margin-left: -9px;
         font-size: 30px;
         font-family: "Arame";
         color: #eee;
         text-shadow: 2px 2px 0 #333;
+        opacity: 1;
+        transition: opacity 1s;
       }
       .kill-popup .kill-popup-medals .kill-popup-medal {
         background-size: 30px;
@@ -336,6 +334,94 @@
         height: 30px;
         font-size: 16px;
         margin-top: 10px;
+        opacity: 1;
+        transition: opacity 1s;
+      }
+      .kill-popup-medal_kill { background-image: url(/images/medals/kill.png) }
+      .kill-popup-medal_double-kill { background-image: url(/images/medals/double-kill.png) }
+      .kill-popup-medal_triple-kill { background-image: url(/images/medals/triple-kill.png) }
+      .kill-popup-medal_melee-kill { background-image: url(/images/medals/melee-kill.png) }
+      .kill-popup-medal_vehicle-kill { background-image: url(/images/medals/vehicle-kill.png) }
+      .kill-popup-medal_grenade-kill { background-image: url(/images/medals/grenade-kill.png) }
+      .kill-popup-medal_rocket-kill { background-image: url(/images/medals/rocket-kill.png) }
+      .kill-popup-medal_headshot { background-image: url(/images/medals/headshot.png) }
+      .kill-popup-medal_snapshot { background-image: url(/images/medals/snapshot.png) }
+      body.auto-resize-mobile {
+        background: #000;
+      }
+      body.auto-resize-mobile .ui-section.top-section {
+        transform: perspective(50px) rotateX(-8deg) scale(.8);
+        transform-origin: center top;
+        top: 15px;
+      }
+      body.auto-resize-mobile .ui-radar {
+        transform: scale(.6);
+        transform-origin: bottom left;
+        left: 220px;
+        bottom: 20px;
+      }
+      body.auto-resize-mobile .ui-section.bottom-right-section {
+        transform: scale(1);
+        right: 100px;
+      }
+      body.auto-resize-mobile .ui-section.bottom-section {
+        transform: scale(.65);
+        transform-origin: center bottom;
+      }
+      body.auto-resize-mobile .ui-container {
+        position: fixed;
+        width: 1000px;
+        height: 500px;
+        left: 50%;
+        top: 50%;
+        margin-left: -500px;
+        margin-top: -250px;
+      }
+      body.auto-resize-mobile canvas {
+        position: relative;
+        width: 1000px !important;
+        height: 500px !important;
+      }
+      .mobile-ui {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        z-index: 2147483645;
+      }
+      .mobile-ui .movement-touch-area {
+        position: absolute;
+        width: 50%;
+        height: 100%;
+        left: 0;
+        top: 0;
+        bottom: 0;
+      }
+      .mobile-ui .movement-touch-area * {
+        pointer-events: none !important;
+      }
+      .mobile-ui .movement-node {
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        left: 50px;
+        bottom: 50px;
+        border-radius: 100%;
+        border: 3px solid rgba(80, 80, 80, 0.3);
+        box-sizing: border-box;
+        background-image: url(/images/ui/mobile-ui/movement-node.png);
+        background-color: rgba(50, 50, 50, 0.6);
+        background-size: 100%;
+        background-position: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .mobile-ui .movement-node .movement-stick {
+        position: relative;
+        padding: 30px;
+        background: rgba(20, 20, 20, 0.5);
+        border: 3px solid rgba(80, 80, 80, 0.6);
+        border-radius: 100%;
       }
     </style>
   </head>
@@ -352,66 +438,73 @@
     <script src="/js/text.js"></script>
     <script src="/js/Tween.js"></script>
     <script src="/js/PointerLockControls.js"></script>
+    <script src="/js/TouchScreenControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Parking-Master/Gametime.js/js/username-generator.js"></script>
     <script src="/js/user.js"></script>
-    <div class="hurt-screen"></div>
-    <div class="ui-section left-section">
-      <div class="ui-kill-stats"></div>
-    </div>
-    <div class="ui" id="game-ui">
-      <div class="vignette"></div>
-      <div class="kill-popup">
-        <div class="kill-popup-points">+<span id="value">10</span></div>
-        <div class="kill-popup-medals">
-          <div class="kill-popup-medal kill-popup-medal_kill" style="background-image:url(/images/medals/kill.png)">Kill</div>
-          <div class="kill-popup-medal kill-popup-medal_double-kill" style="background-image:url(/images/medals/double-kill.png)">Double Kill</div>
-          <div class="kill-popup-medal kill-popup-medal_triple-kill" style="background-image:url(/images/medals/triple-kill.png)">Triple Kill</div>
-          <div class="kill-popup-medal kill-popup-medal_melee-kill" style="background-image:url(/images/medals/melee-kill.png)">Melee Kill</div>
-          <div class="kill-popup-medal kill-popup-medal_vehicle-kill" style="background-image:url(/images/medals/vehicle-kill.png)">Vehicle Kill</div>
-          <div class="kill-popup-medal kill-popup-medal_grenade-kill" style="background-image:url(/images/medals/grenade-kill.png)">Grenade Kill</div>
-          <div class="kill-popup-medal kill-popup-medal_rocket-kill" style="background-image:url(/images/medals/rocket-kill.png)">Rocket Kill</div>
-          <div class="kill-popup-medal kill-popup-medal_headshot" style="background-image:url(/images/medals/headshot.png)">Headshot</div>
-          <div class="kill-popup-medal kill-popup-medal_snapshot" style="background-image:url(/images/medals/snapshot.png)">Snapshot</div>
-        </div>
+    <div class="ui-container">
+      <div class="hurt-screen"></div>
+      <div class="ui-section left-section">
+        <div class="ui-kill-stats"></div>
       </div>
-      <img class="crosshair" src="/images/crosshairs/0.png">
-      <div class="ui-section top-section">
-        <div class="ui-health-bar">
-          <div class="ui-health-value"></div>
+      <div class="ui" id="game-ui">
+        <div class="vignette"></div>
+        <div class="kill-popup">
+          <div class="kill-popup-points">+<span id="value">10</span></div>
+          <div class="kill-popup-medals"></div>
         </div>
-        <div class="ui-ammo-info">NO AMMO LEFT IN WEAPON. PRESS [Y] TO SWITCH WEAPON.</div>
-      </div>
-      <div class="ui-section bottom-section">
-        <div class="ui-pickup-weapon">
-          <img src="/images/weapons/AK-74.png" class="ui-pickup-weapon-icon">
-          <p>PRESS [T] TO PICK UP AK-74 ASSAULT RIFLE</p>
-        </div>
-        <div class="scores">
-          <div class="time">12:00</div>
-          <div class="scoreboard scoreboard-left">
-            <div class="score-username">YOU</div>
-            <div class="score-value">0</div>
+        <img class="crosshair" src="/images/crosshairs/0.png">
+        <div class="ui-section top-section">
+          <div class="ui-health-bar">
+            <div class="ui-health-value"></div>
           </div>
-          <div class="scoreboard scoreboard-right">
-            <div class="score-username">ENEMY</div>
-            <div class="score-value">0</div>
+          <div class="ui-ammo-info">NO AMMO LEFT IN WEAPON. PRESS [Y] TO SWITCH WEAPON.</div>
+        </div>
+        <div class="ui-section bottom-section">
+          <div class="ui-pickup-weapon">
+            <img src="/images/weapons/AK-74.png" class="ui-pickup-weapon-icon">
+            <p>PRESS [T] TO PICK UP AK-74 ASSAULT RIFLE</p>
+          </div>
+          <div class="scores">
+            <div class="time">12:00</div>
+            <div class="scoreboard scoreboard-left">
+              <div class="score-username">YOU</div>
+              <div class="score-value">0</div>
+            </div>
+            <div class="scoreboard scoreboard-right">
+              <div class="score-username">ENEMY</div>
+              <div class="score-value">0</div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="ui-section bottom-left-section">
-        <div class="ui-radar">
-          <canvas style="width: 100%; height: 100%" width="150" height="150"></canvas>
+        <div class="ui-section bottom-left-section">
+          <div class="ui-radar">
+            <canvas style="width: 100%; height: 100%" width="150" height="150"></canvas>
+          </div>
+        </div>
+        <div class="ui-section bottom-right-section">
+          <div class="ui-weapon">
+            <div class="ui-ammo"><span class="current-value">36</span> <span class="remaining-value">/ 108</span></div>
+            <img class="ui-primary-weapon-display">
+          </div>
+          <div class="ui-slot ui-grenades ui-grenades-mk2"><img class="icon" src="/images/ui/grenade_mk2.png"> <span class="value">0</span></div>
+          <div class="ui-slot ui-grenades ui-grenades-plasma"><img class="icon" src="/images/ui/grenade_plasma.png"> <span class="value">0</span></div>
+          <img class="ui-secondary-weapon-display">
         </div>
       </div>
-      <div class="ui-section bottom-right-section">
-        <div class="ui-weapon">
-          <div class="ui-ammo"><span class="current-value">36</span> <span class="remaining-value">/ 108</span></div>
-          <img class="ui-primary-weapon-display">
+      <div class="mobile-ui">
+        <div class="movement-touch-area">
+          <div class="movement-node">
+            <div class="movement-stick"></div>
+          </div>
         </div>
-        <div class="ui-slot ui-grenades ui-grenades-mk2"><img class="icon" src="/images/ui/grenade_mk2.png"> <span class="value">0</span></div>
-        <div class="ui-slot ui-grenades ui-grenades-plasma"><img class="icon" src="/images/ui/grenade_plasma.png"> <span class="value">0</span></div>
-        <img class="ui-secondary-weapon-display">
+        <div class="fire-weapon-node"></div>
+        <div class="reload-weapon-node"></div>
+        <div class="zoom-weapon-node"></div>
+        <div class="throw-grenade-node"></div>
+        <div class="crouch-node"></div>
+        <div class="enter-vehicle-node"></div>
+        <div class="pickup-weapon-node"></div>
       </div>
     </div>
     <script>
@@ -424,7 +517,7 @@
 
       camera.rotation.order = "YXZ";
       scene.add(camera);
-      document.body.appendChild(renderer.domElement);
+      document.querySelector(".ui-container").appendChild(renderer.domElement);
 
       const directionalLight = new THREE.DirectionalLight(0xf4e6bc, 1.1);
       const ambientLight = new THREE.AmbientLight(0xefe1a7, 0.4);
@@ -495,6 +588,7 @@
         audio.update(cameraPosition, cameraRotation);
         utils.weapons.position(cameraPosition, cameraRotation);
         utils.weapons.updateSpawned(deltaTime);
+        TouchControls.update();
 
         for (let i = 0; i < sandbox.models.length; i++) {
           if (sandbox.models[i].loaded && sandbox.models[i].model.animationMixer) {
@@ -588,6 +682,16 @@
               delete spawnedWeapons[object.uuid];
               utils.options.set("SpawnedWeapons", spawnedWeapons);
               delete tmpObjects[uuid];
+            } else if (object.objectType == "displayMedal") {
+              utils.ui.displayMedal(object.medal);
+              delete tmpObjects[uuid];
+            } else if (object.objectType == "hideMedal") {
+              utils.ui.cache.activeMedals.splice(utils.ui.cache.activeMedals.indexOf(object.medal), 1);
+              if (utils.ui.cache.activeMedals.indexOf(object.medal) < 0) utils.ui.elements.killPopupMedals[object.medal].style = "opacity: 0";
+              delete tmpObjects[uuid];
+            } else if (object.objectType == "hidePoints") {
+              if (utils.ui.cache.activeMedals.length <= 0) object.style = "opacity: 0", utils.ui.cache.activePoints = 0;
+              delete tmpObjects[uuid];
             }
           }
           if (object.objectType == "deathPose" && object.parentType == "camera") {
@@ -666,6 +770,17 @@
         },
         loadout: [],
         grenades: {},
+        medals: {
+          "kill": { points: 10, name: "Kill" },
+          "double-kill": { points: 10, name: "Double Kill" },
+          "triple-kill": { points: 10, name: "Triple Kill" },
+          "melee-kill": { points: 5, name: "Melee Kill" },
+          "vehicle-kill": { points: 5, name: "Vehicle Kill" },
+          "grenade-kill": { points: 10, name: "Grenade Kill" },
+          "rocket-kill": { points: 5, name: "Rocket Kill" },
+          "headshot": { points: 5, name: "Headshot" },
+          "snapshot": { points: 10, name: "Snapshot" }
+        },
         currentWeapon: null,
         primaryWeapon: null,
         secondaryWeapon: null,
@@ -720,6 +835,7 @@
         },
         initialize: function() {
           audio.initialize(function() {
+            onWindowResize();
             if (sandbox.presets.options.teamGame) {
               utils.players.setArmorColor("self");
               utils.ui.elements.scores.classList.add("team-game");
@@ -1497,6 +1613,7 @@
             scopeRendered: false,
             delayBetweenShots: 700,
             type: "rifle",
+            sniper: true,
             model: null,
             loaded: false,
             animationStructure: {
@@ -1639,6 +1756,7 @@
             scopeRendered: false,
             delayBetweenShots: 300,
             type: "rifle",
+            sniper: true,
             model: null,
             loaded: false,
             animationStructure: {
@@ -1763,7 +1881,9 @@
             leftTeamScore: null,
             rightTeamUsername: null,
             rightTeamScore: null,
-            timeInitiallyUpdated: false
+            timeInitiallyUpdated: false,
+            activeMedals: [],
+            activePoints: 0
           },
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
@@ -1776,6 +1896,7 @@
             healthBar: document.querySelector(".ui .ui-health-bar"),
             hurtScreen: document.querySelector(".hurt-screen"),
             ui: document.querySelector(".ui"),
+            container: document.querySelector(".ui-container"),
             vignette: document.querySelector(".ui .vignette"),
             primaryWeaponDisplay: document.querySelector(".ui .ui-primary-weapon-display"),
             secondaryWeaponDisplay: document.querySelector(".ui .ui-secondary-weapon-display"),
@@ -1790,7 +1911,10 @@
             rightTeamUsername: document.querySelector(".ui-section.bottom-section .scores .scoreboard-right .score-username"),
             rightTeamScore: document.querySelector(".ui-section.bottom-section .scores .scoreboard-right .score-value"),
             time: document.querySelector(".time"),
-            scores: document.querySelector(".scores")
+            scores: document.querySelector(".scores"),
+            killPopupMedalsWrapper: document.querySelector(".kill-popup-medals"),
+            killPopupMedals: {},
+            killPopupPoints: document.querySelector(".kill-popup-points")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle, time) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -1942,6 +2066,16 @@
             row.textContent = text;
             utils.ui.elements.killStats.appendChild(row);
             utils.options.addTmpObject(row, "htmlElement", 6000);
+          },
+          displayMedal: function(medal) {
+            utils.ui.cache.activePoints += sandbox.medals[medal].points;
+            utils.ui.cache.activeMedals.push(medal);
+            utils.ui.elements.killPopupPoints.style = "transition: none";
+            utils.ui.elements.killPopupPoints.querySelector("#value").textContent = utils.ui.cache.activePoints;
+            utils.ui.elements.killPopupMedals[medal].style = "animation: medal .3s ease-in";
+            utils.options.addTmpObject({ medal: medal }, "hideMedal", 3000);
+            utils.options.addTmpObject(utils.ui.elements.killPopupPoints, "hidePoints", 3000);
+            audio.medal();
           },
           radar: {
             init: function(radarRange = 18) {
@@ -2224,7 +2358,7 @@
               const distance = worldPosition.distanceTo(camera.position);
               if (distance > weapon.distance) return;
               const realDamage = Math.min(weapon.damage / (distance / 1.3 * (weapon.distance / 5)), weapon.damage);
-              utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null, weapon);
+              utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null, weapon, false, false, true);
             } else if (weapon == "melee") {
               const realDamage = 100;
               gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, false, true]);
@@ -2237,10 +2371,11 @@
               } else {
                 realDamage = 150;
               }
-              utils.health.subtract(realDamage, utils.players.objects[weapon.lastUsedBy] || null, null);
+              utils.health.subtract(realDamage, utils.players.objects[weapon.lastUsedBy] || null, null, false, false, false, true);
             } else {
               const realDamage = (shield.shieldType == "head" ? weapon.headshotDamage : weapon.damage) / Math.max(camera.getWorldPosition(vectors[31]).distanceTo(player.scene.position) / weapon.range, 1);
-              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, shield.shieldType == "head"]);
+              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, shield.shieldType == "head", false, false, false, (weapon.sniper && !utils.options.get("Zoomed"))]);
+              audio.hit();
             }
           },
           incrementScore: function() {
@@ -2552,7 +2687,7 @@
             }
           },
           health: {
-            die: function(player, killer, isHeadshot) {
+            die: function(player, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) {
               player.isDead = true;
               utils.players.animations.stop(player, "rifle_idle");
               utils.players.animations.stop(player, "pistol_idle");
@@ -2565,7 +2700,29 @@
               });
               if (killer == gametime.player.uuid) {
                 if (isHeadshot) audio.hitHeadshot();
-                if (sandbox.presets.options.teamGame ? gametime.players[player.uuid].data.team != gametime.player.data.team : true) utils.players.incrementScore();
+                if (sandbox.presets.options.teamGame ? gametime.players[player.uuid].data.team != gametime.player.data.team : true) {
+                  if (Date.now() - utils.options.get("lastKill") <= 4500) {
+                    utils.options.set("KillStreak", utils.options.get("KillStreak") + 1);
+                  } else {
+                    utils.options.set("KillStreak", 1);
+                  }
+                  utils.options.set("lastKill", Date.now());
+                  let medals = [];
+                  medals.push("kill");
+                  let killStreak = utils.options.get("KillStreak");
+                  if (killStreak == 2) {
+                    medals.push("double-kill");
+                  } else if (killStreak == 3) {
+                    medals.push("triple-kill");
+                  }
+                  if (isMelee) medals.push("melee-kill");
+                  if (isGrenade) medals.push("grenade-kill");
+                  if (isVehicle) medals.push("vehicle-kill");
+                  if (isHeadshot) medals.push("headshot");
+                  if (isSnapshot) medals.push("snapshot");
+                  for (let i = 0; i < medals.length; i++) utils.options.addTmpObject({ medal: medals[i] }, "displayMedal", 500 * i);
+                  utils.players.incrementScore();
+                }
               }
               utils.ui.addKillStatsRow(killer, player.uuid);
               audio.dying(player.scene.position);
@@ -4270,9 +4427,9 @@
             utils.health.current = newHealth;
             utils.ui.setHealthBar(newHealth, "short");
           },
-          subtract: function(amount, killer, grenade, isHeadshot, isMelee = false) {
+          subtract: function(amount, killer, grenade, isHeadshot, isMelee = false, isGrenade = false, isVehicle = false, isSnapshot = false) {
             const newHealth = utils.health.current - Math.round(amount);
-            if (newHealth <= -25) utils.health.die(killer || "self", isHeadshot);
+            if (newHealth <= -25) utils.health.die(killer || "self", isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot);
             utils.health.current = newHealth;
             utils.ui.setHealthBar(Math.max(newHealth, 0), "short");
             utils.health.lastHitTimestamp = Date.now();
@@ -4292,7 +4449,7 @@
             utils.health.current = 100;
             utils.ui.setHealthBar(100, "instant");
           },
-          die: function(killer, isHeadshot = false) {
+          die: function(killer, isHeadshot = false, isMelee = false, isGrenade = false, isVehicle = false, isSnapshot = false) {
             for (key in keyStates) keyStates[key] = false;
             audio.stopShieldsWarning();
             audio.stopShieldsLow();
@@ -4317,11 +4474,11 @@
                 body: deathPose
               });
               utils.ui.addKillStatsRow("self", "self");
-              gametime.run("playerDie", [gametime.player.uuid, gametime.player.uuid, false]);
+              gametime.run("playerDie", [gametime.player.uuid, gametime.player.uuid]);
             } else {
               utils.options.set("Killer", killer.uuid);
               utils.ui.addKillStatsRow(killer.uuid, "self");
-              gametime.run("playerDie", [gametime.player.uuid, killer.uuid, isHeadshot]);
+              gametime.run("playerDie", [gametime.player.uuid, killer.uuid, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot]);
               if (isHeadshot) audio.hitHeadshot();
             }
             camera.rotation.set(Math.PI / 2 - 0.8, 0, 0);
@@ -4363,6 +4520,19 @@
         }
       };
 
+      for (medal in sandbox.medals) {
+        let element = document.createElement("div");
+        element.className = "kill-popup-medal kill-popup-medal_" + medal;
+        element.textContent = sandbox.medals[medal].name;
+        utils.ui.elements.killPopupMedalsWrapper.appendChild(element);
+        utils.ui.elements.killPopupMedals[medal] = element;
+        element.style = "display: none";
+        element.addEventListener("transitionend", function() {
+          if (getComputedStyle(element).opacity == 0) element.style = "display: none";
+        });
+      }
+      utils.ui.elements.killPopupPoints.style.opacity = 0;
+
       if (user.loggedIn) {
         sandbox.presets.character = user.data.character;
         sandbox.presets.loadout = user.data.loadout;
@@ -4390,14 +4560,24 @@
 
       function onWindowResize() {
         renderer.setPixelRatio(1.3);
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth * 0.5, window.innerHeight * 0.5, false);
-        if (window.innerWidth < 1000 && window.innerHeight < 500) {
-          if (!utils.ui.elements.ui.className.includes("mobile-ui")) utils.ui.elements.ui.classList.add("mobile-ui");
+        if (utils.options.get("MobileGame") || (window.innerWidth < 1000 && window.innerHeight < 500)) {
+          if (!document.body.className.includes("auto-resize-mobile")) document.body.classList.add("auto-resize-mobile");
+          if (window.innerWidth < 1000 * (window.innerHeight / 500)) {
+            utils.options.set("uiScale", window.innerWidth / 1000);
+            utils.ui.elements.container.style.transform = `scale(${window.innerWidth / 1000})`;
+          } else {
+            utils.options.set("uiScale", window.innerWidth / 500);
+            utils.ui.elements.container.style.transform = `scale(${window.innerHeight / 500})`;
+          }
+          camera.aspect = 1000 / 500;
+          renderer.setSize(1000, 500, false);
         } else {
-          if (utils.ui.elements.ui.className.includes("mobile-ui")) utils.ui.elements.ui.classList.remove("mobile-ui");
+          if (document.body.className.includes("auto-resize-mobile")) document.body.classList.remove("auto-resize-mobile");
+          utils.ui.elements.container.style.transform = "";
+          camera.aspect = window.innerWidth / window.innerHeight;
+          renderer.setSize(window.innerWidth * 0.5, window.innerHeight * 0.5, false);
         }
+        camera.updateProjectionMatrix();
       }
       window.addEventListener("resize", onWindowResize);
       onWindowResize();
@@ -4442,6 +4622,7 @@
       });
 
       const PointerControls = new PointerLockControls(camera, renderer.domElement);
+      const TouchControls = new TouchScreenControls(camera, document.querySelector(".mobile-ui"));
       PointerControls.maxPolarAngle = Math.PI - 0.15;
       PointerControls.minPolarAngle = 0.15;
       PointerControls.pointerSpeed = 0.6;
@@ -4488,6 +4669,10 @@
       utils.options.set("PreviousGunnerWeapon", null);
       utils.options.set("GravityLifts", []);
       utils.options.set("CheckRunningAfterJump", false);
+      utils.options.set("KillStreak", 0);
+      utils.options.set("lastKill", null);
+      utils.options.set("MobileGame", /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in document.documentElement));
+      utils.options.set("uiScale", 1);
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -4533,11 +4718,11 @@
       gametime.on("stopCrouching", function(player) {
         if (player != gametime.player.uuid) utils.players.stopCrouching(utils.players.objects[player]);
       });
-      gametime.on("damage", function(player, damage, killer, isHeadshot, isMelee) {
-        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee), utils.effects.shock(damage / 400);
+      gametime.on("damage", function(player, damage, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) {
+        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot), utils.effects.shock(damage / 400);
       });
-      gametime.on("playerDie", function(player, killer, isHeadshot) {
-        if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer, isHeadshot);
+      gametime.on("playerDie", function(player, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) {
+        if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot);
       });
       gametime.on("playerRespawn", function(player, spawnPoint) {
         if (player != gametime.player.uuid) utils.players.health.respawn(utils.players.objects[player], spawnPoint);
