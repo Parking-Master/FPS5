@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <title>FPS5 multiplayer shooter</title>
     <style>
       @font-face {
@@ -32,6 +32,8 @@
         margin: 0;
         overflow: hidden !important;
         user-select: none !important;
+        touch-action: none !important;
+        -webkit-touch-callout: none !important;
       }
       body {
         margin: 0;
@@ -362,7 +364,8 @@
       }
       body.auto-resize-mobile .ui-section.bottom-right-section {
         transform: scale(1);
-        right: 100px;
+        right: 200px;
+        bottom: 20px;
       }
       body.auto-resize-mobile .ui-section.bottom-section {
         transform: scale(.65);
@@ -377,7 +380,7 @@
         margin-left: -500px;
         margin-top: -250px;
       }
-      body.auto-resize-mobile canvas {
+      body.auto-resize-mobile > canvas {
         position: relative;
         width: 1000px !important;
         height: 500px !important;
@@ -388,13 +391,21 @@
         height: 100%;
         z-index: 2147483645;
       }
-      .mobile-ui .movement-touch-area {
+      .mobile-ui .movement-touch-area, .mobile-ui .look-touch-area {
         position: absolute;
         width: 50%;
         height: 100%;
-        left: 0;
         top: 0;
         bottom: 0;
+      }
+      .mobile-ui .movement-touch-area * {
+        pointer-events: none !important;
+      }
+      .mobile-ui .movement-touch-area {
+        left: 0;
+      }
+      .mobile-ui .look-touch-area {
+        right: 0;
       }
       .mobile-ui .movement-touch-area * {
         pointer-events: none !important;
@@ -422,6 +433,48 @@
         background: rgba(20, 20, 20, 0.5);
         border: 3px solid rgba(80, 80, 80, 0.6);
         border-radius: 100%;
+      }
+      .mobile-ui-movement-stick-thumb {
+        position: absolute;
+        padding: 40px;
+        background: rgba(80, 80, 80, 0.8);
+        border-radius: 100%;
+        z-index: 2147483645;
+        display: none;
+      }
+      .mobile-ui .fire-weapon-node {
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        right: 50px;
+        bottom: 60px;
+        border-radius: 100%;
+        border: 3px solid rgba(80, 80, 80, 0.3);
+        box-sizing: border-box;
+        background-image: url(/images/ui/mobile-ui/fire-weapon-node.png);
+        background-color: rgba(30, 30, 30, 0.7);
+        background-size: 100%;
+        background-position: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .mobile-ui .jump-node {
+        position: absolute;
+        width: 70px;
+        height: 70px;
+        right: 20px;
+        bottom: 200px;
+        border-radius: 100%;
+        border: 3px solid rgba(80, 80, 80, 0.3);
+        box-sizing: border-box;
+        background-image: url(/images/ui/mobile-ui/jump-node.png);
+        background-color: rgba(30, 30, 30, 0.7);
+        background-size: 100%;
+        background-position: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
     </style>
   </head>
@@ -498,15 +551,19 @@
             <div class="movement-stick"></div>
           </div>
         </div>
-        <div class="fire-weapon-node"></div>
-        <div class="reload-weapon-node"></div>
-        <div class="zoom-weapon-node"></div>
-        <div class="throw-grenade-node"></div>
-        <div class="crouch-node"></div>
-        <div class="enter-vehicle-node"></div>
-        <div class="pickup-weapon-node"></div>
+        <div class="look-touch-area">
+          <div class="fire-weapon-node"></div>
+          <div class="reload-weapon-node"></div>
+          <div class="zoom-weapon-node"></div>
+          <div class="throw-grenade-node"></div>
+          <div class="jump-node"></div>
+          <div class="crouch-node"></div>
+          <div class="enter-vehicle-node"></div>
+          <div class="pickup-weapon-node"></div>
+        </div>
       </div>
     </div>
+    <div class="mobile-ui-movement-stick-thumb"></div>
     <script>
       if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -569,7 +626,7 @@
         const weapon = utils.weapons.getCurrentEntry();
 
         for (let i = 0; i < 4; i++) {
-          utils.physics.controls(deltaTime);
+          utils.physics.controls(deltaTime, time);
           utils.physics.updatePlayer(deltaTime);
           utils.physics.updateGrenades(deltaTime, time, i);
           utils.physics.updateVehicles(deltaTime, time, i);
@@ -588,7 +645,6 @@
         audio.update(cameraPosition, cameraRotation);
         utils.weapons.position(cameraPosition, cameraRotation);
         utils.weapons.updateSpawned(deltaTime);
-        TouchControls.update();
 
         for (let i = 0; i < sandbox.models.length; i++) {
           if (sandbox.models[i].loaded && sandbox.models[i].model.animationMixer) {
@@ -1473,6 +1529,7 @@
             recoil: 0.5,
             reticle: 0,
             bulletHole: 0,
+            defaultDelayBetweenShots: 100,
             type: "rifle",
             model: null,
             loaded: false,
@@ -1507,6 +1564,7 @@
             recoil: 1,
             reticle: 1,
             bulletHole: 0,
+            defaultDelayBetweenShots: 300,
             type: "pistol",
             model: null,
             loaded: false,
@@ -1541,6 +1599,7 @@
             recoil: 0.8,
             reticle: 2,
             bulletHole: 0,
+            defaultDelayBetweenShots: 80,
             type: "rifle",
             model: null,
             loaded: false,
@@ -1575,6 +1634,7 @@
             recoil: 0.5,
             reticle: 3,
             bulletHole: 0,
+            defaultDelayBetweenShots: 65,
             type: "rifle",
             model: null,
             loaded: false,
@@ -1612,6 +1672,7 @@
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 700,
+            defaultDelayBetweenShots: 700,
             type: "rifle",
             sniper: true,
             model: null,
@@ -1647,6 +1708,7 @@
             recoil: 1,
             reticle: 5,
             bulletHole: 0,
+            defaultDelayBetweenShots: 200,
             type: "pistol",
             model: null,
             loaded: false,
@@ -1684,6 +1746,7 @@
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 200,
+            defaultDelayBetweenShots: 200,
             type: "rifle",
             model: null,
             loaded: false,
@@ -1718,6 +1781,7 @@
             recoil: .5,
             reticle: 7,
             bulletHole: 0,
+            defaultDelayBetweenShots: 100,
             type: "rifle",
             model: null,
             loaded: false,
@@ -1755,6 +1819,7 @@
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 300,
+            defaultDelayBetweenShots: 300,
             type: "rifle",
             sniper: true,
             model: null,
@@ -1791,6 +1856,7 @@
             reticle: 9,
             bulletHole: 0,
             delayBetweenShots: 200,
+            defaultDelayBetweenShots: 200,
             type: "pistol",
             model: null,
             loaded: false,
@@ -1828,6 +1894,7 @@
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 100,
+            defaultDelayBetweenShots: 400,
             type: "rifle",
             model: null,
             loaded: false,
@@ -2785,7 +2852,7 @@
             playerDirection.cross(camera.up);
             return playerDirection;
           },
-          controls: function(deltaTime) {
+          controls: function(deltaTime, time) {
             if (deathScreen) return;
             const vehicle = utils.options.get("CurrentVehicle");
             if (vehicle) {
@@ -2804,6 +2871,7 @@
             } else {
               const sprinting = utils.options.get("Sprinting");
               const walkSpeed = deltaTime * (playerOnFloor ? 24 : 1.5) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1);
+              TouchControls.update(deltaTime, time, walkSpeed);
               if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
                 playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(walkSpeed));
               }
@@ -2816,7 +2884,7 @@
               if ((keyStates["KeyD"] || keyStates["ArrowRight"]) && !sprinting) {
                 playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(walkSpeed));
               }
-              if (playerOnFloor && keyStates["Space"]) utils.weapons.jump();
+              if (keyStates["Space"]) utils.weapons.jump();
             }
           },
           updatePlayer: function(deltaTime) {
@@ -3306,7 +3374,7 @@
                 const time = Date.now();
                 if (time - lastFire >= weapon.fireRate) {
                   lastFire = time;
-                  if (weapon.delayBetweenShots) weapon.lastShot = time;
+                  weapon.lastShot = time;
                   utils.weapons.animations.start("shoot", { loop: THREE.LoopOnce, reset: true });
                   audio.fire(weapon);
 
@@ -3357,7 +3425,7 @@
               utils.options.set("ContinueFiring", false);
             }
           },
-          zoom: function(force = false) {
+          zoom: function(force = false, callback = () => {}) {
             if (utils.vehicles.check()) return;
             if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
             const weapon = utils.weapons.getCurrentEntry();
@@ -3397,7 +3465,7 @@
               }
               utils.options.set("globalZoomTween", {
                 in: {
-                  position: new TWEEN.Tween(weapon.model.scene.children[0].position).to({ x: weapon.zoomPosition[0], y: weapon.zoomPosition[1], z: weapon.zoomPosition[2] }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).start(),
+                  position: new TWEEN.Tween(weapon.model.scene.children[0].position).to({ x: weapon.zoomPosition[0], y: weapon.zoomPosition[1], z: weapon.zoomPosition[2] }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).start().onComplete(() => callback()),
                   rotation: new TWEEN.Tween(weapon.model.scene.children[0].rotation).to({ x: weapon.zoomPosition[3], y: weapon.zoomPosition[4], z: weapon.zoomPosition[5] }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).start(),
                   fov: new TWEEN.Tween(camera).to({ fov: weapon.zoomFov }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => { camera.updateProjectionMatrix() }).start(),
                 }
@@ -3647,7 +3715,7 @@
             if (updateMultiplayer) gametime.run("stopWalking", [gametime.player.uuid]);
           },
           jump: function() {
-            if (utils.vehicles.check(true)) return;
+            if (!playerOnFloor || utils.vehicles.check(true)) return;
             utils.options.set("Jumping", true);
             if (utils.options.get("Walking")) audio.stopWalk();
             if (utils.options.get("Sprinting")) utils.weapons.stopSprint(), utils.options.set("CheckRunningAfterJump", true);
@@ -4540,7 +4608,7 @@
       } else {
         // Later this will change based off of user preferences, even when not logged in
         sandbox.presets.character = "Raven";
-        sandbox.presets.loadout = ["AK-74", "FN-502"];
+        sandbox.presets.loadout = ["AR-15", "AK-74"];
         gametime.set("username", generateName());
       }
       sandbox.loadout[0] = sandbox.presets.loadout[0];
@@ -4622,7 +4690,7 @@
       });
 
       const PointerControls = new PointerLockControls(camera, renderer.domElement);
-      const TouchControls = new TouchScreenControls(camera, document.querySelector(".mobile-ui"));
+      const TouchControls = new TouchScreenControls(camera, document.querySelector(".mobile-ui .look-touch-area"));
       PointerControls.maxPolarAngle = Math.PI - 0.15;
       PointerControls.minPolarAngle = 0.15;
       PointerControls.pointerSpeed = 0.6;
