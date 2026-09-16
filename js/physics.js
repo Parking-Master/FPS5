@@ -47,6 +47,7 @@ physics = {
     const playerBody = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(0.1, 0.1, 0.1)) });
     physics.player = playerBody;
     physics.world.add(playerBody);
+    playerBody.mass = 1;
   },
   add: function(mesh, mass, rotation) {
     mesh.rotation.set(0, 0, 0);

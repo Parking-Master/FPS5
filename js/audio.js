@@ -98,12 +98,13 @@ const AudioWrapper3d = function(src, alias = false) {
 
 let currentExplodeSound = 0;
 let roundsFired = 0;
+let finishedLoading = false;
 
 audio = {
   ctx: new (window.AudioContext || window.webkitAudioContext)(),
   finishCallback: null,
   checkIfLoaded: function() {
-    if (Object.values(audio.sounds).filter(a => a.loaded).length == Object.values(audio.sounds).length) audio.finishCallback();
+    if (!finishedLoading && Object.values(audio.sounds).filter(a => a.loaded).length == Object.values(audio.sounds).length) audio.finishCallback(), finishedLoading = true;
   },
   initialize: function(callback) {
     const listener = new THREE.AudioListener();
@@ -146,7 +147,9 @@ audio = {
         audio.sounds["3d.fire." + weapons[i]] = AudioWrapper3d("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true);
       }
     }
-    [...new Set(sandbox.maps[sandbox.presets.map].vehicles.map(vehicle => vehicle.type))].forEach(vehicle => {
+    let vehicles = [...new Set(sandbox.maps[sandbox.presets.map].vehicles.map(vehicle => vehicle.type))];
+    for (let i = 0; i < vehicles.length; i++) {
+      let vehicle = vehicles[i];
       audio.sounds["vehicle." + vehicle + ".accelerate"] = AudioWrapper3d("/sounds/vehicles/" + vehicle + "/accelerate.mp3", true);
       audio.sounds["vehicle." + vehicle + ".decelerate"] = AudioWrapper3d("/sounds/vehicles/" + vehicle + "/decelerate.mp3", true);
       audio.sounds["vehicle." + vehicle + ".horn"] = AudioWrapper3d("/sounds/vehicles/" + vehicle + "/horn.mp3", true);
@@ -155,7 +158,7 @@ audio = {
       audio.sounds["vehicle." + vehicle + ".big-crash"] = AudioWrapper3d("/sounds/vehicles/big-crash.mp3");
       audio.sounds["vehicle." + vehicle + ".small-crash"] = AudioWrapper3d("/sounds/vehicles/small-crash.mp3");
       audio.sounds["vehicle." + vehicle + ".explosion"] = AudioWrapper3d("/sounds/vehicles/explosion.mp3");
-    });
+    }
   },
   update: function(cameraPosition, cameraRotation) {
     if (typeof camera.audioListener != "undefined") {

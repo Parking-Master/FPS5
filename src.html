@@ -31,9 +31,13 @@
       html, body {
         margin: 0;
         overflow: hidden !important;
-        user-select: none !important;
         touch-action: none !important;
         -webkit-touch-callout: none !important;
+      }
+      * {
+        user-select: none !important;
+        -moz-user-select: none !important;
+        -webkit-user-select: none !important;
       }
       body {
         margin: 0;
@@ -385,97 +389,6 @@
         width: 1000px !important;
         height: 500px !important;
       }
-      .mobile-ui {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        z-index: 2147483645;
-      }
-      .mobile-ui .movement-touch-area, .mobile-ui .look-touch-area {
-        position: absolute;
-        width: 50%;
-        height: 100%;
-        top: 0;
-        bottom: 0;
-      }
-      .mobile-ui .movement-touch-area * {
-        pointer-events: none !important;
-      }
-      .mobile-ui .movement-touch-area {
-        left: 0;
-      }
-      .mobile-ui .look-touch-area {
-        right: 0;
-      }
-      .mobile-ui .movement-touch-area * {
-        pointer-events: none !important;
-      }
-      .mobile-ui .movement-node {
-        position: absolute;
-        width: 150px;
-        height: 150px;
-        left: 50px;
-        bottom: 50px;
-        border-radius: 100%;
-        border: 3px solid rgba(80, 80, 80, 0.3);
-        box-sizing: border-box;
-        background-image: url(/images/ui/mobile-ui/movement-node.png);
-        background-color: rgba(50, 50, 50, 0.6);
-        background-size: 100%;
-        background-position: center;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      .mobile-ui .movement-node .movement-stick {
-        position: relative;
-        padding: 30px;
-        background: rgba(20, 20, 20, 0.5);
-        border: 3px solid rgba(80, 80, 80, 0.6);
-        border-radius: 100%;
-      }
-      .mobile-ui-movement-stick-thumb {
-        position: absolute;
-        padding: 40px;
-        background: rgba(80, 80, 80, 0.8);
-        border-radius: 100%;
-        z-index: 2147483645;
-        display: none;
-      }
-      .mobile-ui .fire-weapon-node {
-        position: absolute;
-        width: 120px;
-        height: 120px;
-        right: 50px;
-        bottom: 60px;
-        border-radius: 100%;
-        border: 3px solid rgba(80, 80, 80, 0.3);
-        box-sizing: border-box;
-        background-image: url(/images/ui/mobile-ui/fire-weapon-node.png);
-        background-color: rgba(30, 30, 30, 0.7);
-        background-size: 100%;
-        background-position: center;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      .mobile-ui .jump-node {
-        position: absolute;
-        width: 70px;
-        height: 70px;
-        right: 20px;
-        bottom: 200px;
-        border-radius: 100%;
-        border: 3px solid rgba(80, 80, 80, 0.3);
-        box-sizing: border-box;
-        background-image: url(/images/ui/mobile-ui/jump-node.png);
-        background-color: rgba(30, 30, 30, 0.7);
-        background-size: 100%;
-        background-position: center;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
     </style>
   </head>
   <body>
@@ -545,25 +458,7 @@
           <img class="ui-secondary-weapon-display">
         </div>
       </div>
-      <div class="mobile-ui">
-        <div class="movement-touch-area">
-          <div class="movement-node">
-            <div class="movement-stick"></div>
-          </div>
-        </div>
-        <div class="look-touch-area">
-          <div class="fire-weapon-node"></div>
-          <div class="reload-weapon-node"></div>
-          <div class="zoom-weapon-node"></div>
-          <div class="throw-grenade-node"></div>
-          <div class="jump-node"></div>
-          <div class="crouch-node"></div>
-          <div class="enter-vehicle-node"></div>
-          <div class="pickup-weapon-node"></div>
-        </div>
-      </div>
     </div>
-    <div class="mobile-ui-movement-stick-thumb"></div>
     <script>
       if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -645,6 +540,7 @@
         audio.update(cameraPosition, cameraRotation);
         utils.weapons.position(cameraPosition, cameraRotation);
         utils.weapons.updateSpawned(deltaTime);
+        utils.vehicles.updateSpawned(deltaTime);
 
         for (let i = 0; i < sandbox.models.length; i++) {
           if (sandbox.models[i].loaded && sandbox.models[i].model.animationMixer) {
@@ -806,9 +702,9 @@
       }
 
       sandbox = {
-        setup: false,
+        initialized: false,
         presets: {
-          map: "Lihid",
+          map: "Cargo_Port",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
           grenades: {
@@ -819,7 +715,7 @@
             gravity: 100, // Percent
             teamGame: false,
             teamSize: 2, // Players
-            playersNeeded: 1, // Players
+            playersNeeded: 2, // Players
             respawnTime: 4, // Seconds
             timeLimit: null // Seconds
           }
@@ -890,7 +786,10 @@
           }
         },
         initialize: function() {
+          if (sandbox.initialized) return;
+          sandbox.initialized = true;
           audio.initialize(function() {
+            if (utils.options.get("MobileGame")) TouchControls.initialize(utils.ui.elements.container);
             onWindowResize();
             if (sandbox.presets.options.teamGame) {
               utils.players.setArmorColor("self");
@@ -1950,7 +1849,8 @@
             rightTeamScore: null,
             timeInitiallyUpdated: false,
             activeMedals: [],
-            activePoints: 0
+            activePoints: 0,
+            currentVehicleSeatHovering: null
           },
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
@@ -2045,16 +1945,39 @@
             utils.ui.elements.bottomRightSection.style.opacity = 0;
           },
           showPickupWeapon: function(weapon) {
-            if (weapon != utils.ui.cache.currentPickupWeapon) {
+            if (weapon != utils.ui.cache.currentPickupWeapon && !utils.options.get("CurrentVehicleHovering")) {
               utils.ui.cache.currentPickupWeapon = weapon;
+              utils.ui.elements.pickupWeaponIcon.style.opacity = 1;
               utils.ui.elements.pickupWeaponIcon.src = "/images/weapons/" + weapon + ".png";
               utils.ui.elements.pickupWeaponText.textContent = "PRESS [T] TO PICK UP " + sandbox.weapons[weapon].displayName.toUpperCase();
               utils.ui.elements.pickupWeapon.style.opacity = 1;
             }
           },
-          hidePickupWeapon: function(weapon) {
+          hidePickupWeapon: function() {
             if (utils.ui.cache.currentPickupWeapon != null) {
               utils.ui.cache.currentPickupWeapon = null;
+              utils.ui.elements.pickupWeapon.style.opacity = 0;
+            }
+          },
+          showEnterVehicle: function(seatType) {
+            if (seatType != utils.ui.cache.currentVehicleSeatHovering) {
+              let seatName;
+              if (seatType == "driver") {
+                seatName = "DRIVER SEAT";
+              } else if (seatType == "gunner") {
+                seatName = "GUNNER";
+              } else {
+                seatName = "PASSENGER SEAT";
+              }
+              utils.ui.cache.currentVehicleSeatHovering = seatType;
+              utils.ui.elements.pickupWeaponIcon.style.opacity = 0;
+              utils.ui.elements.pickupWeaponText.textContent = "PRESS [E] TO ENTER VEHICLE " + seatName;
+              utils.ui.elements.pickupWeapon.style.opacity = 1;
+            }
+          },
+          hideEnterVehicle: function(weapon) {
+            if (utils.ui.cache.currentVehicleSeatHovering != null && !utils.options.get("CurrentWeaponHovering")) {
+              utils.ui.cache.currentVehicleSeatHovering = null;
               utils.ui.elements.pickupWeapon.style.opacity = 0;
             }
           },
@@ -2855,6 +2778,8 @@
           controls: function(deltaTime, time) {
             if (deathScreen) return;
             const vehicle = utils.options.get("CurrentVehicle");
+            const sprinting = utils.options.get("Sprinting");
+            const walkSpeed = deltaTime * (playerOnFloor ? 24 : 1.5) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1);
             if (vehicle) {
               if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
                 utils.vehicles.throttle(vehicle, "drive", deltaTime);
@@ -2869,9 +2794,6 @@
                 utils.vehicles.steer(vehicle, "right", deltaTime);
               }
             } else {
-              const sprinting = utils.options.get("Sprinting");
-              const walkSpeed = deltaTime * (playerOnFloor ? 24 : 1.5) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1);
-              TouchControls.update(deltaTime, time, walkSpeed);
               if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
                 playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(walkSpeed));
               }
@@ -2886,6 +2808,7 @@
               }
               if (keyStates["Space"]) utils.weapons.jump();
             }
+            if (utils.options.get("MobileGame")) TouchControls.update(time, walkSpeed);
           },
           updatePlayer: function(deltaTime) {
             let damping = (Math.exp(-4 * deltaTime) - 1) * 2;
@@ -3011,6 +2934,16 @@
             }
           },
           updateVehicles: function(deltaTime, time, loop) {
+            let updatePlayer = !utils.vehicles.check(true);
+            if (time - utils.options.get("LastPlayerVehicleCollision") < 500) {
+              updatePlayer = false;
+              playerCollider.start.set(physics.player.position.x, physics.player.position.y - 0.65, physics.player.position.z);
+              if (utils.options.get("Crouching")) {
+                playerCollider.end.set(physics.player.position.x, physics.player.position.y - .27, physics.player.position.z);
+              } else {
+                playerCollider.end.set(physics.player.position.x, physics.player.position.y, physics.player.position.z);
+              }
+            }
             physics.update(deltaTime, !utils.vehicles.check(true));
             for (let i = 0; i < utils.vehicles.objects.length; i++) {
               const vehicle = utils.vehicles.objects[i];
@@ -4227,8 +4160,9 @@
               body.oncollision = function(point, intensity, contact, body) {
                 if (body == physics.player) {
                   const time = Date.now();
+                  utils.options.set("LastPlayerVehicleCollision", time);
                   const normal = vectors[32].set(contact.ni.x, contact.ni.y, contact.ni.z);
-                  playerCollider.translate(normal.multiplyScalar(0.1));
+                  if (Math.abs(normal.y) >= .5) playerVelocity.y += 1;
                   if (time - entry.lastPlayerCollision > 500) {
                     entry.lastPlayerCollision = time;
                     utils.players.hit(null, null, entry);
@@ -4354,14 +4288,14 @@
           },
           enter: function() {
             if (utils.vehicles.exit() || utils.vehicles.flip()) return;
-            for (let i = 0; i < utils.vehicles.objects.length; i++) {
-              const vehicle = utils.vehicles.objects[i];
-              vehicle.lastUsedBy = "self";
+            let vehicle = utils.options.get("CurrentVehicleHovering");
+            if (vehicle) {
               for (let j = 0; j < vehicle.seats.length; j++) {
                 const seat = vehicle.seats[j];
                 const worldPosition = seat.seat.getWorldPosition(vectors[6]);
                 let radius = seat.type == "gunner" ? 1.3 : .9;
                 if (camera.position.distanceTo(worldPosition) < radius && !seat.taken) {
+                  vehicle.lastUsedBy = "self";
                   utils.weapons.stopFire();
                   utils.weapons.stopZoom();
                   utils.weapons.stopReload();
@@ -4463,6 +4397,30 @@
             const position2 = vectors[29];
             position2.set(vehicle.mesh.position.x, vehicle.mesh.position.y + 1, vehicle.mesh.position.z);
             return position1.distanceTo(up) > position2.distanceTo(up) + 0.5;
+          },
+          updateSpawned: function() {
+            let vehicleHovered = false;
+            if (!utils.options.get("DeathTime") && !utils.vehicles.check(true)) {
+              for (let i = 0; i < utils.vehicles.objects.length; i++) {
+                const vehicle = utils.vehicles.objects[i];
+                for (let j = 0; j < vehicle.seats.length; j++) {
+                  const seat = vehicle.seats[j];
+                  const worldPosition = seat.seat.getWorldPosition(vectors[6]);
+                  let radius = seat.type == "gunner" ? 1.3 : .9;
+                  if (camera.position.distanceTo(worldPosition) < radius && !seat.taken) {
+                    if (!vehicleHovered) {
+                      vehicleHovered = true;
+                      utils.options.set("CurrentVehicleHovering", vehicle);
+                      utils.ui.showEnterVehicle(seat.type);
+                    }
+                  }
+                }
+              }
+            }
+            if (!vehicleHovered) {
+              utils.options.set("CurrentVehicleHovering", null);
+              utils.ui.hideEnterVehicle();
+            }
           },
           calculateTurningAngle: function(v, a) {
             return (v / 2.7) * Math.tan((a / (Math.max(v * 2.24, 10) / 10)) * (Math.PI / 180));
@@ -4628,7 +4586,7 @@
 
       function onWindowResize() {
         renderer.setPixelRatio(1.3);
-        if (utils.options.get("MobileGame") || (window.innerWidth < 1000 && window.innerHeight < 500)) {
+        if (utils.options.get("MobileGame")) {
           if (!document.body.className.includes("auto-resize-mobile")) document.body.classList.add("auto-resize-mobile");
           if (window.innerWidth < 1000 * (window.innerHeight / 500)) {
             utils.options.set("uiScale", window.innerWidth / 1000);
@@ -4651,7 +4609,7 @@
       onWindowResize();
 
       document.addEventListener("keydown", function(event) {
-        if (!PointerControls.isLocked || !sandbox.setup) return;
+        if (!PointerControls.isLocked || !sandbox.initialized) return;
         keyStates[event.code] = true;
         if (!event.repeat && !deathScreen) {
           if (!utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.startWalking();
@@ -4669,7 +4627,7 @@
         }
       });
       document.addEventListener("keyup", function(event) {
-        if (!PointerControls.isLocked || !sandbox.setup) return;
+        if (!PointerControls.isLocked || !sandbox.initialized) return;
         keyStates[event.code] = false;
         if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) utils.weapons.stopWalking();
         if (!keyStates["KeyW"] && !keyStates["KeyS"] && !keyStates["ArrowUp"] && !keyStates["ArrowDown"]) {
@@ -4680,17 +4638,17 @@
         if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint();
       });
       document.addEventListener("mousedown", function(event) {
-        if (document.pointerLockElement != null || !sandbox.setup) return;
+        if (document.pointerLockElement != null || !sandbox.initialized) return;
         document.body.requestPointerLock();
         PointerControls.lock();
       });
       document.addEventListener("mouseup", (event) => {
-        if (!PointerControls.isLocked || !sandbox.setup) return;
+        if (!PointerControls.isLocked || !sandbox.initialized) return;
         PointerControls.lock();
       });
 
       const PointerControls = new PointerLockControls(camera, renderer.domElement);
-      const TouchControls = new TouchScreenControls(camera, document.querySelector(".mobile-ui .look-touch-area"));
+      const TouchControls = new TouchScreenControls();
       PointerControls.maxPolarAngle = Math.PI - 0.15;
       PointerControls.minPolarAngle = 0.15;
       PointerControls.pointerSpeed = 0.6;
@@ -4704,7 +4662,9 @@
       utils.options.set("ThrowingGrenade", false);
       utils.options.set("Sprinting", false);
       utils.options.set("Aiming", false);
+      utils.options.set("CurrentWeaponHovering", null);
       utils.options.set("CurrentVehicle", false);
+      utils.options.set("CurrentVehicleHovering", null);
       utils.options.set("ReloadCallback", {});
       utils.options.set("bulletHoles", {
         0: {
@@ -4741,6 +4701,7 @@
       utils.options.set("lastKill", null);
       utils.options.set("MobileGame", /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in document.documentElement));
       utils.options.set("uiScale", 1);
+      utils.options.get("LastPlayerVehicleCollision", null);
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -4822,9 +4783,10 @@
         kills: 0,
         ready: false
       });
+      let connected = false;
       gametime.onconnect = function() {
-        if (sandbox.setup) return;
-        sandbox.setup = true;
+        if (connected) return;
+        connected = true;
         function check() {
           if (Object.values(gametime.players).length >= sandbox.presets.options.playersNeeded) {
             for (player in gametime.players) {
