@@ -315,10 +315,10 @@ particles = {
       bursts.shift();
     }
   },
-  update: function() {
+  update: function(deltaTime) {
     const now = performance.now();
-    explosionMaterial.uniforms.time.value = now * 0.001;
-    plasmaMaterial.uniforms.time.value = now * 0.001;
+    explosionMaterial.uniforms.time.value = now * deltaTime * .1;
+    plasmaMaterial.uniforms.time.value = now * deltaTime * .1;
     for (let b = bursts.length - 1; b >= 0; b--) {
       const particles = bursts[b].particles;
       for (let i = particles.length - 1; i >= 0; i--) {

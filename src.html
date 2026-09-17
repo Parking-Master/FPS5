@@ -400,13 +400,12 @@
     <script src="/js/Lensflare.js"></script>
     <script src="/js/particles.js"></script>
     <script src="/js/audio.js"></script>
-    <script src="/js/physics.js"></script>
+    <script src="/js/VehiclePhysics.js"></script>
     <script src="/js/text.js"></script>
     <script src="/js/Tween.js"></script>
     <script src="/js/PointerLockControls.js"></script>
     <script src="/js/TouchScreenControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Parking-Master/Gametime.js/js/username-generator.js"></script>
     <script src="/js/user.js"></script>
     <div class="ui-container">
       <div class="hurt-screen"></div>
@@ -460,7 +459,7 @@
       </div>
     </div>
     <script>
-      if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
+      // if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -535,7 +534,7 @@
         cameraRotation.setFromQuaternion(vectors[10]);
 
         TWEEN.update();
-        particles.update();
+        particles.update(deltaTime);
         utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle, time);
         audio.update(cameraPosition, cameraRotation);
         utils.weapons.position(cameraPosition, cameraRotation);
@@ -704,18 +703,19 @@
       sandbox = {
         initialized: false,
         presets: {
-          map: "Cargo_Port",
+          map: "Lihid",
+          mode: "slayer",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
           grenades: {
-            "mk2": 2,
+            "mk2": 0,
             "plasma": 0
           },
           options: {
             gravity: 100, // Percent
             teamGame: false,
             teamSize: 2, // Players
-            playersNeeded: 2, // Players
+            playersNeeded: 1, // Players
             respawnTime: 4, // Seconds
             timeLimit: null // Seconds
           }
@@ -817,7 +817,7 @@
               textureLoader.load("/images/assets/skies/0.png", function(skyTexture) {
                 map = model.scene;
                 worldOctree.fromGraphNode(map);
-                physics.initialize(map);
+                vehiclePhysics.initialize(map);
                 map.traverse(child => {
                   child.frustumCulled = false;
                   if (child.isMesh) {
@@ -964,7 +964,7 @@
                 nocollisions.forEach(child => child.parent.remove(child));
                 worldOctree.fromGraphNode(map);
                 nocollisions.forEach(child => scene.add(child));
-                physics.initialize(map);
+                vehiclePhysics.initialize(map);
                 directionalLight.position.set(-500,100,-500);
                 directionalLight.shadow.camera.far = 1000;
                 directionalLight.shadow.camera.updateProjectionMatrix();
@@ -1028,7 +1028,6 @@
                   map: skyTexture,
                   side: THREE.BackSide
                 }));
-                // sky.position.y = 2;
                 scene.add(sky);
               });
             }
@@ -1855,6 +1854,7 @@
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
             radarCanvas: document.querySelector(".ui-radar canvas"),
+            radar: document.querySelector(".ui-radar"),
             ammoCurrentValue: document.querySelector(".ui .ui-weapon .ui-ammo .current-value"),
             ammoRemainingValue: document.querySelector(".ui .ui-weapon .ui-ammo .remaining-value"),
             grenades_mk2: document.querySelector(".ui .ui-grenades-mk2 .value"),
@@ -2036,7 +2036,12 @@
             utils.ui.elements.primaryWeaponDisplay.src = "/images/weapons/" + weapon + ".png";
           },
           setSecondaryDisplay: function(weapon) {
-            utils.ui.elements.secondaryWeaponDisplay.src = "/images/weapons/" + weapon + ".png";
+            if (weapon) {
+              utils.ui.elements.secondaryWeaponDisplay.src = "/images/weapons/" + weapon + ".png";
+              utils.ui.elements.secondaryWeaponDisplay.style.visibility = "";
+            } else {
+              utils.ui.elements.secondaryWeaponDisplay.style.visibility = "hidden";
+            }
           },
           addKillStatsRow: function(killer, player) {
             let text = null;
@@ -2224,45 +2229,9 @@
               scene.add(model.scene);
               let animationStructure = null;
               if (player.data.character == "Raven") {
-                animationStructure = {
-                  "death": [0, 1.7, 1],
-                  "throw_grenade": [1, 0.6, 1],
-                  "pistol_idle": [2, 1, 1],
-                  "pistol_jump": [3, 1, 1],
-                  "pistol_shoot": [9, 1, 1],
-                  "pistol_walk": [4, 1, 1],
-                  "pistol_run": [13, 1.5, 1],
-                  "pistol_reload": [11, 0.6, 1],
-                  "rifle_idle": [5, 1, 1],
-                  "rifle_jump": [6, 1, 1],
-                  "rifle_shoot": [7, 1, 1],
-                  "rifle_walk": [8, 1, 1],
-                  "rifle_run": [12, 1.5, 1],
-                  "rifle_reload": [10, 0.6, 1],
-                  "crouch_idle": [14, 1, 1],
-                  "driving": [15, 1, 1],
-                  "sitting": [16, 1, 1]
-                };
+                animationStructure = { "death": [0, 1.7, 1], "throw_grenade": [1, 0.6, 1], "pistol_idle": [2, 1, 1], "pistol_jump": [3, 1, 1], "pistol_shoot": [9, 1, 1], "pistol_walk": [4, 1, 1], "pistol_run": [13, 1.5, 1], "pistol_reload": [11, 0.6, 1], "rifle_idle": [5, 1, 1], "rifle_jump": [6, 1, 1], "rifle_shoot": [7, 1, 1], "rifle_walk": [8, 1, 1], "rifle_run": [12, 1.5, 1], "rifle_reload": [10, 0.6, 1], "crouch_idle": [14, 1, 1], "driving": [15, 1, 1], "sitting": [16, 1, 1] };
               } else if (player.data.character == "FOTUS") {
-                animationStructure = {
-                  "crouch_idle": [0, 1, 1],
-                  "driving": [1, 1, 1],
-                  "death": [2, 1.7, 1],
-                  "throw_grenade": [3, 0.6, 1],
-                  "pistol_idle": [4, 1, 1],
-                  "pistol_jump": [5, 1, 1],
-                  "pistol_reload": [6, 0.6, 1],
-                  "pistol_run": [7, 1.5, 1],
-                  "pistol_shoot": [8, 1, 1],
-                  "pistol_walk": [9, 1, 1],
-                  "rifle_idle": [10, 1, 1],
-                  "rifle_jump": [11, 1, 1],
-                  "rifle_reload": [12, 0.6, 1],
-                  "rifle_run": [13, 1.5, 1],
-                  "rifle_shoot": [14, 1, 1],
-                  "rifle_walk": [15, 1, 1],
-                  "sitting": [16, 1, 1]
-                };
+                animationStructure = { "crouch_idle": [0, 1, 1], "driving": [1, 1, 1], "death": [2, 1.7, 1], "throw_grenade": [3, 0.6, 1], "pistol_idle": [4, 1, 1], "pistol_jump": [5, 1, 1], "pistol_reload": [6, 0.6, 1], "pistol_run": [7, 1.5, 1], "pistol_shoot": [8, 1, 1], "pistol_walk": [9, 1, 1], "rifle_idle": [10, 1, 1], "rifle_jump": [11, 1, 1], "rifle_reload": [12, 0.6, 1], "rifle_run": [13, 1.5, 1], "rifle_shoot": [14, 1, 1], "rifle_walk": [15, 1, 1], "sitting": [16, 1, 1] };
               }
               let playerObject = Object.assign(model, {
                 animationMixer: new THREE.AnimationMixer(model.scene),
@@ -2433,8 +2402,8 @@
                       const seat = vehicle.seats.filter(seat => seat.type == playerObject.vehicle.seat)[0];
                       seat.taken = true;
                       if (seat.type == "driver") {
-                        const result = physics._vec1;
-                        const position = physics._vec3;
+                        const result = vehiclePhysics._vec1;
+                        const position = vehiclePhysics._vec3;
                         result.set(0, 0, 0);
                         position.set(playerObject.vehicle.position[3], playerObject.vehicle.position[4], playerObject.vehicle.position[5]);
                         vehicle.body.position.lerp(position, 0.4, result);
@@ -2469,17 +2438,14 @@
               const clip = player.animationMixer.clipAction(player.animations[player.animationStructure[animation][0]]);
               clip.timeScale = options.timeScale || player.animationStructure[animation][1];
               clip.weight = options.weight || player.animationStructure[animation][2];
-
               if (animation == "rifle_idle" || animation == "pistol_idle") clip.loop = THREE.LoopRepeat;
               if (animation == "rifle_walk" || animation == "pistol_walk") {
                 clip.loop = THREE.LoopRepeat;
                 clip.reset();
               }
-
               if (options.loop) clip.loop = options.loop;
               if (options.reset) clip.reset();
               clip.play();
-
               if (typeof onfinish == "function") {
                 let finished = false;
                 let customCallback = function(event) {
@@ -2776,10 +2742,11 @@
             return playerDirection;
           },
           controls: function(deltaTime, time) {
-            if (deathScreen) return;
-            const vehicle = utils.options.get("CurrentVehicle");
             const sprinting = utils.options.get("Sprinting");
             const walkSpeed = deltaTime * (playerOnFloor ? 24 : 1.5) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1);
+            if (utils.options.get("MobileGame")) TouchControls.update(deltaTime, time, walkSpeed);
+            if (deathScreen) return;
+            const vehicle = utils.options.get("CurrentVehicle");
             if (vehicle) {
               if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
                 utils.vehicles.throttle(vehicle, "drive", deltaTime);
@@ -2808,7 +2775,6 @@
               }
               if (keyStates["Space"]) utils.weapons.jump();
             }
-            if (utils.options.get("MobileGame")) TouchControls.update(time, walkSpeed);
           },
           updatePlayer: function(deltaTime) {
             let damping = (Math.exp(-4 * deltaTime) - 1) * 2;
@@ -2937,14 +2903,14 @@
             let updatePlayer = !utils.vehicles.check(true);
             if (time - utils.options.get("LastPlayerVehicleCollision") < 500) {
               updatePlayer = false;
-              playerCollider.start.set(physics.player.position.x, physics.player.position.y - 0.65, physics.player.position.z);
+              playerCollider.start.set(vehiclePhysics.player.position.x, vehiclePhysics.player.position.y - 0.65, vehiclePhysics.player.position.z);
               if (utils.options.get("Crouching")) {
-                playerCollider.end.set(physics.player.position.x, physics.player.position.y - .27, physics.player.position.z);
+                playerCollider.end.set(vehiclePhysics.player.position.x, vehiclePhysics.player.position.y - .27, vehiclePhysics.player.position.z);
               } else {
-                playerCollider.end.set(physics.player.position.x, physics.player.position.y, physics.player.position.z);
+                playerCollider.end.set(vehiclePhysics.player.position.x, vehiclePhysics.player.position.y, vehiclePhysics.player.position.z);
               }
             }
-            physics.update(deltaTime, !utils.vehicles.check(true));
+            vehiclePhysics.update(deltaTime, !utils.vehicles.check(true));
             for (let i = 0; i < utils.vehicles.objects.length; i++) {
               const vehicle = utils.vehicles.objects[i];
               audio.updateVehicle(vehicle);
@@ -2968,17 +2934,17 @@
                     vehicle.physicsVariables.enginePower += 3 * deltaTime * 125;
                   }
                 }
-                physics.forward.set(0, 0, -1);
-                vehicle.body.quaternion.vmult(physics.forward, physics.forward);
-                physics.forward.scale(vehicle.physicsVariables.enginePower * deltaTime, physics.forward);
-                const result = physics._vec1;
+                vehiclePhysics.forward.set(0, 0, -1);
+                vehicle.body.quaternion.vmult(vehiclePhysics.forward, vehiclePhysics.forward);
+                vehiclePhysics.forward.scale(vehicle.physicsVariables.enginePower * deltaTime, vehiclePhysics.forward);
+                const result = vehiclePhysics._vec1;
                 result.set(0, 0, 0);
-                vehicle.body.velocity.lerp(physics.forward, 0.06, result);
+                vehicle.body.velocity.lerp(vehiclePhysics.forward, 0.06, result);
                 vehicle.body.velocity.set(result.x, vehicle.body.velocity.y, result.z);
                 const speed = Math.sqrt(Math.pow(vehicle.body.velocity.x, 2) + Math.pow(vehicle.body.velocity.y, 2) + Math.pow(vehicle.body.velocity.z, 2));
                 vehicle.speed = speed;
                 const turningAngle = utils.vehicles.calculateTurningAngle(speed * (vehicle.physicsVariables.enginePower > 0 ? 1 : -1), vehicle.physicsVariables.heading);
-                const target = physics._vec4.copy(vehicle.body.angularVelocity);
+                const target = vehiclePhysics._vec4.copy(vehicle.body.angularVelocity);
                 target.y = turningAngle * 400;
                 result.set(0, 0, 0);
                 vehicle.body.angularVelocity.lerp(target, 0.3, result);
@@ -3111,6 +3077,7 @@
           animations: {
             start: function(animation, options = {}, onfinish = null) {
               const weapon = utils.weapons.getCurrentEntry();
+              if (!weapon) return;
               const action = weapon.model.animations[weapon.animationStructure[animation][0]]
               const clip = weapon.model.animationMixer.clipAction(action);
               clip.timeScale = options.timeScale || weapon.animationStructure[animation][1];
@@ -3146,6 +3113,7 @@
             },
             stop: function(animation, options = {}) {
               const weapon = utils.weapons.getCurrentEntry();
+              if (!weapon) return;
               const clip = weapon.model.animationMixer.clipAction(weapon.model.animations[weapon.animationStructure[animation][0]]);
               if (animation == "walk") {
                 clip.fadeOut(0.3);
@@ -3216,6 +3184,7 @@
             return sandbox.weapons[sandbox.loadout[0]];
           },
           getSecondaryEntry: function() {
+            if (!sandbox.loadout[1]) return {};
             return sandbox.weapons[sandbox.loadout[1]];
           },
           getChild: function() {
@@ -3224,6 +3193,14 @@
             }
           },
           switch: function(slot = null, instant = false, ignoreVehicles = false) {
+            if (!slot) {
+              if (sandbox.currentWeapon == sandbox.secondaryWeapon) {
+                slot = "primary";
+              } else {
+                slot = "secondary";
+              }
+            }
+            if (slot == "secondary" && !sandbox.loadout[1]) return;
             if (!ignoreVehicles && (utils.vehicles.check() || utils.vehicles.check("gunner")) || deathScreen) return;
             utils.options.set("Switching", true);
             utils.weapons.stopFire();
@@ -3232,13 +3209,6 @@
             utils.weapons.stopMelee();
             utils.weapons.stopSprint(false);
             audio.weaponSwitch();
-            if (!slot) {
-              if (sandbox.currentWeapon == sandbox.secondaryWeapon) {
-                slot = "primary";
-              } else {
-                slot = "secondary";
-              }
-            }
             if (utils.options.get("Walking")) utils.weapons.animations.stop("walk");
             function next() {
               utils.weapons.animations.stop("idle");
@@ -3662,7 +3632,8 @@
             const intersects = raycaster.intersectObjects(utils.players.shields);
             if (intersects.length > 0) {
               const intersect = intersects[0];
-              if (camera.getWorldPosition(vectors[31]).distanceTo(intersect.point) < weapon.range) {
+              let distance = camera.getWorldPosition(vectors[31]).distanceTo(intersect.point);
+              if (distance < weapon.range) {
                 if (sandbox.presets.options.teamGame) {
                   const player = utils.players.objects[intersect.object.playerUUID];
                   if (player.team == gametime.player.data.team) {
@@ -3679,18 +3650,29 @@
                 utils.ui.unaimCrosshair();
                 utils.options.set("Aiming", false);
               }
+              if (distance < 2.5) {
+                utils.options.set("MeleeAllowed", true);
+              } else {
+                utils.options.set("MeleeAllowed", false);
+              }
             } else {
               utils.ui.unaimCrosshair();
               utils.options.set("Aiming", false);
+              utils.options.set("MeleeAllowed", false);
             }
           },
           setNew: function(slot = null, weapon) {
+            if (!weapon) return {};
             if (!slot) {
               if (utils.weapons.getCurrentEntry() == utils.weapons.getPrimaryEntry()) {
                 slot = "primary";
               } else {
                 slot = "secondary";
               }
+            }
+            if (weapon == "random") {
+              let weapons = Object.values(sandbox.weapons);
+              weapon = weapons[Math.floor(Math.random() * weapons.length)].name;
             }
             if (slot == "primary") {
               sandbox.loadout[0] = weapon;
@@ -4077,7 +4059,7 @@
               } else if (type == "Warthog") {
                 mass = 8;
               }
-              const body = physics.add(vehicle, mass, [mapVehicle.position[3], mapVehicle.position[4], mapVehicle.position[5]]);
+              const body = vehiclePhysics.add(vehicle, mass, [mapVehicle.position[3], mapVehicle.position[4], mapVehicle.position[5]]);
               const entry = {
                 id: utils.vehicles.objects.length,
                 type: type,
@@ -4158,7 +4140,7 @@
               }
               scene.add(entry.shadow);
               body.oncollision = function(point, intensity, contact, body) {
-                if (body == physics.player) {
+                if (body == vehiclePhysics.player) {
                   const time = Date.now();
                   utils.options.set("LastPlayerVehicleCollision", time);
                   const normal = vectors[32].set(contact.ni.x, contact.ni.y, contact.ni.z);
@@ -4229,10 +4211,10 @@
                 sittingPose.rotation.set(0, 0, 0);
                 vehicle.currentSeat.seat.add(sittingPose);
                 sandbox.primaryWeapon.visible = false;
-                sandbox.secondaryWeapon.visible = false;
+                if (sandbox.secondaryWeapon) sandbox.secondaryWeapon.visible = false;
               } else if (newView == 0) {
                 sandbox.primaryWeapon.visible = true;
-                sandbox.secondaryWeapon.visible = true;
+                if (sandbox.secondaryWeapon) sandbox.secondaryWeapon.visible = true;
                 vehicle.currentView = 0;
                 camera.position.set(0, 0, 0);
                 if (vehicle.currentSeat.type == "driver") camera.rotation.set(0, 0, 0);
@@ -4342,10 +4324,9 @@
               const vehicle = utils.vehicles.objects[i];
               if (!didFlip && camera.position.distanceTo(vehicle.mesh.position) < 3 && utils.vehicles.checkIfFlipped(vehicle)) {
                 didFlip = true;
-                vehicle.body.angularVelocity.x = 5;
-                vehicle.body.velocity.y += 5;
+                vehicle.body.velocity.y += 2;
                 vehicle.body.angularVelocity.z = 5;
-                vehicle.body.angularVelocity.x = 10;
+                vehicle.body.angularVelocity.x = 5;
               }
             }
             return didFlip;
@@ -4559,20 +4540,19 @@
       }
       utils.ui.elements.killPopupPoints.style.opacity = 0;
 
-      if (user.loggedIn) {
-        sandbox.presets.character = user.data.character;
+      sandbox.presets.character = user.data.character;
+      gametime.set("username", user.data.username);
+      if (sandbox.presets.mode == "snipers") {
+        sandbox.presets.loadout = ["HK-G28"];
+        utils.ui.elements.radar.style.display = "none";
+      } else if (sandbox.presets.mode == "fiesta") {
+        sandbox.models.forEach(model => { if (model.id.startsWith("weapon.") || model.id.startsWith("propweapon.")) model.requiredMaps.push(sandbox.presets.map) });
+        sandbox.presets.loadout = ["random", "random"];
+        sandbox.presets.grenades = { "mk2": 1, "plasma": 0 };
+      } else if (sandbox.presets.mode == "slayer") {
         sandbox.presets.loadout = user.data.loadout;
-        gametime.set("username", user.data.username);
-      } else {
-        // Later this will change based off of user preferences, even when not logged in
-        sandbox.presets.character = "Raven";
-        sandbox.presets.loadout = ["AR-15", "AK-74"];
-        gametime.set("username", generateName());
+        sandbox.presets.grenades = user.data.grenades;
       }
-      sandbox.loadout[0] = sandbox.presets.loadout[0];
-      sandbox.loadout[1] = sandbox.presets.loadout[1];
-      sandbox.grenades["mk2"] = sandbox.presets.grenades["mk2"];
-      sandbox.grenades["plasma"] = sandbox.presets.grenades["plasma"];
 
       sandbox.loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
         const progress = itemsLoaded / itemsTotal;
@@ -4586,23 +4566,19 @@
 
       function onWindowResize() {
         renderer.setPixelRatio(1.3);
+        let width = window.innerWidth * .5;
+        let height = window.innerHeight * .5;
         if (utils.options.get("MobileGame")) {
-          if (!document.body.className.includes("auto-resize-mobile")) document.body.classList.add("auto-resize-mobile");
-          if (window.innerWidth < 1000 * (window.innerHeight / 500)) {
-            utils.options.set("uiScale", window.innerWidth / 1000);
-            utils.ui.elements.container.style.transform = `scale(${window.innerWidth / 1000})`;
+          width = 1000;
+          height = 500;
+          if (window.innerWidth < width * (window.innerHeight / height)) {
+            utils.ui.elements.container.style.transform = `scale(${window.innerWidth / width})`;
           } else {
-            utils.options.set("uiScale", window.innerWidth / 500);
-            utils.ui.elements.container.style.transform = `scale(${window.innerHeight / 500})`;
+            utils.ui.elements.container.style.transform = `scale(${window.innerHeight / height})`;
           }
-          camera.aspect = 1000 / 500;
-          renderer.setSize(1000, 500, false);
-        } else {
-          if (document.body.className.includes("auto-resize-mobile")) document.body.classList.remove("auto-resize-mobile");
-          utils.ui.elements.container.style.transform = "";
-          camera.aspect = window.innerWidth / window.innerHeight;
-          renderer.setSize(window.innerWidth * 0.5, window.innerHeight * 0.5, false);
         }
+        camera.aspect = width / height;
+        renderer.setSize(width, height, false);
         camera.updateProjectionMatrix();
       }
       window.addEventListener("resize", onWindowResize);
@@ -4700,8 +4676,8 @@
       utils.options.set("KillStreak", 0);
       utils.options.set("lastKill", null);
       utils.options.set("MobileGame", /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in document.documentElement));
-      utils.options.set("uiScale", 1);
       utils.options.get("LastPlayerVehicleCollision", null);
+      utils.options.set("MeleeAllowed", false);
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -4791,6 +4767,7 @@
           if (Object.values(gametime.players).length >= sandbox.presets.options.playersNeeded) {
             for (player in gametime.players) {
               gametime.players[player].data.loadout.forEach(weapon => {
+                if (!utils.models.get("weapon." + weapon)) return;
                 if (utils.models.get("weapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("weapon." + weapon).requiredMaps.push(sandbox.presets.map);
                 if (utils.models.get("propweapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("propweapon." + weapon).requiredMaps.push(sandbox.presets.map);
               });

@@ -3,12 +3,13 @@ TouchScreenControls = function() {
   _this.initialize = function(container) {
     _this.isLocked = true;
     _this.speed = .6;
+    document.body.classList.add("auto-resize-mobile");
     let stylesheet = document.createElement("style");
-    stylesheet.innerHTML = '.mobile-ui{position:absolute;width:100%;height:100%;top:0;z-index:2147483645}.mobile-ui .look-touch-area,.mobile-ui .movement-touch-area{position:absolute;width:50%;height:100%;top:0;bottom:0}.mobile-ui .movement-touch-area *{pointer-events:none !important}.mobile-ui .movement-touch-area{left:0}.mobile-ui .look-touch-area{right:0}.mobile-ui .movement-touch-area *{pointer-events:none !important}.mobile-ui .movement-node{position:absolute;width:150px;height:150px;left:50px;bottom:50px;border-radius:100%;border:3px solid rgba(80, 80, 80, 0.3);box-sizing:border-box;background-image:url("/images/ui/mobile-ui/movement-node.png");background-color:rgba(50, 50, 50, 0.6);background-size:100%;background-position:center;display:flex;justify-content:center;align-items:center}.mobile-ui .movement-node .movement-stick{position:relative;padding:30px;background:rgba(20, 20, 20, 0.5);border:3px solid rgba(80, 80, 80, 0.6);border-radius:100%}.mobile-ui-movement-stick-thumb{position:absolute;padding:40px;background:rgba(80, 80, 80, 0.8);border-radius:100%;z-index:2147483645;display:none}.mobile-ui .look-touch-area div{position:absolute;border-radius:100%;border:3px solid rgba(80, 80, 80, 0.3);box-sizing:border-box;background-color:rgba(30, 30, 30, 0.7);background-size:100%;background-position:center}.mobile-ui .fire-weapon-node{width:120px;height:120px;right:50px;bottom:70px;background-image:url("/images/ui/mobile-ui/fire-weapon-node.png")}.mobile-ui .reload-weapon-node{width:50px;height:50px;right:120px;bottom:10px;background-image:url("/images/ui/mobile-ui/reload-weapon-node.png")}.mobile-ui .zoom-weapon-node{width:60px;height:60px;right:120px;bottom:200px;background-image:url("/images/ui/mobile-ui/zoom-weapon-node.png")}.mobile-ui .jump-node{width:60px;height:60px;right:20px;bottom:200px;background-image:url("/images/ui/mobile-ui/jump-node.png")}.mobile-ui .crouch-node{width:50px;height:50px;right:30px;bottom:10px;background-image:url("/images/ui/mobile-ui/crouch-node.png")}.mobile-ui .throw-grenade-node{width:50px;height:50px;right:180px;bottom:140px;background-image:url("/images/ui/mobile-ui/throw-grenade-node.png")}.mobile-ui .switch-weapon-node{width:50px;height:50px;right:20px;bottom:280px;background-image:url("/images/ui/mobile-ui/switch-weapon-node.png")}.mobile-ui .interact-node{width:100px;height:100px;right:250px;bottom:250px;background-image:url("/images/ui/mobile-ui/interact-node.png")}';
+    stylesheet.innerHTML = '.mobile-ui{position:absolute;width:100%;height:100%;top:0;z-index:2147483645}.mobile-ui .look-touch-area,.mobile-ui .movement-touch-area{position:absolute;width:50%;height:100%;top:0;bottom:0}.mobile-ui .movement-touch-area *{pointer-events:none !important}.mobile-ui .movement-touch-area{left:0}.mobile-ui .look-touch-area{right:0}.mobile-ui .movement-touch-area *{pointer-events:none !important}.mobile-ui .movement-node{position:absolute;width:150px;height:150px;left:50px;bottom:50px;border-radius:100%;border:3px solid rgba(80, 80, 80, 0.3);box-sizing:border-box;background-image:url("/images/ui/mobile-ui/movement-node.png");background-color:rgba(50, 50, 50, 0.6);background-size:100%;background-position:center;display:flex;justify-content:center;align-items:center}.mobile-ui .movement-node .movement-stick{position:relative;padding:30px;background:rgba(20, 20, 20, 0.5);border:3px solid rgba(80, 80, 80, 0.6);border-radius:100%}.mobile-ui-movement-stick-thumb{position:absolute;padding:40px;background:rgba(80, 80, 80, 0.8);border-radius:100%;z-index:2147483645;display:none}.mobile-ui .look-touch-area .button-node{position:absolute;border-radius:100%;border:3px solid rgba(80, 80, 80, 0.3);box-sizing:border-box;background-color:rgba(30, 30, 30, 0.7);background-size:100%;background-position:center}.mobile-ui .fire-weapon-node{width:120px;height:120px;right:50px;bottom:70px;background-image:url("/images/ui/mobile-ui/fire-weapon-node.png")}.mobile-ui .reload-weapon-node{width:50px;height:50px;right:120px;bottom:10px;background-image:url("/images/ui/mobile-ui/reload-weapon-node.png")}.mobile-ui .zoom-weapon-node{width:60px;height:60px;right:120px;bottom:200px;background-image:url("/images/ui/mobile-ui/zoom-weapon-node.png")}.mobile-ui .jump-node{width:60px;height:60px;right:20px;bottom:200px;background-image:url("/images/ui/mobile-ui/jump-node.png")}.mobile-ui .crouch-node{width:50px;height:50px;right:30px;bottom:10px;background-image:url("/images/ui/mobile-ui/crouch-node.png")}.mobile-ui .throw-grenade-node{width:50px;height:50px;right:180px;bottom:140px;background-image:url("/images/ui/mobile-ui/throw-grenade-node.png")}.mobile-ui .switch-weapon-node{width:50px;height:50px;right:20px;bottom:280px;background-image:url("/images/ui/mobile-ui/switch-weapon-node.png")}.mobile-ui .interact-node{width:100px;height:100px;right:250px;bottom:250px;background-image:url("/images/ui/mobile-ui/interact-node.png")}.mobile-ui .switch-view-node{width:50px;height:50px;right:300px;bottom:200px;background-image:url("/images/ui/mobile-ui/switch-view-node.png")}.mobile-ui .horn-node{width:50px;height:50px;right:200px;bottom:230px;background-image:url("/images/ui/mobile-ui/horn-node.png")}.mobile-ui .driving-nodes{display:none}';
     document.querySelector("head").appendChild(stylesheet);
     let mobileUI = document.createElement("div");
     mobileUI.className = "mobile-ui";
-    mobileUI.innerHTML = '<div class="movement-touch-area"><div class="movement-node"><div class="movement-stick"></div></div></div><div class="look-touch-area"><div class="fire-weapon-node" data-node="fire-weapon"></div><div class="reload-weapon-node" data-node="reload-weapon"></div><div class="zoom-weapon-node" data-node="zoom-weapon"></div><div class="throw-grenade-node" data-node="throw-grenade"></div><div class="switch-weapon-node" data-node="switch-weapon"></div><div class="jump-node" data-node="jump"></div><div class="crouch-node" data-node="crouch"></div><div class="interact-node" data-node="interact"></div></div>';
+    mobileUI.innerHTML = '<div class="movement-touch-area"><div class="movement-node"><div class="movement-stick"></div></div></div><div class="look-touch-area"><div class="fps-nodes"><div class="button-node fire-weapon-node" data-node="fire-weapon"></div><div class="button-node reload-weapon-node" data-node="reload-weapon"></div><div class="button-node zoom-weapon-node" data-node="zoom-weapon"></div><div class="button-node throw-grenade-node" data-node="throw-grenade"></div><div class="button-node switch-weapon-node" data-node="switch-weapon"></div><div class="button-node jump-node" data-node="jump"></div><div class="button-node crouch-node" data-node="crouch"></div></div><div class="button-node interact-node" data-node="interact"></div><div class="driving-nodes"><div class="button-node switch-view-node" data-node="switch-view"></div><div class="button-node horn-node" data-node="horn"></div></div>';
     container.appendChild(mobileUI);
     let movementStickThumb = document.createElement("div");
     movementStickThumb.className = "mobile-ui-movement-stick-thumb";
@@ -25,7 +26,9 @@ TouchScreenControls = function() {
     let fire = false;
     let stoppedFiring = true;
     let manualZoom = false;
-    /* --- START LEFT UI FUNCTIONALITY --- */
+    let drivingControls = false;
+    let mobileUIHidden = false;
+    let meleeIconChanged = false;
     function movementEvent(event) {
       if (!utils.options.get("Walking")) utils.weapons.startWalking();
       const touch = Object.values(event.touches).filter(touch => touch.target == movementTouchArea)[0];
@@ -71,11 +74,15 @@ TouchScreenControls = function() {
       } else if (event.target.dataset.node == "reload-weapon") {
         utils.weapons.reload();
       } else if (event.target.dataset.node == "zoom-weapon") {
-        if (utils.options.get("Zoomed")) {
-          utils.weapons.stopZoom();
+        if (utils.options.get("MeleeAllowed")) {
+          utils.weapons.melee();
         } else {
-          utils.weapons.zoom();
-          manualZoom = true;
+          if (utils.options.get("Zoomed")) {
+            utils.weapons.stopZoom();
+          } else {
+            utils.weapons.zoom();
+            manualZoom = true;
+          }
         }
       } else if (event.target.dataset.node == "throw-grenade") {
         utils.grenades.throw();
@@ -94,6 +101,13 @@ TouchScreenControls = function() {
         } else if (utils.options.get("CurrentWeaponHovering")) {
           utils.weapons.pickup();
         }
+      } else if (event.target.dataset.node == "switch-view") {
+        if (utils.vehicles.check(true)) {
+          utils.vehicles.switchView();
+        }
+      } else if (event.target.dataset.node == "horn") {
+        let vehicle = utils.vehicles.check();
+        if (vehicle) vehicle.horn = true;
       }
     }
     function nodeRelease(event) {
@@ -101,9 +115,14 @@ TouchScreenControls = function() {
       if (event.target.dataset.node == "fire-weapon") {
         if (!manualZoom) utils.weapons.stopZoom();
         fire = false;
+      } else if (event.target.dataset.node == "zoom-weapon") {
+        meleeIconChanged = false;
+      } else if (event.target.dataset.node == "horn") {
+        let vehicle = utils.vehicles.check();
+        if (vehicle) vehicle.horn = false;
       }
     }
-    lookTouchArea.querySelectorAll("div").forEach(node => (node.addEventListener("touchstart", nodePress), node.addEventListener("touchend", nodeRelease), node.addEventListener("touchcancel", nodeRelease)));
+    lookTouchArea.querySelectorAll(".button-node").forEach(node => (node.addEventListener("touchstart", nodePress), node.addEventListener("touchend", nodeRelease), node.addEventListener("touchcancel", nodeRelease)));
     lookTouchArea.addEventListener("touchmove", (event) => {
       if (!_this.isLocked) return;
       const touch = Object.values(event.touches).filter(touch => lookTouchArea.contains(touch.target))[0];
@@ -116,8 +135,25 @@ TouchScreenControls = function() {
     lookTouchArea.addEventListener("touchstart", event => event.preventDefault());
     lookTouchArea.addEventListener("touchend", event => (event.preventDefault(), previousTouch = null));
     lookTouchArea.addEventListener("touchcancel", event => event.preventDefault());
-    _this.update = function(time, walkSpeed) {
+    _this.update = function(deltaTime, time, walkSpeed) {
       let weapon = utils.weapons.getCurrentEntry();
+      let inVehicle = utils.vehicles.check(true);
+      if (!inVehicle && drivingControls) {
+        drivingControls = false;
+        lookTouchArea.querySelector(".fps-nodes").style.display = "block";
+        lookTouchArea.querySelector(".driving-nodes").style.display = "none";
+      } else if (inVehicle && !drivingControls) {
+        drivingControls = true;
+        if (utils.vehicles.check()) lookTouchArea.querySelector(".fps-nodes").style.display = "none";
+        lookTouchArea.querySelector(".driving-nodes").style.display = "block";
+      }
+      if (!deathScreen && mobileUIHidden) {
+        mobileUIHidden = false;
+        mobileUI.style.display = "block";
+      } else if (deathScreen && !mobileUIHidden) {
+        mobileUIHidden = true;
+        mobileUI.style.display = "none";
+      }
       _this.isLocked = PointerControls.isLocked;
       if (utils.options.get("Zoomed")) {
         _this.speed = .2;
@@ -125,10 +161,20 @@ TouchScreenControls = function() {
         _this.speed = PointerControls.pointerSpeed;
         manualZoom = false;
       }
-      playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(walkVector.x * walkSpeed));
-      playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(walkVector.y * walkSpeed));
+      let vehicle = utils.vehicles.check();
+      if (vehicle) {
+        vehicle.physicsVariables.heading = -walkVector.y / 3;
+        if (walkVector.x > .2) {
+          utils.vehicles.throttle(vehicle, "drive", deltaTime);
+        } else if (walkVector.x < -.1) {
+          utils.vehicles.throttle(vehicle, "reverse", deltaTime);
+        }
+      } else {
+        playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(walkVector.x * walkSpeed));
+        playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(walkVector.y * walkSpeed));
+      }
       if (run) {
-        if (!utils.options.get("Zoomed") && !utils.options.get("Jumping") && !utils.options.get("Reloading") && !utils.options.get("Crouching") && playerOnFloor) utils.weapons.sprint();
+        if (!utils.options.get("Zoomed") && !utils.options.get("Jumping") && !utils.options.get("Reloading") && !utils.options.get("Switching") && !utils.options.get("Crouching") && playerOnFloor) utils.weapons.sprint();
       } else {
         utils.weapons.stopSprint();
       }
@@ -142,7 +188,7 @@ TouchScreenControls = function() {
           utils.weapons.stopFire();
         }
       }
-      if (utils.options.get("CurrentWeaponHovering") || utils.options.get("CurrentVehicleHovering") || utils.vehicles.check(true)) {
+      if (utils.options.get("CurrentWeaponHovering") || utils.options.get("CurrentVehicleHovering") || inVehicle) {
         if (interactNode.style.display == "none") {
           interactNode.style.display = "";
         }
@@ -150,6 +196,14 @@ TouchScreenControls = function() {
         if (interactNode.style.display != "none") {
           interactNode.style.display = "none";
         }
+      }
+      let meleeAllowed = utils.options.get("MeleeAllowed");
+      if (!meleeAllowed && meleeIconChanged) {
+        meleeIconChanged = false;
+        lookTouchArea.querySelector(".zoom-weapon-node").style.backgroundImage = "";
+      } else if (meleeAllowed && !meleeIconChanged) {
+        meleeIconChanged = true;
+        lookTouchArea.querySelector(".zoom-weapon-node").style.backgroundImage = "url(/images/ui/mobile-ui/melee-node.png)";
       }
     };
   };

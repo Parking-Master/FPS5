@@ -282,10 +282,9 @@
       }
       if (!localStorage["points"]) localStorage.setItem("points", 0);
       function updateLoadout() {
-        let character = "Raven";
-        let loadout = ["AK-74", "FN-502"];
-        let points = localStorage["points"];
-        if (user.loggedIn) character = user.data.character, loadout = user.data.loadout, points = user.data.points;
+        let character = user.data.character;
+        let loadout = user.data.loadout;
+        let points = user.data.points;
         document.querySelector(".loadout-character .loadout-item-tag").textContent = character;
         document.querySelector(".loadout-character").style.backgroundImage = `url(/images/characters/${character}.png)`;
         document.querySelector(".loadout-primary-weapon .loadout-item-tag").textContent = loadout[0];
