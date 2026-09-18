@@ -332,13 +332,9 @@ particles = {
         p.z += p.vz * 0.8;
         p.size *= 0.98;
         p.life -= 0.022;
-        if (p.life <= 0) {
-          particles.splice(i, 1);
-        }
+        if (p.life <= 0) particles.splice(i, 1);
       }
-      if (particles.length === 0) {
-        bursts.splice(b, 1);
-      }
+      if (particles.length === 0) bursts.splice(b, 1);
     }
     const dustParticles = [];
     const bloodParticles = [];

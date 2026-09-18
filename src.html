@@ -352,8 +352,54 @@
       .kill-popup-medal_rocket-kill { background-image: url(/images/medals/rocket-kill.png) }
       .kill-popup-medal_headshot { background-image: url(/images/medals/headshot.png) }
       .kill-popup-medal_snapshot { background-image: url(/images/medals/snapshot.png) }
-      body.auto-resize-mobile {
+      .ui-death-info-separator {
+        font-size: 16px;
+      }
+      .ui-death-info {
+        position: absolute;
+        background: #f5f5f5;
+        border-radius: 2px;
+        width: 300px;
+        left: 50%;
+        margin-left: -150px;
+        top: 30px;
+        padding: 10px;
+        z-index: 1000;
+        font-family: "Arame";
+        font-size: 30px;
+        box-shadow: 5px 5px 0 #dd0000;
+        display: none;
+      }
+      .ui-death-info .respawn-countdown {
+        position: absolute;
+        color: #fff;
+        text-shadow: 1px 1px 0 #000;
+        font-size: 14px;
+        text-align: center;
+        width: 100%;
+        margin-top: 20px;
+        left: 0;
+      }
+      body.auto-resize-mobile, body.auto-resize-tv {
         background: #000;
+      }
+      body.auto-resize-mobile .ui-container {
+        position: fixed;
+        width: 1000px;
+        height: 500px;
+        left: 50%;
+        top: 50%;
+        margin-left: -500px;
+        margin-top: -250px;
+      }
+      body.auto-resize-tv .ui-container {
+        position: fixed;
+        width: 960px;
+        height: 540px;
+        left: 50%;
+        top: 50%;
+        margin-left: -480px;
+        margin-top: -270px;
       }
       body.auto-resize-mobile .ui-section.top-section {
         transform: perspective(50px) rotateX(-8deg) scale(.8);
@@ -374,15 +420,6 @@
       body.auto-resize-mobile .ui-section.bottom-section {
         transform: scale(.65);
         transform-origin: center bottom;
-      }
-      body.auto-resize-mobile .ui-container {
-        position: fixed;
-        width: 1000px;
-        height: 500px;
-        left: 50%;
-        top: 50%;
-        margin-left: -500px;
-        margin-top: -250px;
       }
       body.auto-resize-mobile > canvas {
         position: relative;
@@ -411,6 +448,10 @@
       <div class="hurt-screen"></div>
       <div class="ui-section left-section">
         <div class="ui-kill-stats"></div>
+      </div>
+      <div class="ui-death-info">
+        <div class="ui-death-info-separator">KILLED BY</div><span id="value">GUESTUSER1234</span>
+        <div class="respawn-countdown">RESPAWNING IN <span id="value">3</span>...</div>
       </div>
       <div class="ui" id="game-ui">
         <div class="vignette"></div>
@@ -459,7 +500,7 @@
       </div>
     </div>
     <script>
-      // if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
+      if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -486,7 +527,7 @@
       directionalLight.shadow.camera.bottom = -30;
       directionalLight.shadow.mapSize.width = 1024;
       directionalLight.shadow.mapSize.height = 1024;
-      directionalLight.shadow.radius = 14;
+      directionalLight.shadow.radius = 2;
       directionalLight.shadow.bias = -0.00006;
       ambientLight.position.set(2, 1, 1);
       scene.add(directionalLight);
@@ -500,18 +541,16 @@
       directionalLight.add(lensflare);
 
       let map = null;
-      let playerOnFloor = false;
-      let playerAgainstWall = false;
       let deathScreen = false;
       let frameCount = 0;
-      let lastTimerUpdate = null;
-      let gameStartTime = null;
-      const vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-      const keyStates = {};
-      const playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
-      const playerVelocity = vectors[7];
-      const playerDirection = vectors[8];
-      const playerSpeeds = [];
+      let vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+      let keyStates = {};
+      let playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
+      let playerVelocity = vectors[7];
+      let playerDirection = vectors[8];
+      let playerSpeeds = [];
+      let playerOnFloor = false;
+      let playerAgainstWall = false;
 
       function animate(now) {
         const clockDelta = clock.getDelta();
@@ -801,7 +840,7 @@
             renderer.shadowMap.needsUpdate = true;
             audio.ambience(sandbox.maps[sandbox.presets.map].ambienceSound);
             gametime.player.data.ready = true;
-            gameStartTime = Date.now(); // This will be moved to the actual game start function later on
+            utils.options.set("GameStartTime", Date.now()); // This will be moved to the actual game start function later on
           });
         },
         loadingManager: new THREE.LoadingManager(),
@@ -855,7 +894,7 @@
                   if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    if (child.material.map) child.material.map.anisotropy = 4;
+                    if (child.material.map) child.material.map.anisotropy = 2, child.material.map.needsUpdate = true;
                   }
                 });
                 sky = new THREE.Mesh(new THREE.SphereGeometry(100, 25, 25), new THREE.MeshBasicMaterial({
@@ -1119,6 +1158,7 @@
             loaded: false,
             requiredMaps: [],
             callback: function(model) {
+              model.scene.renderOrder = 1;
               model.scene.getObjectByName("LensCover").material.blending = THREE.MultiplyBlending;
               model.scene.getObjectByName("LensCover").material.color.setHex(0x22ff11);
             }
@@ -1462,7 +1502,7 @@
             recoil: 1,
             reticle: 1,
             bulletHole: 0,
-            defaultDelayBetweenShots: 300,
+            defaultDelayBetweenShots: 200,
             type: "pistol",
             model: null,
             loaded: false,
@@ -1754,7 +1794,7 @@
             reticle: 9,
             bulletHole: 0,
             delayBetweenShots: 200,
-            defaultDelayBetweenShots: 200,
+            defaultDelayBetweenShots: 250,
             type: "pistol",
             model: null,
             loaded: false,
@@ -1881,7 +1921,10 @@
             scores: document.querySelector(".scores"),
             killPopupMedalsWrapper: document.querySelector(".kill-popup-medals"),
             killPopupMedals: {},
-            killPopupPoints: document.querySelector(".kill-popup-points")
+            killPopupPoints: document.querySelector(".kill-popup-points"),
+            deathInfo: document.querySelector(".ui-death-info"),
+            deathInfoUsername: document.querySelector(".ui-death-info #value"),
+            respawnCountdown: document.querySelector(".ui-death-info .respawn-countdown #value")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle, time) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -1912,31 +1955,23 @@
                 utils.ui.cache.timeInitiallyUpdated = true;
                 utils.ui.elements.time.textContent = "NO TIME LIMIT";
               }
-            } else if (time - lastTimerUpdate >= 1000) {
-              lastTimerUpdate = time;
-              let secondsLeft = sandbox.presets.options.timeLimit - ((time - gameStartTime) / 1000);
+            } else if (time - utils.options.get("LastTimerUpdate") >= 1000) {
+              utils.options.set("LastTimerUpdate", time);
+              let secondsLeft = sandbox.presets.options.timeLimit - ((time - utils.options.get("GameStartTime")) / 1000);
               let formattedSeconds = Math.floor(secondsLeft % 60);
               let formattedTime = Math.floor((secondsLeft % 3600) / 60) + ":" + (formattedSeconds < 10 ? "0" : "") + formattedSeconds;
               utils.ui.elements.time.textContent = formattedTime;
             }
+            if (deathScreen) {
+              let respawnTimeLeft = Math.ceil(((sandbox.presets.options.respawnTime * 1000) - (time - utils.options.get("DeathTime"))) / 1000);
+              utils.ui.elements.respawnCountdown.textContent = respawnTimeLeft;
+            }
           },
           updateScores: function(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore) {
-            if (leftTeamUsername != utils.ui.cache.leftTeamUsername) {
-              utils.ui.cache.leftTeamUsername = leftTeamUsername;
-              utils.ui.elements.leftTeamUsername.textContent = leftTeamUsername;
-            }
-            if (leftTeamScore != utils.ui.cache.leftTeamScore) {
-              utils.ui.cache.leftTeamScore = leftTeamScore;
-              utils.ui.elements.leftTeamScore.textContent = leftTeamScore;
-            }
-            if (rightTeamUsername != utils.ui.cache.rightTeamUsername) {
-              utils.ui.cache.rightTeamUsername = rightTeamUsername;
-              utils.ui.elements.rightTeamUsername.textContent = rightTeamUsername;
-            }
-            if (rightTeamScore != utils.ui.cache.rightTeamScore) {
-              utils.ui.cache.rightTeamScore = rightTeamScore;
-              utils.ui.elements.rightTeamScore.textContent = rightTeamScore;
-            }
+            if (leftTeamUsername != utils.ui.cache.leftTeamUsername) utils.ui.cache.leftTeamUsername = leftTeamUsername, utils.ui.elements.leftTeamUsername.textContent = leftTeamUsername;
+            if (leftTeamScore != utils.ui.cache.leftTeamScore) utils.ui.cache.leftTeamScore = leftTeamScore, utils.ui.elements.leftTeamScore.textContent = leftTeamScore;
+            if (rightTeamUsername != utils.ui.cache.rightTeamUsername) utils.ui.cache.rightTeamUsername = rightTeamUsername, utils.ui.elements.rightTeamUsername.textContent = rightTeamUsername;
+            if (rightTeamScore != utils.ui.cache.rightTeamScore) utils.ui.cache.rightTeamScore = rightTeamScore, utils.ui.elements.rightTeamScore.textContent = rightTeamScore;
           },
           showBottomRightSection: function() {
             utils.ui.elements.bottomRightSection.style.opacity = 1;
@@ -1974,6 +2009,13 @@
               utils.ui.elements.pickupWeaponText.textContent = "PRESS [E] TO ENTER VEHICLE " + seatName;
               utils.ui.elements.pickupWeapon.style.opacity = 1;
             }
+          },
+          showDeathInfo: function(username) {
+            utils.ui.elements.deathInfoUsername.textContent = username;
+            utils.ui.elements.deathInfo.style.display = "block";
+          },
+          hideDeathInfo: function() {
+            utils.ui.elements.deathInfo.style.display = "";
           },
           hideEnterVehicle: function(weapon) {
             if (utils.ui.cache.currentVehicleSeatHovering != null && !utils.options.get("CurrentWeaponHovering")) {
@@ -2438,6 +2480,7 @@
               const clip = player.animationMixer.clipAction(player.animations[player.animationStructure[animation][0]]);
               clip.timeScale = options.timeScale || player.animationStructure[animation][1];
               clip.weight = options.weight || player.animationStructure[animation][2];
+              if (animation == "crouch_idle") return clip.reset(), clip.fadeIn(.3), clip.play();
               if (animation == "rifle_idle" || animation == "pistol_idle") clip.loop = THREE.LoopRepeat;
               if (animation == "rifle_walk" || animation == "pistol_walk") {
                 clip.loop = THREE.LoopRepeat;
@@ -2462,6 +2505,7 @@
             },
             stop: function(player, animation, options = {}) {
               const clip = player.animationMixer.clipAction(player.animations[player.animationStructure[animation][0]]);
+              if (animation == "crouch_idle") return clip.reset(), clip.fadeOut(.3), clip.play();
               if (animation == "rifle_walk" || animation == "pistol_walk" || animation == "rifle_jump" || animation == "pistol_jump") {
                 clip.fadeOut(0.3);
               } else {
@@ -2676,7 +2720,10 @@
                   if (isVehicle) medals.push("vehicle-kill");
                   if (isHeadshot) medals.push("headshot");
                   if (isSnapshot) medals.push("snapshot");
-                  for (let i = 0; i < medals.length; i++) utils.options.addTmpObject({ medal: medals[i] }, "displayMedal", 500 * i);
+                  for (let i = 0; i < medals.length; i++) {
+                    gametime.player.data.score += sandbox.medals[medals[i]].points;
+                    utils.options.addTmpObject({ medal: medals[i] }, "displayMedal", 500 * i);
+                  }
                   utils.players.incrementScore();
                 }
               }
@@ -2742,11 +2789,13 @@
             return playerDirection;
           },
           controls: function(deltaTime, time) {
-            const sprinting = utils.options.get("Sprinting");
-            const walkSpeed = deltaTime * (playerOnFloor ? 24 : 1.5) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1);
+            let upOrDownKey = keyStates["KeyW"] || keyStates["KeyS"] || keyStates["ArrowUp"] || keyStates["ArrowDown"];
+            let leftOrRightKey = keyStates["KeyA"] || keyStates["KeyD"] || keyStates["ArrowLeft"] || keyStates["ArrowRight"];
+            let sprinting = utils.options.get("Sprinting");
+            let walkSpeed = deltaTime * (playerOnFloor ? 24 : 1.5) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1) * (upOrDownKey && leftOrRightKey ? .7 : 1);
             if (utils.options.get("MobileGame")) TouchControls.update(deltaTime, time, walkSpeed);
             if (deathScreen) return;
-            const vehicle = utils.options.get("CurrentVehicle");
+            let vehicle = utils.options.get("CurrentVehicle");
             if (vehicle) {
               if (keyStates["KeyW"] || keyStates["ArrowUp"]) {
                 utils.vehicles.throttle(vehicle, "drive", deltaTime);
@@ -4325,8 +4374,8 @@
               if (!didFlip && camera.position.distanceTo(vehicle.mesh.position) < 3 && utils.vehicles.checkIfFlipped(vehicle)) {
                 didFlip = true;
                 vehicle.body.velocity.y += 2;
-                vehicle.body.angularVelocity.z = 5;
-                vehicle.body.angularVelocity.x = 5;
+                vehicle.body.angularVelocity.z = 10;
+                vehicle.body.angularVelocity.x = 10;
               }
             }
             return didFlip;
@@ -4485,6 +4534,7 @@
             } else {
               utils.options.set("Killer", killer.uuid);
               utils.ui.addKillStatsRow(killer.uuid, "self");
+              utils.ui.showDeathInfo(gametime.players[killer.uuid].username);
               gametime.run("playerDie", [gametime.player.uuid, killer.uuid, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot]);
               if (isHeadshot) audio.hitHeadshot();
             }
@@ -4492,6 +4542,8 @@
             deathScreen = true;
             scene.remove(sandbox.currentWeapon);
             utils.ui.hide();
+            let zoomTween = utils.options.get("globalZoomTween");
+            if (zoomTween && zoomTween.out) zoomTween.out.fov.stop();
             camera.fov = 70;
             camera.updateProjectionMatrix();
             utils.effects.shake(10, 0, 1000);
@@ -4522,6 +4574,7 @@
             sandbox.grenades["mk2"] = sandbox.presets.grenades["mk2"];
             sandbox.grenades["plasma"] = sandbox.presets.grenades["plasma"];
             utils.health.reset();
+            utils.ui.hideDeathInfo();
             gametime.run("playerRespawn", [gametime.player.uuid, spawnPoint]);
           }
         }
@@ -4569,6 +4622,7 @@
         let width = window.innerWidth * .5;
         let height = window.innerHeight * .5;
         if (utils.options.get("MobileGame")) {
+          if (!document.body.className.includes("auto-resize-mobile")) document.body.classList.add("auto-resize-mobile");
           width = 1000;
           height = 500;
           if (window.innerWidth < width * (window.innerHeight / height)) {
@@ -4576,6 +4630,17 @@
           } else {
             utils.ui.elements.container.style.transform = `scale(${window.innerHeight / height})`;
           }
+        } else if (window.innerWidth > 1920 && window.innerHeight > 1080) {
+          if (!document.body.className.includes("auto-resize-tv")) document.body.classList.add("auto-resize-tv");
+          width = 960;
+          height = 540;
+          if (window.innerWidth < width * (window.innerHeight / height)) {
+            utils.ui.elements.container.style.transform = `scale(${window.innerWidth / width})`;
+          } else {
+            utils.ui.elements.container.style.transform = `scale(${window.innerHeight / height})`;
+          }
+        } else {
+          if (document.body.className.includes("auto-resize-tv")) document.body.classList.remove("auto-resize-tv");
         }
         camera.aspect = width / height;
         renderer.setSize(width, height, false);
@@ -4605,7 +4670,7 @@
       document.addEventListener("keyup", function(event) {
         if (!PointerControls.isLocked || !sandbox.initialized) return;
         keyStates[event.code] = false;
-        if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowS|ArrowD/i.test(event.code)) utils.weapons.stopWalking();
+        if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.stopWalking();
         if (!keyStates["KeyW"] && !keyStates["KeyS"] && !keyStates["ArrowUp"] && !keyStates["ArrowDown"]) {
           const vehicle = utils.options.get("CurrentVehicle");
           if (vehicle) utils.vehicles.stopThrottle(vehicle);
@@ -4678,6 +4743,8 @@
       utils.options.set("MobileGame", /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in document.documentElement));
       utils.options.get("LastPlayerVehicleCollision", null);
       utils.options.set("MeleeAllowed", false);
+      utils.options.set("LastTimerUpdate", null);
+      utils.options.set("GameStartTime", null);
 
       scene.add(utils.options.get("playerCamera"));
 

@@ -30,6 +30,7 @@ TouchScreenControls = function() {
     let mobileUIHidden = false;
     let meleeIconChanged = false;
     function movementEvent(event) {
+      if (deathScreen) return;
       if (!utils.options.get("Walking")) utils.weapons.startWalking();
       const touch = Object.values(event.touches).filter(touch => touch.target == movementTouchArea)[0];
       let movementNodeRect = movementNode.getBoundingClientRect();
@@ -153,6 +154,7 @@ TouchScreenControls = function() {
       } else if (deathScreen && !mobileUIHidden) {
         mobileUIHidden = true;
         mobileUI.style.display = "none";
+        stopMovementEvent();
       }
       _this.isLocked = PointerControls.isLocked;
       if (utils.options.get("Zoomed")) {
