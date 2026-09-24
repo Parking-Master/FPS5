@@ -500,7 +500,7 @@
       </div>
     </div>
     <script>
-      if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
+      // if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -572,6 +572,7 @@
         camera.getWorldQuaternion(vectors[10]);
         cameraRotation.setFromQuaternion(vectors[10]);
 
+        utils.weapons.updateRockets(clockDelta, time);
         TWEEN.update();
         particles.update(deltaTime);
         utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle, time);
@@ -690,9 +691,7 @@
           }
         }
 
-        if (time - utils.health.lastHitTimestamp > 6000) {
-          utils.health.increment(clockDelta);
-        }
+        if (time - utils.health.lastHitTimestamp > 6000) utils.health.increment(clockDelta);
 
         const deathTime = utils.options.get("DeathTime");
         if (deathTime) {
@@ -742,7 +741,7 @@
       sandbox = {
         initialized: false,
         presets: {
-          map: "Lihid",
+          map: "Cargo_Port",
           mode: "slayer",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
@@ -835,11 +834,11 @@
               utils.ui.elements.scores.classList.add("team-game");
             }
             utils.ui.radar.init();
+            gametime.player.data.ready = true;
             utils.health.respawn();
             animate();
             renderer.shadowMap.needsUpdate = true;
             audio.ambience(sandbox.maps[sandbox.presets.map].ambienceSound);
-            gametime.player.data.ready = true;
             utils.options.set("GameStartTime", Date.now()); // This will be moved to the actual game start function later on
           });
         },
@@ -1164,6 +1163,18 @@
             }
           },
           {
+            id: "weapon.Rocket-Launcher",
+            path: "/models/weapons/Rocket-Launcher.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: [],
+            callback: function(model) {
+              model.scene.renderOrder = 1;
+              model.scene.getObjectByName("LensCover").material.blending = THREE.MultiplyBlending;
+              model.scene.getObjectByName("LensCover").material.color.setHex(0x2244bb);
+            }
+          },
+          {
             id: "propweapon.AK-74",
             path: "/models/characters/weapons/AK-74.glb",
             model: null,
@@ -1235,6 +1246,13 @@
           },
           {
             id: "propweapon.AR-15",
+            path: "/models/characters/weapons/AR-15.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.Rocket-Launcher",
             path: "/models/characters/weapons/AR-15.glb",
             model: null,
             loaded: false,
@@ -1417,8 +1435,8 @@
               [-16.1,.25,9,0,-Math.PI/2,0],
               [-15.9,4.4,-7.9,0,-Math.PI/2,0],
               [8.1,4.4,7.2,0,Math.PI/2,0],
-              [11.8,-.5,6.4,0,-Math.PI/2],
-              [-19.8,-.5,-7.3,0,Math.PI/2]
+              [11.8,-.5,6.4,0,-Math.PI/2,0],
+              [-19.8,-.5,-7.3,0,Math.PI/2,0]
             ],
             vehicles: [
               {
@@ -1844,6 +1862,45 @@
               throw: [4, 1.4, 1],
               walk: [5, .9, .7],
               run: [5, 1.2, 1]
+            }
+          },
+          "Rocket-Launcher": {
+            name: "Rocket-Launcher",
+            displayName: "SPNKr Rocket Launcher",
+            ammo: 2,
+            defaultAmmo: 2,
+            currentAmmo: 2,
+            maxAmmo: 2,
+            maxTotalAmmo: 4,
+            damage: 200,
+            headshotDamage: 200,
+            spread: 0,
+            muzzleFlash: true,
+            zoomPosition: [0.0401,-0.0145,-0.059,0.05,0,0],
+            zoomFov: 35,
+            zoomDuration: 300,
+            fireMode: "semi",
+            fireRate: 200,
+            range: 60,
+            recoil: 3,
+            reticle: 11,
+            bulletHole: 0,
+            scope: true,
+            scopeRendered: false,
+            delayBetweenShots: 700,
+            defaultDelayBetweenShots: 750,
+            type: "rifle",
+            rocket: true,
+            model: null,
+            loaded: false,
+            animationStructure: {
+              shoot: [0, 0.1, 2],
+              idle: [1, 1, 1],
+              reload: [2, 0.8, 1],
+              reload_full: [3, 0.8, 1],
+              walk: [4, 1, 1],
+              run: [4, 1.2, 1],
+              throw: [5, 1.4, 1]
             }
           },
         }
@@ -2385,6 +2442,7 @@
           update: function() {
             gametime.player.data.position = [camera.position.x, camera.position.y - 1, camera.position.z];
             gametime.player.data.rotation = [camera.rotation.x, camera.rotation.y, camera.rotation.z];
+            if (sandbox.presets.mode == "fiesta") gametime.player.data.loadout = sandbox.presets.loadout;
             gametime.update();
             let leftTeamUsername = null;
             let rightTeamUsername = null;
@@ -2691,6 +2749,10 @@
               player.isDead = true;
               utils.players.animations.stop(player, "rifle_idle");
               utils.players.animations.stop(player, "pistol_idle");
+              utils.players.animations.stop(player, "rifle_walk");
+              utils.players.animations.stop(player, "pistol_walk");
+              utils.players.animations.stop(player, "rifle_run");
+              utils.players.animations.stop(player, "pistol_run");
               utils.players.animations.start(player, "death", { loop: THREE.LoopOnce, reset: true }, function() {
                 if (player.isDead) {
                   player.allowedToUpdate = false;
@@ -3332,7 +3394,11 @@
 
                   const spreadX = spreads[roundsFired];
                   const spreadY = spreads[roundsFired + 1];
-                  utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
+                  if (weapon.rocket) {
+                    utils.effects.rocketLaunch(weapon.name);
+                  } else {
+                    utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
+                  }
                   if (weapon.muzzleFlash) {
                     if (!weapon.scope || !zoomed) {
                       utils.effects.muzzleFlash();
@@ -3848,6 +3914,47 @@
               utils.ui.outOfAmmo(false);
             }
           },
+          updateRockets: function(deltaTime, time) {
+            let rockets = utils.options.get("CurrentRockets");
+            let closestRocketDistance = null;
+            let raycaster = utils.options.get("effectsRaycaster");
+            let rocketPoint = utils.options.get("playerCamera");
+            utils.options.set("CameraShake", 0);
+            function explodeRocket(rocket, rocketIndex) {
+              particles.explosion(rocket.position);
+              particles.dust(rocket.position, 7, 10);
+              const shakeIntensity = 4 / (Math.max(camera.getWorldPosition(vectors[31]).distanceTo(rocket.position), 1) / 2);
+              utils.effects.shake(shakeIntensity);
+              audio.rocketExplosion(rocket);
+              rocket.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+              });
+              scene.remove(rocket);
+              rockets.splice(rocketIndex, 1);
+              utils.options.set("CurrentRockets", rockets);
+            }
+            for (let i = 0; i < rockets.length; i++) {
+              let rocket = rockets[i];
+              if (time - rocket.fireTimestamp > 8000) return explodeRocket(rocket, i);
+              let rocketDistance = camera.position.distanceTo(rocket.position);
+              if (closestRocketDistance == null) closestRocketDistance = rocketDistance;
+              if (rocketDistance <= closestRocketDistance) {
+                let shakeIntensity = (10 - camera.position.distanceTo(rocket.position)) / 5;
+                if (shakeIntensity > .01) utils.options.set("CameraShake", shakeIntensity);
+              }
+              let speed = Math.min((time - rocket.fireTimestamp) / 700, 10) * 15 * deltaTime;
+              rocket.translateX(speed);
+              particles.dust(rocket.position, Math.min((time - rocket.fireTimestamp) / 500, .5), 10);
+              rocketPoint.position.set(rocket.position.x, rocket.position.y, rocket.position.z);
+              rocketPoint.rotation.set(rocket.rotation.x, rocket.rotation.y, rocket.rotation.z);
+              rocketPoint.rotateY(-Math.PI/2);
+              rocketPoint.updateMatrixWorld();
+              raycaster.setFromCamera(new THREE.Vector2(), rocketPoint);
+              let intersects = raycaster.intersectObjects(map.children.concat(utils.players.shields, utils.vehicles.shields));
+              if (intersects.length > 0 && rocket.position.distanceTo(intersects[0].point) < speed * 2) explodeRocket(rocket, i);
+            }
+          },
           updateSpawned: function(deltaTime) {
             if (utils.options.get("DeathTime") || utils.vehicles.check(true)) return;
             let spawnedWeapons = utils.options.get("SpawnedWeapons");
@@ -4035,6 +4142,34 @@
                 if (Math.floor(Math.random() * 5) == 0) audio.ricochet(intersect.point);
               }
             }
+          },
+          rocketLaunch: function(weaponName, isMultiplayer = false, point = null) {
+            let weaponChild = utils.weapons.getChild();
+            let weaponChildRotation = weaponChild.rotation.clone();
+            weaponChild.rotation.set(0, 0, 0);
+            let projectileOrigin = utils.models.get("weapon." + weaponName).model.scene.getObjectByName("Missile_Projectile");
+            let worldPosition, worldScale, worldQuaternion;
+            if (point) {
+              worldPosition = new THREE.Vector3(point[0], point[1], point[2]);
+              worldScale = new THREE.Vector3(point[3], point[4], point[5]);
+              worldQuaternion = new THREE.Quaternion(point[6], point[7], point[8], point[9]);
+            } else {
+              worldPosition = projectileOrigin.getWorldPosition(new THREE.Vector3());
+              worldScale = projectileOrigin.getWorldScale(new THREE.Vector3());
+              worldQuaternion = projectileOrigin.getWorldQuaternion(new THREE.Quaternion());
+            }
+            let projectile = projectileOrigin.clone();
+            projectile.position.copy(worldPosition);
+            projectile.quaternion.copy(worldQuaternion);
+            projectile.scale.copy(worldScale.multiplyScalar(2.5));
+            scene.add(projectile);
+            projectile.fireTimestamp = Date.now();
+            let rockets = utils.options.get("CurrentRockets");
+            rockets.push(projectile);
+            utils.options.set("CurrentRockets", rockets);
+            audio.rocketLaunch(projectile);
+            weaponChild.rotation.copy(weaponChildRotation);
+            if (!isMultiplayer) gametime.run("rocketLaunch", [gametime.player.uuid, weaponName, [worldPosition.x, worldPosition.y, worldPosition.z, worldScale.x, worldScale.y, worldScale.z, worldQuaternion.x, worldQuaternion.y, worldQuaternion.z, worldQuaternion.w]]);
           },
           muzzleFlash: function(model = null) {
             const flash = (model || sandbox.currentWeapon).getObjectByName("muzzleFlash");
@@ -4477,9 +4612,7 @@
           },
           add: function(amount) {
             let newHealth = utils.health.current + amount;
-            if (newHealth > 100) {
-              newHealth = 100;
-            }
+            if (newHealth > 100) newHealth = 100;
             utils.health.current = newHealth;
             utils.ui.setHealthBar(newHealth, "short");
           },
@@ -4601,7 +4734,7 @@
       } else if (sandbox.presets.mode == "fiesta") {
         sandbox.models.forEach(model => { if (model.id.startsWith("weapon.") || model.id.startsWith("propweapon.")) model.requiredMaps.push(sandbox.presets.map) });
         sandbox.presets.loadout = ["random", "random"];
-        sandbox.presets.grenades = { "mk2": 1, "plasma": 0 };
+        sandbox.presets.grenades = { "mk2": 0, "plasma": 1 };
       } else if (sandbox.presets.mode == "slayer") {
         sandbox.presets.loadout = user.data.loadout;
         sandbox.presets.grenades = user.data.grenades;
@@ -4745,6 +4878,7 @@
       utils.options.set("MeleeAllowed", false);
       utils.options.set("LastTimerUpdate", null);
       utils.options.set("GameStartTime", null);
+      utils.options.set("CurrentRockets", []);
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -4808,6 +4942,9 @@
       gametime.on("vehicleHit", function(player, vehicleIndex, damage) {
         if (player != gametime.player.uuid) utils.players.vehicles.hit(utils.players.objects[player], utils.vehicles.objects[vehicleIndex], damage);
       });
+      gametime.on("rocketLaunch", function(player, weaponName, point) {
+        if (player != gametime.player.uuid) utils.effects.rocketLaunch(weaponName, true, point);
+      });
 
       // Start order:
       // - Players join
@@ -4853,10 +4990,7 @@
         }
         check();
         gametime.onupdate = function(player) {
-          if (player.uuid == gametime.player.uuid) return;
-          if (typeof utils.players.objects[player.uuid] === "undefined" && player.data.ready) {
-            utils.players.add(player);
-          }
+          if (player.uuid != gametime.player.uuid && typeof utils.players.objects[player.uuid] === "undefined" && player.data.ready) utils.players.add(player);
         };
       };
       gametime.connect();
