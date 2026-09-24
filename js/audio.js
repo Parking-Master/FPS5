@@ -138,6 +138,8 @@ audio = {
       "weapon.zoom-in": AudioWrapper("/sounds/weapons/zoom-in.mp3"),
       "weapon.zoom-out": AudioWrapper("/sounds/weapons/zoom-out.mp3"),
       "medal": AudioWrapper("/sounds/weapons/medal.mp3"),
+      "rocket.launch": AudioWrapper3d("/sounds/weapons/rocket-launch.mp3", true),
+      "rocket.explosion": AudioWrapper3d("/sounds/weapons/rocket-explode.mp3", true),
     };
     for (let i = 0; i < weapons.length; i++) {
       if (sandbox.weapons[weapons[i]].loaded) {
@@ -164,6 +166,15 @@ audio = {
     if (typeof camera.audioListener != "undefined") {
       camera.audioListener.position.copy(cameraPosition);
       camera.audioListener.rotation.copy(cameraRotation);
+    }
+    let rockets = utils.options.get("CurrentRockets");
+    for (let i = 0; i < rockets.length; i++) {
+      let rocket = rockets[i];
+      if (i == 0) {
+        audio.sounds["rocket.launch"].sound.position.copy(rocket.position);
+      } else if (i == 1) {
+        audio.sounds["rocket.launch"].sound.alias.position.copy(rocket.position);
+      }
     }
   },
   updateVehicle: function(vehicle) {
@@ -444,6 +455,25 @@ audio = {
     sound.currentTime = 0;
     sound.play();
   },
+  rocketLaunch: function(rocket) {
+    let sound = audio.sounds["rocket.launch"].sound;
+    if (sound.isPlaying) sound = sound.alias;
+    if (sound.source) sound.stop();
+    sound.play();
+    rocket.launchSound = sound;
+  },
+  rocketExplosion: function(rocket) {
+    let sound = audio.sounds["rocket.explosion"].sound;
+    if (sound.isPlaying) sound = sound.alias;
+    sound.position.copy(rocket.position);
+    sound.setMaxDistance(100);
+    sound.setRefDistance(5);
+    if (sound.source) sound.setDetune(100 * (rocket.position.distanceTo(camera.position) / 10));
+    sound.setVolume(2);
+    if (sound.source) sound.stop();
+    sound.play();
+    if (rocket.launchSound && rocket.launchSound.source) rocket.launchSound.stop();
+  }
 };
 
 document.addEventListener("touchstart", () => {
