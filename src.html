@@ -500,7 +500,7 @@
       </div>
     </div>
     <script>
-      // if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
+      if (!location.hostname.includes("fps5")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -572,7 +572,7 @@
         camera.getWorldQuaternion(vectors[10]);
         cameraRotation.setFromQuaternion(vectors[10]);
 
-        utils.weapons.updateRockets(clockDelta, time);
+        utils.physics.updateRockets(clockDelta, time, cameraPosition);
         TWEEN.update();
         particles.update(deltaTime);
         utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle, time);
@@ -1253,7 +1253,7 @@
           },
           {
             id: "propweapon.Rocket-Launcher",
-            path: "/models/characters/weapons/AR-15.glb",
+            path: "/models/characters/weapons/Rocket-Launcher.glb",
             model: null,
             loaded: false,
             requiredMaps: []
@@ -1896,11 +1896,11 @@
             animationStructure: {
               shoot: [0, 0.1, 2],
               idle: [1, 1, 1],
-              reload: [2, 0.8, 1],
-              reload_full: [3, 0.8, 1],
-              walk: [4, 1, 1],
-              run: [4, 1.2, 1],
-              throw: [5, 1.4, 1]
+              reload: [2, 1.8, 1],
+              reload_full: [2, 1.8, 1],
+              throw: [4, 1.4, 1],
+              walk: [5, 1, 1],
+              run: [5, 1.2, 1]
             }
           },
         }
@@ -2417,6 +2417,18 @@
               if (distance > weapon.distance) return;
               const realDamage = Math.min(weapon.damage / (distance / 1.3 * (weapon.distance / 5)), weapon.damage);
               utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null, weapon, false, false, true);
+            } else if (weapon.rocket) {
+              for (let i = 0; i < utils.vehicles.objects.length; i++) {
+                const distance = utils.vehicles.objects[i].mesh.position.distanceTo(weapon.rocket.position);
+                if (distance < 3) {
+                  const realDamage = Math.min(weapon.damage / (distance / 1.3), weapon.damage);
+                  utils.vehicles.objects[i].condition += -realDamage / 1.8;
+                }
+              }
+              const distance = weapon.rocket.position.distanceTo(camera.position);
+              if (distance > weapon.distance) return;
+              const realDamage = Math.min(weapon.damage / (distance / 1.3 * (weapon.distance / 5)), weapon.damage);
+              utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null, weapon, false, false, false, false, false, true);
             } else if (weapon == "melee") {
               const realDamage = 100;
               gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, false, true]);
@@ -2501,7 +2513,7 @@
                     if (vehicle.allowedToUpdate) {
                       const seat = vehicle.seats.filter(seat => seat.type == playerObject.vehicle.seat)[0];
                       seat.taken = true;
-                      if (seat.type == "driver") {
+                      if (seat.type == "driver" || (vehicle.seats.filter(seat => seat.taken).length == 1 && utils.vehicles.check(true) != vehicle)) {
                         const result = vehiclePhysics._vec1;
                         const position = vehiclePhysics._vec3;
                         result.set(0, 0, 0);
@@ -2618,7 +2630,7 @@
             fire: function(player, point, spreadX, spreadY, bulletHole) {
               if (!player.isWalking && !player.isCrouching && (!player.vehicle || player.vehicle.seat == "gunner")) utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
               if (sandbox.weapons[player.weapon.name].muzzleFlash) utils.effects.muzzleFlash(player.weapon);
-              utils.players.effects.bulletHole(point, spreadX, spreadY, bulletHole);
+              if (!sandbox.weapons[player.weapon.name].rocket) utils.players.effects.bulletHole(point, spreadX, spreadY, bulletHole);
               audio.fire3D(player.weapon.name, player.scene.position);
             },
             reload: function(player) {
@@ -2745,7 +2757,7 @@
             }
           },
           health: {
-            die: function(player, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) {
+            die: function(player, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket) {
               player.isDead = true;
               utils.players.animations.stop(player, "rifle_idle");
               utils.players.animations.stop(player, "pistol_idle");
@@ -2778,8 +2790,9 @@
                     medals.push("triple-kill");
                   }
                   if (isMelee) medals.push("melee-kill");
-                  if (isGrenade) medals.push("grenade-kill");
                   if (isVehicle) medals.push("vehicle-kill");
+                  if (isGrenade) medals.push("grenade-kill");
+                  if (isRocket) medals.push("rocket-kill");
                   if (isHeadshot) medals.push("headshot");
                   if (isSnapshot) medals.push("snapshot");
                   for (let i = 0; i < medals.length; i++) {
@@ -2917,6 +2930,36 @@
             if (!utils.vehicles.check(true)) camera.position.copy(playerCollider.end);
             let worldPosition = camera.getWorldPosition(vectors[31]);
             if (camera.position.y <= -40 || Math.abs(worldPosition.x) > 200 || Math.abs(worldPosition.z) > 200) utils.health.die("self");
+          },
+          updateRockets: function(deltaTime, time, cameraPosition) {
+            let rockets = utils.options.get("RocketProjectiles");
+            let closestRocketDistance = null;
+            let raycaster = utils.options.get("effectsRaycaster");
+            let rocketPoint = utils.options.get("playerCamera");
+            utils.options.set("CameraShake", 0);
+            for (id in rockets) {
+              let rocket = rockets[id];
+              if (time - rocket.fireTimestamp > 8000) {
+                utils.rockets.explode(rocket, true);
+              } else {
+                let rocketDistance = camera.position.distanceTo(rocket.position);
+                if (closestRocketDistance == null) closestRocketDistance = rocketDistance;
+                if (rocketDistance <= closestRocketDistance) {
+                  let shakeIntensity = (10 - camera.position.distanceTo(rocket.position)) / 5;
+                  if (shakeIntensity > .01) utils.options.set("CameraShake", shakeIntensity);
+                }
+                let speed = Math.min((time - rocket.fireTimestamp) / 700, 10) * 15 * deltaTime;
+                rocket.translateX(speed);
+                particles.dust(rocket.position, Math.min((time - rocket.fireTimestamp) / 500, .5), 10);
+                rocketPoint.position.set(rocket.position.x, rocket.position.y, rocket.position.z);
+                rocketPoint.rotation.set(rocket.rotation.x, rocket.rotation.y, rocket.rotation.z);
+                rocketPoint.rotateY(-Math.PI / 2);
+                rocketPoint.updateMatrixWorld();
+                raycaster.setFromCamera(new THREE.Vector2(), rocketPoint);
+                let intersects = raycaster.intersectObjects(map.children.concat(utils.players.shields, utils.vehicles.shields));
+                if (!rocket.isMultiplayer && intersects.length > 0 && rocket.position.distanceTo(intersects[0].point) < Math.min(speed * 2, 5)) utils.rockets.explode(rocket);
+              }
+            }
           },
           updateGrenades: function(deltaTime, time, loop) {
             for (let i = 0; i < utils.grenades.objects.length; i++) {
@@ -3395,7 +3438,7 @@
                   const spreadX = spreads[roundsFired];
                   const spreadY = spreads[roundsFired + 1];
                   if (weapon.rocket) {
-                    utils.effects.rocketLaunch(weapon.name);
+                    utils.rockets.launch(weapon.name);
                   } else {
                     utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
                   }
@@ -3522,6 +3565,7 @@
             utils.weapons.stopSprint(false);
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.stop("walk");
+            utils.weapons.animations.stop("shoot");
             let animation = null;
             if (full) {
               animation = "reload_full";
@@ -3914,47 +3958,6 @@
               utils.ui.outOfAmmo(false);
             }
           },
-          updateRockets: function(deltaTime, time) {
-            let rockets = utils.options.get("CurrentRockets");
-            let closestRocketDistance = null;
-            let raycaster = utils.options.get("effectsRaycaster");
-            let rocketPoint = utils.options.get("playerCamera");
-            utils.options.set("CameraShake", 0);
-            function explodeRocket(rocket, rocketIndex) {
-              particles.explosion(rocket.position);
-              particles.dust(rocket.position, 7, 10);
-              const shakeIntensity = 4 / (Math.max(camera.getWorldPosition(vectors[31]).distanceTo(rocket.position), 1) / 2);
-              utils.effects.shake(shakeIntensity);
-              audio.rocketExplosion(rocket);
-              rocket.traverse(child => {
-                if (child.geometry) child.geometry.dispose();
-                if (child.material) child.material.dispose();
-              });
-              scene.remove(rocket);
-              rockets.splice(rocketIndex, 1);
-              utils.options.set("CurrentRockets", rockets);
-            }
-            for (let i = 0; i < rockets.length; i++) {
-              let rocket = rockets[i];
-              if (time - rocket.fireTimestamp > 8000) return explodeRocket(rocket, i);
-              let rocketDistance = camera.position.distanceTo(rocket.position);
-              if (closestRocketDistance == null) closestRocketDistance = rocketDistance;
-              if (rocketDistance <= closestRocketDistance) {
-                let shakeIntensity = (10 - camera.position.distanceTo(rocket.position)) / 5;
-                if (shakeIntensity > .01) utils.options.set("CameraShake", shakeIntensity);
-              }
-              let speed = Math.min((time - rocket.fireTimestamp) / 700, 10) * 15 * deltaTime;
-              rocket.translateX(speed);
-              particles.dust(rocket.position, Math.min((time - rocket.fireTimestamp) / 500, .5), 10);
-              rocketPoint.position.set(rocket.position.x, rocket.position.y, rocket.position.z);
-              rocketPoint.rotation.set(rocket.rotation.x, rocket.rotation.y, rocket.rotation.z);
-              rocketPoint.rotateY(-Math.PI/2);
-              rocketPoint.updateMatrixWorld();
-              raycaster.setFromCamera(new THREE.Vector2(), rocketPoint);
-              let intersects = raycaster.intersectObjects(map.children.concat(utils.players.shields, utils.vehicles.shields));
-              if (intersects.length > 0 && rocket.position.distanceTo(intersects[0].point) < speed * 2) explodeRocket(rocket, i);
-            }
-          },
           updateSpawned: function(deltaTime) {
             if (utils.options.get("DeathTime") || utils.vehicles.check(true)) return;
             let spawnedWeapons = utils.options.get("SpawnedWeapons");
@@ -3990,6 +3993,64 @@
               utils.ui.hidePickupWeapon();
             }
           }
+        },
+        rockets: {
+          launch: function(weaponName, isMultiplayer = false, point = null, rocketId) {
+            let weaponChild = utils.weapons.getChild();
+            let weaponChildRotation = weaponChild.rotation.clone();
+            weaponChild.rotation.set(0, 0, 0);
+            let projectileOrigin = utils.models.get("weapon." + weaponName).model.scene.getObjectByName("Missile_Projectile");
+            let worldPosition, worldScale, worldQuaternion;
+            if (point) {
+              worldPosition = new THREE.Vector3(point[0], point[1], point[2]);
+              worldScale = new THREE.Vector3(point[3], point[4], point[5]);
+              worldQuaternion = new THREE.Quaternion(point[6], point[7], point[8], point[9]);
+            } else {
+              worldPosition = projectileOrigin.getWorldPosition(new THREE.Vector3());
+              worldScale = projectileOrigin.getWorldScale(new THREE.Vector3());
+              worldQuaternion = projectileOrigin.getWorldQuaternion(new THREE.Quaternion());
+            }
+            let projectile = projectileOrigin.clone();
+            projectile.position.copy(worldPosition);
+            projectile.quaternion.copy(worldQuaternion);
+            projectile.scale.copy(worldScale.multiplyScalar(2.5));
+            scene.add(projectile);
+            projectile.fireTimestamp = Date.now();
+            let rockets = utils.options.get("RocketProjectiles");
+            audio.rocketLaunch(projectile);
+            weaponChild.rotation.copy(weaponChildRotation);
+            if (isMultiplayer) {
+              projectile.isMultiplayer = true;
+              projectile.uuid = rocketId;
+            } else {
+              projectile.isMultiplayer = false;
+              gametime.run("rocketLaunch", [gametime.player.uuid, weaponName, [worldPosition.x, worldPosition.y, worldPosition.z, worldScale.x, worldScale.y, worldScale.z, worldQuaternion.x, worldQuaternion.y, worldQuaternion.z, worldQuaternion.w], projectile.uuid]);
+            }
+            rockets[projectile.uuid] = projectile;
+            utils.options.set("RocketProjectiles", rockets);
+          },
+          explode: function(rocket, isMultiplayer = false, multiplayerUUID = null) {
+            let rockets = utils.options.get("RocketProjectiles");
+            utils.players.hit(null, null, {
+              rocket: rocket,
+              playerUUID: multiplayerUUID,
+              damage: 200,
+              distance: 5
+            });
+            particles.explosion(rocket.position);
+            particles.dust(rocket.position, 7, 10);
+            const shakeIntensity = 4 / (Math.max(camera.getWorldPosition(vectors[31]).distanceTo(rocket.position), 1) / 2);
+            utils.effects.shake(shakeIntensity);
+            audio.rocketExplosion(rocket);
+            rocket.traverse(child => {
+              if (child.geometry) child.geometry.dispose();
+              if (child.material) child.material.dispose();
+            });
+            scene.remove(rocket);
+            delete rockets[rocket.uuid];
+            utils.options.set("RocketProjectiles", rockets);
+            if (!isMultiplayer) gametime.run("rocketExplode", [gametime.player.uuid, rocket.uuid]);
+          },
         },
         grenades: {
           objects: [],
@@ -4142,34 +4203,6 @@
                 if (Math.floor(Math.random() * 5) == 0) audio.ricochet(intersect.point);
               }
             }
-          },
-          rocketLaunch: function(weaponName, isMultiplayer = false, point = null) {
-            let weaponChild = utils.weapons.getChild();
-            let weaponChildRotation = weaponChild.rotation.clone();
-            weaponChild.rotation.set(0, 0, 0);
-            let projectileOrigin = utils.models.get("weapon." + weaponName).model.scene.getObjectByName("Missile_Projectile");
-            let worldPosition, worldScale, worldQuaternion;
-            if (point) {
-              worldPosition = new THREE.Vector3(point[0], point[1], point[2]);
-              worldScale = new THREE.Vector3(point[3], point[4], point[5]);
-              worldQuaternion = new THREE.Quaternion(point[6], point[7], point[8], point[9]);
-            } else {
-              worldPosition = projectileOrigin.getWorldPosition(new THREE.Vector3());
-              worldScale = projectileOrigin.getWorldScale(new THREE.Vector3());
-              worldQuaternion = projectileOrigin.getWorldQuaternion(new THREE.Quaternion());
-            }
-            let projectile = projectileOrigin.clone();
-            projectile.position.copy(worldPosition);
-            projectile.quaternion.copy(worldQuaternion);
-            projectile.scale.copy(worldScale.multiplyScalar(2.5));
-            scene.add(projectile);
-            projectile.fireTimestamp = Date.now();
-            let rockets = utils.options.get("CurrentRockets");
-            rockets.push(projectile);
-            utils.options.set("CurrentRockets", rockets);
-            audio.rocketLaunch(projectile);
-            weaponChild.rotation.copy(weaponChildRotation);
-            if (!isMultiplayer) gametime.run("rocketLaunch", [gametime.player.uuid, weaponName, [worldPosition.x, worldPosition.y, worldPosition.z, worldScale.x, worldScale.y, worldScale.z, worldQuaternion.x, worldQuaternion.y, worldQuaternion.z, worldQuaternion.w]]);
           },
           muzzleFlash: function(model = null) {
             const flash = (model || sandbox.currentWeapon).getObjectByName("muzzleFlash");
@@ -4616,16 +4649,20 @@
             utils.health.current = newHealth;
             utils.ui.setHealthBar(newHealth, "short");
           },
-          subtract: function(amount, killer, grenade, isHeadshot, isMelee = false, isGrenade = false, isVehicle = false, isSnapshot = false) {
+          subtract: function(amount, killer, explosive, isHeadshot, isMelee = false, isGrenade = false, isVehicle = false, isSnapshot = false, isRocket = false) {
             const newHealth = utils.health.current - Math.round(amount);
-            if (newHealth <= -25) utils.health.die(killer || "self", isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot);
+            if (newHealth <= -25) utils.health.die(killer || "self", isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket);
             utils.health.current = newHealth;
             utils.ui.setHealthBar(Math.max(newHealth, 0), "short");
             utils.health.lastHitTimestamp = Date.now();
             utils.health.incremented = false;
             const hurtIntensity = amount / 28;
-            if (grenade) {
-              utils.ui.hurtScreen(grenade.mesh.position, hurtIntensity);
+            if (explosive) {
+              if (explosive.rocket) {
+                utils.ui.hurtScreen(explosive.rocket.position, hurtIntensity);
+              } else {
+                utils.ui.hurtScreen(explosive.mesh.position, hurtIntensity);
+              }
             } else if (killer) {
               utils.ui.hurtScreen(killer.scene.position, hurtIntensity);
               audio.hit();
@@ -4638,7 +4675,7 @@
             utils.health.current = 100;
             utils.ui.setHealthBar(100, "instant");
           },
-          die: function(killer, isHeadshot = false, isMelee = false, isGrenade = false, isVehicle = false, isSnapshot = false) {
+          die: function(killer, isHeadshot = false, isMelee = false, isGrenade = false, isVehicle = false, isSnapshot = false, isRocket = false) {
             for (key in keyStates) keyStates[key] = false;
             audio.stopShieldsWarning();
             audio.stopShieldsLow();
@@ -4668,7 +4705,7 @@
               utils.options.set("Killer", killer.uuid);
               utils.ui.addKillStatsRow(killer.uuid, "self");
               utils.ui.showDeathInfo(gametime.players[killer.uuid].username);
-              gametime.run("playerDie", [gametime.player.uuid, killer.uuid, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot]);
+              gametime.run("playerDie", [gametime.player.uuid, killer.uuid, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket]);
               if (isHeadshot) audio.hitHeadshot();
             }
             camera.rotation.set(Math.PI / 2 - 0.8, 0, 0);
@@ -4878,7 +4915,7 @@
       utils.options.set("MeleeAllowed", false);
       utils.options.set("LastTimerUpdate", null);
       utils.options.set("GameStartTime", null);
-      utils.options.set("CurrentRockets", []);
+      utils.options.set("RocketProjectiles", {});
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -4927,8 +4964,8 @@
       gametime.on("damage", function(player, damage, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) {
         if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot), utils.effects.shock(damage / 400);
       });
-      gametime.on("playerDie", function(player, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) {
-        if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot);
+      gametime.on("playerDie", function(player, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket) {
+        if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket);
       });
       gametime.on("playerRespawn", function(player, spawnPoint) {
         if (player != gametime.player.uuid) utils.players.health.respawn(utils.players.objects[player], spawnPoint);
@@ -4942,8 +4979,11 @@
       gametime.on("vehicleHit", function(player, vehicleIndex, damage) {
         if (player != gametime.player.uuid) utils.players.vehicles.hit(utils.players.objects[player], utils.vehicles.objects[vehicleIndex], damage);
       });
-      gametime.on("rocketLaunch", function(player, weaponName, point) {
-        if (player != gametime.player.uuid) utils.effects.rocketLaunch(weaponName, true, point);
+      gametime.on("rocketLaunch", function(player, weaponName, point, rocketId) {
+        if (player != gametime.player.uuid) utils.rockets.launch(weaponName, true, point, rocketId);
+      });
+      gametime.on("rocketExplode", function(player, rocketId) {
+        if (player != gametime.player.uuid) utils.rockets.explode(utils.options.get("RocketProjectiles")[rocketId], true, player);
       });
 
       // Start order:

@@ -170,6 +170,8 @@ TouchScreenControls = function() {
           utils.vehicles.throttle(vehicle, "drive", deltaTime);
         } else if (walkVector.x < -.1) {
           utils.vehicles.throttle(vehicle, "reverse", deltaTime);
+        } else {
+          utils.vehicles.stopThrottle(vehicle);
         }
       } else {
         playerVelocity.add(utils.physics.getCameraForwardVector().multiplyScalar(walkVector.x * walkSpeed));

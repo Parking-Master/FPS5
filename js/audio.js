@@ -167,14 +167,9 @@ audio = {
       camera.audioListener.position.copy(cameraPosition);
       camera.audioListener.rotation.copy(cameraRotation);
     }
-    let rockets = utils.options.get("CurrentRockets");
-    for (let i = 0; i < rockets.length; i++) {
-      let rocket = rockets[i];
-      if (i == 0) {
-        audio.sounds["rocket.launch"].sound.position.copy(rocket.position);
-      } else if (i == 1) {
-        audio.sounds["rocket.launch"].sound.alias.position.copy(rocket.position);
-      }
+    let rockets = utils.options.get("RocketProjectiles");
+    for (id in rockets) {
+      if (rockets[id].launchSound) rockets[id].launchSound.position.copy(rockets[id].position);
     }
   },
   updateVehicle: function(vehicle) {
