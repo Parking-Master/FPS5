@@ -115,7 +115,6 @@ audio = {
       callback();
     };
     audio.sounds = {
-      "map.ambience.0": AudioWrapper("/sounds/ambience/0.mp3"),
       "grenade.hit.0": AudioWrapper3d("/sounds/grenades/hits/0.mp3"),
       "grenade.explosion.mk2": AudioWrapper3d("/sounds/grenades/explosions/0.mp3", true),
       "grenade.explosion.plasma.0": AudioWrapper3d("/sounds/grenades/explosions/1.mp3"),
@@ -141,6 +140,7 @@ audio = {
       "rocket.launch": AudioWrapper3d("/sounds/weapons/rocket-launch.mp3", true),
       "rocket.explosion": AudioWrapper3d("/sounds/weapons/rocket-explode.mp3", true),
     };
+    audio.sounds["map.ambience"] = AudioWrapper("/sounds/ambience/" + sandbox.maps[sandbox.presets.map].ambienceSound + ".mp3");
     for (let i = 0; i < weapons.length; i++) {
       if (sandbox.weapons[weapons[i]].loaded) {
         audio.sounds["reload." + weapons[i] + ".normal"] = AudioWrapper("/sounds/weapons/reloading/" + weapons[i] + ".mp3");
@@ -272,8 +272,8 @@ audio = {
       sound.play();
     }
   },
-  ambience: function(id) {
-    const sound = audio.sounds[`map.ambience.${id}`];
+  ambience: function() {
+    const sound = audio.sounds["map.ambience"];
     sound.loop = true;
     sound.play();
   },

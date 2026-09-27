@@ -741,7 +741,7 @@
       sandbox = {
         initialized: false,
         presets: {
-          map: "Cargo_Port",
+          map: "Vertex",
           mode: "slayer",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
@@ -838,7 +838,7 @@
             utils.health.respawn();
             animate();
             renderer.shadowMap.needsUpdate = true;
-            audio.ambience(sandbox.maps[sandbox.presets.map].ambienceSound);
+            audio.ambience();
             utils.options.set("GameStartTime", Date.now()); // This will be moved to the actual game start function later on
           });
         },
@@ -1063,6 +1063,50 @@
                 utils.options.set("GravityLifts", gravityLifts);
                 sky = new THREE.Mesh(new THREE.SphereGeometry(250, 25, 25), new THREE.MeshBasicMaterial({
                   color: 0xffeecc,
+                  map: skyTexture,
+                  side: THREE.BackSide
+                }));
+                scene.add(sky);
+              });
+            }
+          },
+          {
+            id: "map",
+            path: "/models/maps/Vertex.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            requiredMaps: ["Vertex"],
+            callback: function(model) {
+              textureLoader.load("/images/assets/skies/3.png", function(skyTexture) {
+                map = model.scene;
+                let nocollisions = [map.getObjectByName("terrain")];
+                nocollisions.forEach(child => child.parent.remove(child));
+                worldOctree.fromGraphNode(map);
+                nocollisions.forEach(child => scene.add(child));
+                directionalLight.position.set(200, 180, -140);
+                directionalLight.intensity = 1;
+                ambientLight.intensity = .4;
+                directionalLight.shadow.radius = 3;
+                directionalLight.shadow.camera.near = 0.01;
+                directionalLight.shadow.camera.far = 5000;
+                directionalLight.shadow.camera.right = 300;
+                directionalLight.shadow.camera.left = -300;
+                directionalLight.shadow.camera.top = 300;
+                directionalLight.shadow.camera.bottom = -300;
+                directionalLight.shadow.camera.updateProjectionMatrix();
+                directionalLight.shadow.needsUpdate = true;
+                renderer.shadowMap.needsUpdate = true;
+                map.traverse(child => {
+                  child.frustumCulled = false;
+                  if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.material.map) child.material.map.anisotropy = 2, child.material.map.needsUpdate = true;
+                  }
+                });
+                sky = new THREE.Mesh(new THREE.SphereGeometry(720, 25, 25), new THREE.MeshBasicMaterial({
+                  color: 0xffffff,
                   map: skyTexture,
                   side: THREE.BackSide
                 }));
@@ -1461,7 +1505,28 @@
               [8,0,-4.7,0,Math.PI,0]
             ],
             vehicles: []
-          }
+          },
+          "Vertex": {
+            ambienceSound: 1,
+            spawnPoints: [
+              [73.83,-0.52,0.09,0,1.5707963267948966,0],
+              [74.46,-2.54,34.99,0,0,0],
+              [48.52,-1.29,59.67,0,1.5707963267948966,0],
+              [11.59,-1.99,36.83,0,1.5707963267948966,0],
+              [9.55,0.29000000000000004,0.17,0,-1.5707963267948966,0],
+              [-1.07,-0.52,0.17,0,-1.5707963267948966,0],
+              [1.21,-2.96,-41.3,0,-1.5707963267948966,0],
+              [32.82,-1.67,-53.15,0,-1.5707963267948966,0],
+              [33.14,-0.9299999999999999,-73.55,0,3.141592653589793,0],
+              [35.15,0.19999999999999996,-32.87,0,0,0],
+              [35.45,1.37,-10.93,0,0,0],
+              [60.83,0.3799999999999999,0.07,0,1.5707963267948966,0],
+              [35.66,0.19999999999999996,35.35,0,3.141592653589793,0],
+              [35.42,1.37,10.74,0,3.141592653589793,0],
+              [35.57,-5.96,14.48,0,0,0]
+            ],
+            vehicles: []
+          },
         },
         weapons: {
           "AK-74": {
@@ -2428,6 +2493,7 @@
               const distance = weapon.rocket.position.distanceTo(camera.position);
               if (distance > weapon.distance) return;
               const realDamage = Math.min(weapon.damage / (distance / 1.3 * (weapon.distance / 5)), weapon.damage);
+              playerVelocity.y += Math.pow(Math.max(3 - distance, 0), 2) * 3;
               utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null, weapon, false, false, false, false, false, true);
             } else if (weapon == "melee") {
               const realDamage = 100;
