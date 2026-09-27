@@ -1219,6 +1219,15 @@
             }
           },
           {
+            id: "weapon.XD-Mod-2",
+            path: "/models/weapons/XD-Mod-2.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: [],
+            callback: function(model) {
+            }
+          },
+          {
             id: "propweapon.AK-74",
             path: "/models/characters/weapons/AK-74.glb",
             model: null,
@@ -1298,6 +1307,13 @@
           {
             id: "propweapon.Rocket-Launcher",
             path: "/models/characters/weapons/Rocket-Launcher.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.XD-Mod-2",
+            path: "/models/characters/weapons/FN-502.glb",
             model: null,
             loaded: false,
             requiredMaps: []
@@ -1966,6 +1982,41 @@
               throw: [4, 1.4, 1],
               walk: [5, 1, 1],
               run: [5, 1.2, 1]
+            }
+          },
+          "XD-Mod-2": {
+            name: "XD-Mod-2",
+            displayName: "XD Mod.2 Compact Pistol",
+            ammo: 24,
+            defaultAmmo: 24,
+            currentAmmo: 12,
+            maxAmmo: 12,
+            maxTotalAmmo: 48,
+            damage: 10,
+            headshotDamage: 16,
+            spread: 0.4,
+            muzzleFlash: true,
+            zoomPosition: [0.0325, 0.013, -0.016, 0.04991641660703782, -0.0778416846389471, 0.09494591130849153],
+            zoomFov: 30,
+            zoomDuration: 200,
+            fireMode: "semi",
+            fireRate: 200,
+            range: 16,
+            recoil: 1,
+            reticle: 1,
+            bulletHole: 0,
+            defaultDelayBetweenShots: 200,
+            type: "pistol",
+            model: null,
+            loaded: false,
+            animationStructure: {
+              reload: [0, 1, 1],
+              reload_full: [1, 1, 1],
+              idle: [2, 0.5, 0.2],
+              run: [5, 2.5, 1],
+              shoot: [3, 1, 1],
+              throw: [4, 0.5, 1],
+              walk: [5, 1.6, 1]
             }
           },
         }
