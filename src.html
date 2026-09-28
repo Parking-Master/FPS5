@@ -500,7 +500,7 @@
       </div>
     </div>
     <script>
-      if (!location.hostname.includes("5.fps")) gametime.serverURL = "ws://192.168.70.58:7201";
+      // if (!location.hostname.includes("5.fps")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -741,7 +741,7 @@
       sandbox = {
         initialized: false,
         presets: {
-          map: "Vertex",
+          map: "Cargo_Port",
           mode: "slayer",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
@@ -1228,6 +1228,15 @@
             }
           },
           {
+            id: "weapon.MLRS",
+            path: "/models/weapons/MLRS.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: [],
+            callback: function(model) {
+            }
+          },
+          {
             id: "propweapon.AK-74",
             path: "/models/characters/weapons/AK-74.glb",
             model: null,
@@ -1314,6 +1323,13 @@
           {
             id: "propweapon.XD-Mod-2",
             path: "/models/characters/weapons/XD-Mod-2.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.MLRS",
+            path: "/models/characters/weapons/MLRS.glb",
             model: null,
             loaded: false,
             requiredMaps: []
@@ -1773,7 +1789,7 @@
             muzzleFlash: true,
             zoomPosition: [0.032, 0.0031, -0.075, 0.046, -0.057, -0.02],
             zoomFov: 33,
-            zoomDuration: 110,
+            zoomDuration: 150,
             fireMode: "burst",
             fireRate: 30,
             range: 22,
@@ -1783,7 +1799,7 @@
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 200,
-            defaultDelayBetweenShots: 200,
+            defaultDelayBetweenShots: 300,
             type: "rifle",
             model: null,
             loaded: false,
@@ -1954,8 +1970,7 @@
             maxAmmo: 2,
             maxTotalAmmo: 4,
             damage: 200,
-            headshotDamage: 200,
-            spread: 0,
+            distance: 5,
             muzzleFlash: true,
             zoomPosition: [0.0401,-0.0145,-0.059,0.05,0,0],
             zoomFov: 35,
@@ -2015,6 +2030,44 @@
               reload: [2, 1, 1],
               reload_full: [3, 1, 1],
               throw: [4, 1, 1],
+              walk: [5, 1, 1],
+              run: [5, 1.2, 1]
+            }
+          },
+          "MLRS": {
+            name: "MLRS",
+            displayName: "MLRS Rocket Launcher",
+            ammo: 18,
+            defaultAmmo: 18,
+            currentAmmo: 6,
+            maxAmmo: 6,
+            maxTotalAmmo: 24,
+            damage: 50,
+            distance: 3.5,
+            muzzleFlash: true,
+            zoomPosition: [0.04715,-0.001,-0.0889,0.05,0,0.02],
+            zoomFov: 30,
+            zoomDuration: 250,
+            fireMode: "semi",
+            fireRate: 200,
+            range: 60,
+            recoil: 3,
+            reticle: 11,
+            bulletHole: 0,
+            scope: true,
+            scopeRendered: false,
+            delayBetweenShots: 400,
+            defaultDelayBetweenShots: 450,
+            type: "rifle",
+            rocket: true,
+            model: null,
+            loaded: false,
+            animationStructure: {
+              shoot: [0, 0.5, 2],
+              idle: [1, 1, 1],
+              reload: [2, 1.8, 1],
+              reload_full: [2, 1.8, 1],
+              throw: [4, 1.4, 1],
               walk: [5, 1, 1],
               run: [5, 1.2, 1]
             }
@@ -2544,7 +2597,7 @@
               const distance = weapon.rocket.position.distanceTo(camera.position);
               if (distance > weapon.distance) return;
               const realDamage = Math.min(weapon.damage / (distance / 1.3 * (weapon.distance / 5)), weapon.damage);
-              playerVelocity.y += Math.pow(Math.max(3 - distance, 0), 2) * 3;
+              playerVelocity.y += Math.pow(Math.max(3 - distance, 0), 2) * 2;
               utils.health.subtract(realDamage, utils.players.objects[weapon.playerUUID] || null, weapon, false, false, false, false, false, true);
             } else if (weapon == "melee") {
               const realDamage = 100;
@@ -3049,7 +3102,7 @@
             if (camera.position.y <= -40 || Math.abs(worldPosition.x) > 200 || Math.abs(worldPosition.z) > 200) utils.health.die("self");
           },
           updateRockets: function(deltaTime, time, cameraPosition) {
-            let rockets = utils.options.get("RocketProjectiles");
+            let rockets = utils.rockets.objects;
             let closestRocketDistance = null;
             let raycaster = utils.options.get("effectsRaycaster");
             let rocketPoint = utils.options.get("playerCamera");
@@ -4111,6 +4164,7 @@
           }
         },
         rockets: {
+          objects: {},
           launch: function(weaponName, isMultiplayer = false, point = null, rocketId) {
             let weaponChild = utils.weapons.getChild();
             let weaponChildRotation = weaponChild.rotation.clone();
@@ -4127,12 +4181,12 @@
               worldQuaternion = projectileOrigin.getWorldQuaternion(new THREE.Quaternion());
             }
             let projectile = projectileOrigin.clone();
+            projectile.weapon = sandbox.weapons[weaponName];
             projectile.position.copy(worldPosition);
             projectile.quaternion.copy(worldQuaternion);
             projectile.scale.copy(worldScale.multiplyScalar(2.5));
             scene.add(projectile);
             projectile.fireTimestamp = Date.now();
-            let rockets = utils.options.get("RocketProjectiles");
             audio.rocketLaunch(projectile);
             weaponChild.rotation.copy(weaponChildRotation);
             if (isMultiplayer) {
@@ -4142,20 +4196,18 @@
               projectile.isMultiplayer = false;
               gametime.run("rocketLaunch", [gametime.player.uuid, weaponName, [worldPosition.x, worldPosition.y, worldPosition.z, worldScale.x, worldScale.y, worldScale.z, worldQuaternion.x, worldQuaternion.y, worldQuaternion.z, worldQuaternion.w], projectile.uuid]);
             }
-            rockets[projectile.uuid] = projectile;
-            utils.options.set("RocketProjectiles", rockets);
+            utils.rockets.objects[projectile.uuid] = projectile;
           },
           explode: function(rocket, isMultiplayer = false, multiplayerUUID = null) {
-            let rockets = utils.options.get("RocketProjectiles");
             utils.players.hit(null, null, {
               rocket: rocket,
               playerUUID: multiplayerUUID,
-              damage: 200,
-              distance: 5
+              damage: rocket.weapon.damage,
+              distance: rocket.weapon.distance
             });
-            particles.explosion(rocket.position);
-            particles.dust(rocket.position, 7, 10);
-            const shakeIntensity = 4 / (Math.max(camera.getWorldPosition(vectors[31]).distanceTo(rocket.position), 1) / 2);
+            particles.explosion(rocket.position, 1 * (rocket.weapon.damage / 200));
+            particles.dust(rocket.position, 7 * (rocket.weapon.damage / 200), 10);
+            const shakeIntensity = 4 / (Math.max(camera.getWorldPosition(vectors[31]).distanceTo(rocket.position), 1) / 2) * (rocket.weapon.damage / 200);
             utils.effects.shake(shakeIntensity);
             audio.rocketExplosion(rocket);
             rocket.traverse(child => {
@@ -4163,8 +4215,7 @@
               if (child.material) child.material.dispose();
             });
             scene.remove(rocket);
-            delete rockets[rocket.uuid];
-            utils.options.set("RocketProjectiles", rockets);
+            delete utils.rockets.objects[rocket.uuid];
             if (!isMultiplayer) gametime.run("rocketExplode", [gametime.player.uuid, rocket.uuid]);
           },
         },
@@ -5031,7 +5082,6 @@
       utils.options.set("MeleeAllowed", false);
       utils.options.set("LastTimerUpdate", null);
       utils.options.set("GameStartTime", null);
-      utils.options.set("RocketProjectiles", {});
 
       scene.add(utils.options.get("playerCamera"));
 
@@ -5099,7 +5149,7 @@
         if (player != gametime.player.uuid) utils.rockets.launch(weaponName, true, point, rocketId);
       });
       gametime.on("rocketExplode", function(player, rocketId) {
-        if (player != gametime.player.uuid) utils.rockets.explode(utils.options.get("RocketProjectiles")[rocketId], true, player);
+        if (player != gametime.player.uuid) utils.rockets.explode(utils.rockets.objects[rocketId], true, player);
       });
 
       // Start order:
