@@ -139,6 +139,8 @@ audio = {
       "medal": AudioWrapper("/sounds/weapons/medal.mp3"),
       "rocket.launch": AudioWrapper3d("/sounds/weapons/rocket-launch.mp3", true),
       "rocket.explosion": AudioWrapper3d("/sounds/weapons/rocket-explode.mp3", true),
+      "music.ending": AudioWrapper("/sounds/ending-music.mp3"),
+      "announcer.game-over": AudioWrapper("/sounds/game-over.mp3")
     };
     audio.sounds["map.ambience"] = AudioWrapper("/sounds/ambience/" + sandbox.maps[sandbox.presets.map].ambienceSound + ".mp3");
     for (let i = 0; i < weapons.length; i++) {
@@ -468,6 +470,16 @@ audio = {
     if (sound.source) sound.stop();
     sound.play();
     if (rocket.launchSound && rocket.launchSound.source) rocket.launchSound.stop();
+  },
+  endingMusic: function() {
+    let sound = audio.sounds["music.ending"];
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
+  },
+  gameOver: function() {
+    let sound = audio.sounds["announcer.game-over"];
+    sound.play();
   }
 };
 

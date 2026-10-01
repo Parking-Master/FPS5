@@ -511,7 +511,7 @@
       scene.add(camera);
       document.querySelector(".ui-container").appendChild(renderer.domElement);
 
-      const directionalLight = new THREE.DirectionalLight(0xf4e6bc, 1.1);
+      const directionalLight = new THREE.DirectionalLight(0xf4e6bc, .8);
       const ambientLight = new THREE.AmbientLight(0xefe1a7, 0.4);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.autoUpdate = false;
@@ -695,9 +695,7 @@
 
         const deathTime = utils.options.get("DeathTime");
         if (deathTime) {
-          if (time - deathTime > sandbox.presets.options.respawnTime * 1000) {
-            utils.health.respawn();
-          }
+          if (time - deathTime > sandbox.presets.options.respawnTime * 1000 && !utils.options.get("GameEnded")) utils.health.respawn();
           const killer = utils.options.get("Killer");
           if (killer) {
             let target = null;
@@ -750,12 +748,13 @@
             "plasma": 0
           },
           options: {
-            gravity: 100, // Percent
-            teamGame: false,
-            teamSize: 2, // Players
-            playersNeeded: 1, // Players
-            respawnTime: 4, // Seconds
-            timeLimit: null // Seconds
+            scoreToWin: 25, // Kills, `null` for unlimited
+            timeLimit: 120, // Seconds, `null` for unlimited
+            teamGame: false, // Whether teams are enabled
+            teamSize: 2, // Maximum players per team
+            playersNeeded: 1, // Amount of players needed to start
+            respawnTime: 4, // Seconds until you respawn
+            gravity: 100 // Percentage of gravity
           }
         },
         loadout: [],
@@ -836,10 +835,10 @@
             utils.ui.radar.init();
             gametime.player.data.ready = true;
             utils.health.respawn();
+            utils.options.set("GameStartTime", Date.now()); // This will be moved to the actual game start function later on
             animate();
             renderer.shadowMap.needsUpdate = true;
             audio.ambience();
-            utils.options.set("GameStartTime", Date.now()); // This will be moved to the actual game start function later on
           });
         },
         loadingManager: new THREE.LoadingManager(),
@@ -2186,7 +2185,18 @@
               let secondsLeft = sandbox.presets.options.timeLimit - ((time - utils.options.get("GameStartTime")) / 1000);
               let formattedSeconds = Math.floor(secondsLeft % 60);
               let formattedTime = Math.floor((secondsLeft % 3600) / 60) + ":" + (formattedSeconds < 10 ? "0" : "") + formattedSeconds;
-              utils.ui.elements.time.textContent = formattedTime;
+              if (secondsLeft <= 0) {
+                utils.game.end();
+              } else {
+                if (secondsLeft <= 97 && !utils.options.get("StartedEndingMusic")) {
+                  utils.options.set("StartedEndingMusic", true);
+                  audio.endingMusic();
+                }
+                if (secondsLeft <= 10 && !utils.ui.elements.time.style.color) {
+                  utils.ui.elements.time.style.color = "#dd1111";
+                }
+                utils.ui.elements.time.textContent = formattedTime;
+              }
             }
             if (deathScreen) {
               let respawnTimeLeft = Math.ceil(((sandbox.presets.options.respawnTime * 1000) - (time - utils.options.get("DeathTime"))) / 1000);
@@ -2653,6 +2663,7 @@
                 }
               }
               utils.ui.updateScores(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore);
+              if (gametime.players[player].data.kills >= sandbox.presets.options.scoreToWin) utils.game.end();
               const playerObject = utils.players.objects[player];
               if (player != gametime.player.uuid && typeof playerObject !== "undefined" && playerObject != null) {
                 if (playerObject.allowedToUpdate) {
@@ -4914,6 +4925,14 @@
             utils.ui.hideDeathInfo();
             gametime.run("playerRespawn", [gametime.player.uuid, spawnPoint]);
           }
+        },
+        game: {
+          end: function() {
+            if (utils.options.get("GameEnded")) return;
+            utils.options.set("GameEnded", true);
+            utils.ui.hide();
+            audio.gameOver();
+          }
         }
       };
 
@@ -5082,6 +5101,8 @@
       utils.options.set("MeleeAllowed", false);
       utils.options.set("LastTimerUpdate", null);
       utils.options.set("GameStartTime", null);
+      utils.options.set("StartedEndingMusic", false);
+      utils.options.set("GameEnded", false);
 
       scene.add(utils.options.get("playerCamera"));
 
