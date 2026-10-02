@@ -20,6 +20,12 @@
           box-shadow: inset 0 0 40px rgba(220, 30, 20, 0.8);
         }
       }
+      @keyframes points-flashing {
+        50% {
+          color: #555;
+          text-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+        }
+      }
       @keyframes medal {
         0% {
           transform: scale(1.5);
@@ -86,7 +92,7 @@
         position: fixed;
         width: 100%;
         height: 100%;
-        z-index: 2147483645;
+        z-index: 9998;
       }
       .ui {
         position: fixed;
@@ -94,12 +100,13 @@
         height: 100%;
         top: 0;
         pointer-events: none !important;
-        z-index: 2147483645;
+        z-index: 9998;
       }
       canvas {
         position: relative;
         width: 100%;
         height: 100%;
+        transition: opacity 3s ease-out;
       }
       .ui-section.top-section {
         position: absolute;
@@ -447,7 +454,7 @@
         position: relative;
         width: 100%;
         padding: 10px;
-        background: rgba(20, 20, 20, 0.8);
+        background: rgba(50, 50, 50, 0.8);
         font-size: 16px;
         color: #eee;
         margin: 2px;
@@ -466,6 +473,7 @@
       }
       .leaderboard-row.leaderboard-row-me {
         border-left: 5px solid #ddd;
+        box-shadow: inset 0 0 100px rgba(200, 200, 200, 0.15);
       }
       .leaderboard-header {
         background-image: none !important;
@@ -518,21 +526,6 @@
         <div class="leaderboard-wrapper-none"></div>
         <div class="leaderboard-wrapper-red"></div>
         <div class="leaderboard-wrapper-blue"></div>
-        <!-- <div class="leaderboard-row">
-          <div class="leaderboard-username">TestPlayer1234</div>
-          <div class="leaderboard-score">0</div>
-          <div class="leaderboard-kills">0</div>
-        </div>
-        <div class="leaderboard-row">
-          <div class="leaderboard-username">TestPlayer1234</div>
-          <div class="leaderboard-score">0</div>
-          <div class="leaderboard-kills">0</div>
-        </div>
-        <div class="leaderboard-row">
-          <div class="leaderboard-username">TestPlayer1234</div>
-          <div class="leaderboard-score">0</div>
-          <div class="leaderboard-kills">0</div>
-        </div> -->
       </div>
       <div class="hurt-screen"></div>
       <div class="ui-section left-section">
@@ -589,8 +582,7 @@
       </div>
     </div>
     <script>
-      // return;
-      // if (!location.hostname.includes("5.fps")) gametime.serverURL = "ws://192.168.70.58:7201";
+      if (!location.hostname.includes("5.fps")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
@@ -643,6 +635,7 @@
       let playerAgainstWall = false;
 
       function animate(now) {
+        if (utils.options.get("StopFrame")) return;
         const clockDelta = clock.getDelta();
         const deltaTime = Math.min(0.04, clockDelta) / 4;
         const time = Date.now();
@@ -740,7 +733,7 @@
               object.remove();
               delete tmpObjects[uuid];
             } else if (object.objectType == "hurtScreen") {
-              utils.ui.elements.hurtScreen.style = `transition: box-shadow ${Math.max(Math.pow(Math.min(object.intensity, 1), 2), 0.2)}s ease-out; box-shadow: inset 0px 0px 0px transparent; opacity: ${Math.min(object.intensity, 1)}`;
+              utils.ui.elements.hurtScreen.style = `transition: box-shadow ${Math.max(Math.pow(Math.min(object.intensity, 1.5), 2), 0.5)}s ease-out; box-shadow: inset 0px 0px 0px transparent; opacity: ${Math.min(object.intensity, 1)}`;
               delete tmpObjects[uuid];
             } else if (object.objectType == "resetStyle") {
               object.style = "";
@@ -772,6 +765,10 @@
               delete tmpObjects[uuid];
             } else if (object.objectType == "hidePoints") {
               if (utils.ui.cache.activeMedals.length <= 0) object.style = "opacity: 0", utils.ui.cache.activePoints = 0;
+              delete tmpObjects[uuid];
+            } else if (object.objectType == "gameOverTransition") {
+              renderer.domElement.style.opacity = 0;
+              setTimeout(() => location.replace("/"), 5000);
               delete tmpObjects[uuid];
             }
           }
@@ -829,8 +826,8 @@
       sandbox = {
         initialized: false,
         presets: {
-          map: "Cargo_Port",
-          mode: "slayer",
+          map: "Lihid",
+          mode: "fiesta",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
           grenades: {
@@ -839,12 +836,14 @@
           },
           options: {
             scoreToWin: 25, // Kills, `null` for unlimited
-            timeLimit: 120, // Seconds, `null` for unlimited
+            timeLimit: 720, // Seconds, `null` for unlimited
             teamGame: false, // Whether teams are enabled
             teamSize: 2, // Maximum players per team
             playersNeeded: 1, // Amount of players needed to start
             respawnTime: 4, // Seconds until you respawn
-            gravity: 100 // Percentage of gravity
+            gravity: 100, // Percentage of gravity
+            radar: false, // Whether the radar is enabled
+            vehicles: true // Whether vehicles are enabled
           }
         },
         loadout: [],
@@ -875,6 +874,7 @@
           "enterVehicle": ["KeyE", "KeyT"],
           "vehicleView": ["KeyV"],
           "interact": ["KeyT"],
+          "leaderboard": ["KeyL"],
         },
         loadModels: function() {
           for (let i = 0; i < sandbox.models.length; i++) {
@@ -944,7 +944,7 @@
               textureLoader.load("/images/assets/skies/0.png", function(skyTexture) {
                 map = model.scene;
                 worldOctree.fromGraphNode(map);
-                vehiclePhysics.initialize(map);
+                if (sandbox.presets.options.vehicles) vehiclePhysics.initialize(map);
                 map.traverse(child => {
                   child.frustumCulled = false;
                   if (child.isMesh) {
@@ -1091,7 +1091,7 @@
                 nocollisions.forEach(child => child.parent.remove(child));
                 worldOctree.fromGraphNode(map);
                 nocollisions.forEach(child => scene.add(child));
-                vehiclePhysics.initialize(map);
+                if (sandbox.presets.options.vehicles) vehiclePhysics.initialize(map);
                 directionalLight.position.set(-500,100,-500);
                 directionalLight.shadow.camera.far = 1000;
                 directionalLight.shadow.camera.updateProjectionMatrix();
@@ -1470,7 +1470,7 @@
             removeAfterLoaded: false,
             requiredMaps: ["Cargo_Port"],
             callback: function(model) {
-              utils.vehicles.add(model, "Jeep");
+              if (sandbox.presets.options.vehicles) utils.vehicles.add(model, "Jeep");
             }
           },
           {
@@ -1481,7 +1481,7 @@
             removeAfterLoaded: false,
             requiredMaps: ["Apex"],
             callback: function(model) {
-              utils.vehicles.add(model, "Warthog", -.54);
+              if (sandbox.presets.options.vehicles) utils.vehicles.add(model, "Warthog", -.54);
             }
           },
           {
@@ -2333,9 +2333,12 @@
             }
           },
           showLeaderboard: function() {
+            utils.ui.hide();
             utils.ui.elements.leaderboard.style.opacity = 1;
           },
           hideLeaderboard: function() {
+            if (utils.options.get("GameEnded")) return;
+            if (!deathScreen) utils.ui.show();
             utils.ui.elements.leaderboard.style.opacity = 0;
           },
           showBottomRightSection: function() {
@@ -2472,6 +2475,8 @@
           },
           displayMedal: function(medal) {
             utils.ui.cache.activePoints += sandbox.medals[medal].points;
+            if (typeof utils.game.medals[medal] === "undefined") utils.game.medals[medal] = 0;
+            utils.game.medals[medal] += sandbox.medals[medal].points;
             utils.ui.cache.activeMedals.push(medal);
             utils.ui.elements.killPopupPoints.style = "transition: none";
             utils.ui.elements.killPopupPoints.querySelector("#value").textContent = utils.ui.cache.activePoints;
@@ -2766,7 +2771,7 @@
           update: function() {
             gametime.player.data.position = [camera.position.x, camera.position.y - 1, camera.position.z];
             gametime.player.data.rotation = [camera.rotation.x, camera.rotation.y, camera.rotation.z];
-            if (sandbox.presets.mode == "fiesta") gametime.player.data.loadout = sandbox.presets.loadout;
+            if (sandbox.presets.loadout.indexOf("random") > -1) gametime.player.data.loadout = sandbox.loadout;
             gametime.update();
             let leftTeamUsername = null;
             let rightTeamUsername = null;
@@ -2796,7 +2801,7 @@
               }
               utils.ui.updateScores(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore);
               utils.ui.updateLeaderboardEntry(player);
-              if (gametime.players[player].data.kills >= sandbox.presets.options.scoreToWin) utils.game.end();
+              if (sandbox.presets.options.scoreToWin != null && leftTeamScore >= sandbox.presets.options.scoreToWin || rightTeamScore >= sandbox.presets.options.scoreToWin) utils.game.end();
               const playerObject = utils.players.objects[player];
               if (player != gametime.player.uuid && typeof playerObject !== "undefined" && playerObject != null) {
                 if (playerObject.allowedToUpdate) {
@@ -2888,6 +2893,7 @@
               }
             },
             stop: function(player, animation, options = {}) {
+              if (!player) return;
               const clip = player.animationMixer.clipAction(player.animations[player.animationStructure[animation][0]]);
               if (animation == "crouch_idle") return clip.reset(), clip.fadeOut(.3), clip.play();
               if (animation == "rifle_walk" || animation == "pistol_walk" || animation == "rifle_jump" || animation == "pistol_jump") {
@@ -3088,7 +3094,7 @@
               });
               if (killer == gametime.player.uuid) {
                 if (isHeadshot) audio.hitHeadshot();
-                if (sandbox.presets.options.teamGame ? gametime.players[player.uuid].data.team != gametime.player.data.team : true) {
+                if (!utils.options.get("GameEnded") && (sandbox.presets.options.teamGame ? gametime.players[player.uuid].data.team != gametime.player.data.team : true)) {
                   if (Date.now() - utils.options.get("lastKill") <= 4500) {
                     utils.options.set("KillStreak", utils.options.get("KillStreak") + 1);
                   } else {
@@ -3120,6 +3126,7 @@
               audio.dying(player.scene.position);
             },
             respawn: function(player, spawnPoint) {
+              if (!player) return;
               player.isDead = false;
               player.allowedToUpdate = true;
               player.scene.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2]);
@@ -5027,7 +5034,7 @@
             if (zoomTween && zoomTween.out) zoomTween.out.fov.stop();
             camera.fov = 70;
             camera.updateProjectionMatrix();
-            utils.effects.shake(10, 0, 1000);
+            utils.effects.shake(3, 0, 1000);
             audio.dying(camera.position);
             PointerControls.isLocked = false;
           },
@@ -5060,10 +5067,10 @@
           }
         },
         game: {
+          medals: {},
           end: function() {
             if (utils.options.get("GameEnded")) return;
             utils.options.set("GameEnded", true);
-            utils.ui.hide();
             utils.ui.hideDeathInfo();
             utils.ui.showLeaderboard();
             let redTeamScore = 0;
@@ -5085,32 +5092,23 @@
                   winnerText = "TIE GAME";
                 }
               } else {
-                if (winnerText == null || gametime.players[player].data.kills > highestPlayerScore) winnerText = gametime.players[player].username + " WINS!";
+                if (winnerText == null) {
+                  highestPlayerScore = gametime.players[player].data.kills;
+                  winnerText = gametime.players[player].username + " WINS!";
+                } else {
+                  if (gametime.players[player].data.kills > highestPlayerScore) {
+                    highestPlayerScore = gametime.players[player].data.kills;
+                    winnerText = gametime.players[player].username + " WINS!";
+                  } else if (gametime.players[player].data.kills == highestPlayerScore) {
+                    winnerText = "TIE GAME";
+                  }
+                }
               }
             }
             utils.ui.elements.leaderboard.querySelector(".winning-team").textContent = winnerText;
             audio.gameOver();
-            let transitionCanvas = document.createElement("canvas");
-            transitionCanvas.width = window.innerWidth;
-            transitionCanvas.height = window.innerHeight;
-            transitionCanvas.style.zIndex = "9999999999999";
-            document.body.appendChild(transitionCanvas);
-            let ctx = transitionCanvas.getContext("2d");
-            let step = 0;
-            let row = 0;
-            function animationStep() {
-              step++;
-              if (step >= window.innerWidth) step = 0, row++;
-              if (row >= 3) return; // add ending here, showing i.e. points
-              ctx.fillStyle = "#eee";
-              if ((row + 1) % 2 != 0) {
-                ctx.fillRect(window.innerWidth - (step * 10), (window.innerHeight / 4) * row, step * 10, window.innerHeight / 4);
-              } else {
-                ctx.fillRect(0, (window.innerHeight / 4) * row, step * 10, window.innerHeight / 4);
-              }
-              requestAnimationFrame(animationStep);
-            }
-            animationStep();
+            document.body.style.background = "#000";
+            utils.options.addTmpObject({}, "gameOverTransition", 4000);
           }
         }
       };
@@ -5130,17 +5128,46 @@
 
       sandbox.presets.character = user.data.character;
       gametime.set("username", user.data.username);
-      if (sandbox.presets.mode == "snipers") {
+
+      // All of these presets will soon be set when the user creates the lobby, and this code will be replaced by something that fetches and applies the lobby presets
+      if (sandbox.presets.mode == "slayer") {
+        sandbox.presets.loadout = user.data.loadout;
+        sandbox.presets.grenades = user.data.grenades;
+        sandbox.presets.options.teamGame = false;
+        sandbox.presets.options.playersNeeded = 2;
+        sandbox.presets.options.radar = true;
+        sandbox.presets.options.scoreToWin = 25;
+        sandbox.presets.options.timeLimit = 900;
+      } else if (sandbox.presets.mode == "team-slayer") {
+        sandbox.presets.loadout = user.data.loadout;
+        sandbox.presets.grenades = user.data.grenades;
+        sandbox.presets.options.teamGame = true;
+        sandbox.presets.options.teamSize = 2;
+        sandbox.presets.options.playersNeeded = 4;
+        sandbox.presets.options.radar = true;
+        sandbox.presets.options.scoreToWin = 50;
+        sandbox.presets.options.timeLimit = 720;
+      } else if (sandbox.presets.mode == "snipers") {
         sandbox.presets.loadout = ["HK-G28"];
-        utils.ui.elements.radar.style.display = "none";
+        sandbox.presets.grenades = { "mk2": 0, "plasma": 0 };
+        sandbox.presets.options.teamGame = false;
+        sandbox.presets.options.playersNeeded = 2;
+        sandbox.presets.options.radar = false;
+        sandbox.presets.options.scoreToWin = 15;
+        sandbox.presets.options.timeLimit = 600;
       } else if (sandbox.presets.mode == "fiesta") {
         sandbox.models.forEach(model => { if (model.id.startsWith("weapon.") || model.id.startsWith("propweapon.")) model.requiredMaps.push(sandbox.presets.map) });
         sandbox.presets.loadout = ["random", "random"];
         sandbox.presets.grenades = { "mk2": 0, "plasma": 1 };
-      } else if (sandbox.presets.mode == "slayer") {
-        sandbox.presets.loadout = user.data.loadout;
-        sandbox.presets.grenades = user.data.grenades;
+        sandbox.presets.options.teamGame = false;
+        sandbox.presets.options.playersNeeded = 2;
+        sandbox.presets.options.radar = true;
+        sandbox.presets.options.scoreToWin = 25;
+        sandbox.presets.options.timeLimit = 720;
       }
+      // End section
+
+      if (!sandbox.presets.options.radar) utils.ui.elements.radar.style.display = "none";
 
       sandbox.loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
         const progress = itemsLoaded / itemsTotal;
@@ -5185,7 +5212,9 @@
       onWindowResize();
 
       document.addEventListener("keydown", function(event) {
-        if (!PointerControls.isLocked || !sandbox.initialized) return;
+        if (!sandbox.initialized) return;
+        if (!event.repeat && sandbox.controls.leaderboard.includes(event.code)) utils.ui.showLeaderboard();
+        if (!PointerControls.isLocked) return;
         keyStates[event.code] = true;
         if (!event.repeat && !deathScreen) {
           if (!utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.startWalking();
@@ -5203,7 +5232,9 @@
         }
       });
       document.addEventListener("keyup", function(event) {
-        if (!PointerControls.isLocked || !sandbox.initialized) return;
+        if (!sandbox.initialized) return;
+        if (sandbox.controls.leaderboard.includes(event.code)) utils.ui.hideLeaderboard();
+        if (!PointerControls.isLocked) return;
         keyStates[event.code] = false;
         if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.stopWalking();
         if (!keyStates["KeyW"] && !keyStates["KeyS"] && !keyStates["ArrowUp"] && !keyStates["ArrowDown"]) {
@@ -5215,12 +5246,11 @@
       });
       document.addEventListener("mousedown", function(event) {
         if (document.pointerLockElement != null || !sandbox.initialized) return;
-        document.body.requestPointerLock();
-        PointerControls.lock();
+        if (document.hasFocus()) document.body.requestPointerLock(), PointerControls.lock();
       });
       document.addEventListener("mouseup", (event) => {
         if (!PointerControls.isLocked || !sandbox.initialized) return;
-        PointerControls.lock();
+        if (document.hasFocus()) PointerControls.lock();
       });
 
       const PointerControls = new PointerLockControls(camera, renderer.domElement);
@@ -5282,6 +5312,7 @@
       utils.options.set("GameStartTime", null);
       utils.options.set("StartedEndingMusic", false);
       utils.options.set("GameEnded", false);
+      utils.options.set("StopFrame", false);
 
       scene.add(utils.options.get("playerCamera"));
 
