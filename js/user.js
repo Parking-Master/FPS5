@@ -189,7 +189,8 @@ user = {
             "mk2": 2,
             "plasma": 0
           },
-          "character": "Raven"
+          "character": "Raven",
+          "profilePicture": "https://cdn.jsdelivr.net/gh/Parking-Master/Parking-Master@latest/img/profile-picture.png"
         }));
       }
       user.data = JSON.parse(localStorage["local-user-data"]);

@@ -426,6 +426,69 @@
         width: 1000px !important;
         height: 500px !important;
       }
+      .leaderboard {
+        position: absolute;
+        width: 400px;
+        left: 50%;
+        margin-left: -200px;
+        top: 150px;
+        z-index: 99;
+        opacity: 0;
+        transition: opacity .25s ease-in;
+      }
+      .leaderboard .winning-team {
+        font-family: "Arame";
+        font-size: 18px;
+        color: #eee;
+        margin: 6px 2px;
+        text-shadow: 1px 1px #000;
+      }
+      .leaderboard-row {
+        position: relative;
+        width: 100%;
+        padding: 10px;
+        background: rgba(20, 20, 20, 0.8);
+        font-size: 16px;
+        color: #eee;
+        margin: 2px;
+        font-family: "Arame";
+        background-image: url(https://cdn.jsdelivr.net/gh/Parking-Master/Parking-Master@latest/img/profile-picture.png);
+        background-size: 30px;
+        background-position: 6px center;
+        background-repeat: no-repeat;
+        box-sizing: border-box;
+      }
+      .leaderboard .leaderboard-wrapper-red .leaderboard-row {
+        background-color: rgba(200, 20, 20, 0.8);
+      }
+      .leaderboard .leaderboard-wrapper-blue .leaderboard-row {
+        background-color: rgba(20, 100, 200, 0.8);
+      }
+      .leaderboard-row.leaderboard-row-me {
+        border-left: 5px solid #ddd;
+      }
+      .leaderboard-header {
+        background-image: none !important;
+      }
+      .leaderboard-row .leaderboard-score {
+        position: relative;
+        float: right;
+        right: 70px;
+        z-index: 10;
+        margin-top: -20px;
+        text-align: right;
+      }
+      .leaderboard-row .leaderboard-kills {
+        position: relative;
+        float: right;
+        right: 0;
+        z-index: 10;
+        margin-top: -20px;
+      }
+      .leaderboard-username {
+        margin-left: 40px;
+        margin-top: -8px;
+      }
     </style>
   </head>
   <body>
@@ -445,6 +508,32 @@
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
     <script src="/js/user.js"></script>
     <div class="ui-container">
+      <div class="leaderboard">
+        <div class="winning-team"></div>
+        <div class="leaderboard-row leaderboard-header">
+          <div class="leaderboard-username">Player</div>
+          <div class="leaderboard-kills">Kills</div>
+          <div class="leaderboard-score">Score</div>
+        </div>
+        <div class="leaderboard-wrapper-none"></div>
+        <div class="leaderboard-wrapper-red"></div>
+        <div class="leaderboard-wrapper-blue"></div>
+        <!-- <div class="leaderboard-row">
+          <div class="leaderboard-username">TestPlayer1234</div>
+          <div class="leaderboard-score">0</div>
+          <div class="leaderboard-kills">0</div>
+        </div>
+        <div class="leaderboard-row">
+          <div class="leaderboard-username">TestPlayer1234</div>
+          <div class="leaderboard-score">0</div>
+          <div class="leaderboard-kills">0</div>
+        </div>
+        <div class="leaderboard-row">
+          <div class="leaderboard-username">TestPlayer1234</div>
+          <div class="leaderboard-score">0</div>
+          <div class="leaderboard-kills">0</div>
+        </div> -->
+      </div>
       <div class="hurt-screen"></div>
       <div class="ui-section left-section">
         <div class="ui-kill-stats"></div>
@@ -500,6 +589,7 @@
       </div>
     </div>
     <script>
+      // return;
       // if (!location.hostname.includes("5.fps")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
@@ -2114,7 +2204,8 @@
             timeInitiallyUpdated: false,
             activeMedals: [],
             activePoints: 0,
-            currentVehicleSeatHovering: null
+            currentVehicleSeatHovering: null,
+            leaderboardEntries: {}
           },
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
@@ -2149,7 +2240,11 @@
             killPopupPoints: document.querySelector(".kill-popup-points"),
             deathInfo: document.querySelector(".ui-death-info"),
             deathInfoUsername: document.querySelector(".ui-death-info #value"),
-            respawnCountdown: document.querySelector(".ui-death-info .respawn-countdown #value")
+            respawnCountdown: document.querySelector(".ui-death-info .respawn-countdown #value"),
+            leaderboard: document.querySelector(".leaderboard"),
+            leaderboardWrapper_none: document.querySelector(".leaderboard-wrapper-none"),
+            leaderboardWrapper_red: document.querySelector(".leaderboard-wrapper-red"),
+            leaderboardWrapper_blue: document.querySelector(".leaderboard-wrapper-blue")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle, time) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -2185,7 +2280,7 @@
               let secondsLeft = sandbox.presets.options.timeLimit - ((time - utils.options.get("GameStartTime")) / 1000);
               let formattedSeconds = Math.floor(secondsLeft % 60);
               let formattedTime = Math.floor((secondsLeft % 3600) / 60) + ":" + (formattedSeconds < 10 ? "0" : "") + formattedSeconds;
-              if (secondsLeft <= 0) {
+              if (secondsLeft <= 0.5) {
                 utils.game.end();
               } else {
                 if (secondsLeft <= 97 && !utils.options.get("StartedEndingMusic")) {
@@ -2208,6 +2303,40 @@
             if (leftTeamScore != utils.ui.cache.leftTeamScore) utils.ui.cache.leftTeamScore = leftTeamScore, utils.ui.elements.leftTeamScore.textContent = leftTeamScore;
             if (rightTeamUsername != utils.ui.cache.rightTeamUsername) utils.ui.cache.rightTeamUsername = rightTeamUsername, utils.ui.elements.rightTeamUsername.textContent = rightTeamUsername;
             if (rightTeamScore != utils.ui.cache.rightTeamScore) utils.ui.cache.rightTeamScore = rightTeamScore, utils.ui.elements.rightTeamScore.textContent = rightTeamScore;
+          },
+          addToLeaderboard: function(uuid, username, profilePicture, team = null, isMe = false) {
+            let template = `
+            <div class="leaderboard-row ${isMe ? "leaderboard-row-me" : ""}" data-player-uuid="${uuid}" style="${profilePicture ? `background-image:url(${profilePicture})` : ""}">
+              <div class="leaderboard-username">${username}</div>
+              <div class="leaderboard-score">0</div>
+              <div class="leaderboard-kills">0</div>
+            </div>
+            `;
+            if (team) {
+              utils.ui.elements["leaderboardWrapper_" + team].innerHTML += template;
+            } else {
+              utils.ui.elements.leaderboardWrapper_none.innerHTML += template;
+            }
+            utils.ui.cache.leaderboardEntries[uuid] = { score: 0, kills: 0 };
+          },
+          updateLeaderboardEntry: function(uuid) {
+            if (!utils.ui.cache.leaderboardEntries[uuid]) return;
+            let score = gametime.players[uuid].data.score;
+            let kills = gametime.players[uuid].data.kills;
+            if (score != utils.ui.cache.leaderboardEntries[uuid].score) {
+              utils.ui.cache.leaderboardEntries[uuid].score = score;
+              utils.ui.elements.leaderboard.querySelector(`.leaderboard-row[data-player-uuid="${uuid}"] .leaderboard-score`).textContent = score;
+            }
+            if (kills != utils.ui.cache.leaderboardEntries[uuid].kills) {
+              utils.ui.cache.leaderboardEntries[uuid].kills = kills;
+              utils.ui.elements.leaderboard.querySelector(`.leaderboard-row[data-player-uuid="${uuid}"] .leaderboard-kills`).textContent = kills;
+            }
+          },
+          showLeaderboard: function() {
+            utils.ui.elements.leaderboard.style.opacity = 1;
+          },
+          hideLeaderboard: function() {
+            utils.ui.elements.leaderboard.style.opacity = 0;
           },
           showBottomRightSection: function() {
             utils.ui.elements.bottomRightSection.style.opacity = 1;
@@ -2247,6 +2376,7 @@
             }
           },
           showDeathInfo: function(username) {
+            if (utils.options.get("GameEnded")) return;
             utils.ui.elements.deathInfoUsername.textContent = username;
             utils.ui.elements.deathInfo.style.display = "block";
           },
@@ -2542,9 +2672,11 @@
                 const usernamePointer = text.createUsername(player.username, player.data.team != gametime.player.data.team);
                 playerObject.scene.add(usernamePointer);
                 utils.players.setArmorColor(playerObject);
+                utils.ui.addToLeaderboard(player.uuid, player.username, player.data.profilePicture, player.data.team);
               } else {
                 const usernamePointer = text.createUsername(player.username, true);
                 playerObject.scene.add(usernamePointer);
+                utils.ui.addToLeaderboard(player.uuid, player.username, player.data.profilePicture);
               }
             });
           },
@@ -2663,6 +2795,7 @@
                 }
               }
               utils.ui.updateScores(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore);
+              utils.ui.updateLeaderboardEntry(player);
               if (gametime.players[player].data.kills >= sandbox.presets.options.scoreToWin) utils.game.end();
               const playerObject = utils.players.objects[player];
               if (player != gametime.player.uuid && typeof playerObject !== "undefined" && playerObject != null) {
@@ -4931,7 +5064,53 @@
             if (utils.options.get("GameEnded")) return;
             utils.options.set("GameEnded", true);
             utils.ui.hide();
+            utils.ui.hideDeathInfo();
+            utils.ui.showLeaderboard();
+            let redTeamScore = 0;
+            let blueTeamScore = 0;
+            let highestPlayerScore = 0;
+            let winnerText = null;
+            for (player in gametime.players) {
+              if (sandbox.presets.options.teamGame) {
+                if (gametime.players[player].data.team == "red") {
+                  redTeamScore += gametime.players[player].data.kills;
+                } else if (gametime.players[player].data.team == "blue") {
+                  blueTeamScore += gametime.players[player].data.kills;
+                }
+                if (redTeamScore > blueTeamScore) {
+                  winnerText = "RED TEAM WINS!";
+                } else if (blueTeamScore > redTeamScore) {
+                  winnerText = "BLUE TEAM WINS!";
+                } else {
+                  winnerText = "TIE GAME";
+                }
+              } else {
+                if (winnerText == null || gametime.players[player].data.kills > highestPlayerScore) winnerText = gametime.players[player].username + " WINS!";
+              }
+            }
+            utils.ui.elements.leaderboard.querySelector(".winning-team").textContent = winnerText;
             audio.gameOver();
+            let transitionCanvas = document.createElement("canvas");
+            transitionCanvas.width = window.innerWidth;
+            transitionCanvas.height = window.innerHeight;
+            transitionCanvas.style.zIndex = "9999999999999";
+            document.body.appendChild(transitionCanvas);
+            let ctx = transitionCanvas.getContext("2d");
+            let step = 0;
+            let row = 0;
+            function animationStep() {
+              step++;
+              if (step >= window.innerWidth) step = 0, row++;
+              if (row >= 3) return; // add ending here, showing i.e. points
+              ctx.fillStyle = "#eee";
+              if ((row + 1) % 2 != 0) {
+                ctx.fillRect(window.innerWidth - (step * 10), (window.innerHeight / 4) * row, step * 10, window.innerHeight / 4);
+              } else {
+                ctx.fillRect(0, (window.innerHeight / 4) * row, step * 10, window.innerHeight / 4);
+              }
+              requestAnimationFrame(animationStep);
+            }
+            animationStep();
           }
         }
       };
@@ -5188,7 +5367,8 @@
         team: null,
         score: 0,
         kills: 0,
-        ready: false
+        ready: false,
+        profilePicture: user.data.profilePicture
       });
       let connected = false;
       gametime.onconnect = function() {
@@ -5209,6 +5389,9 @@
               } else {
                 gametime.player.data.team = "red";
               }
+              utils.ui.addToLeaderboard(gametime.player.uuid, gametime.player.username, gametime.player.data.profilePicture, gametime.player.data.team, true);
+            } else {
+              utils.ui.addToLeaderboard(gametime.player.uuid, gametime.player.username, gametime.player.data.profilePicture, null, true);
             }
             sandbox.loadModels();
           } else {
