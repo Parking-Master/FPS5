@@ -827,7 +827,7 @@
         initialized: false,
         presets: {
           map: "Lihid",
-          mode: "fiesta",
+          mode: "slayer",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
           grenades: {
@@ -1312,18 +1312,21 @@
             path: "/models/weapons/XD-Mod-2.glb",
             model: null,
             loaded: false,
-            requiredMaps: [],
-            callback: function(model) {
-            }
+            requiredMaps: []
           },
           {
             id: "weapon.MLRS",
             path: "/models/weapons/MLRS.glb",
             model: null,
             loaded: false,
-            requiredMaps: [],
-            callback: function(model) {
-            }
+            requiredMaps: []
+          },
+          {
+            id: "weapon.Remington-870",
+            path: "/models/weapons/Remington-870.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
           },
           {
             id: "propweapon.AK-74",
@@ -1418,6 +1421,13 @@
           },
           {
             id: "propweapon.MLRS",
+            path: "/models/characters/weapons/MLRS.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.Remington-870",
             path: "/models/characters/weapons/MLRS.glb",
             model: null,
             loaded: false,
@@ -1672,6 +1682,7 @@
             reticle: 0,
             bulletHole: 0,
             defaultDelayBetweenShots: 100,
+            holdType: "rifle",
             type: "rifle",
             model: null,
             loaded: false,
@@ -1707,6 +1718,7 @@
             reticle: 1,
             bulletHole: 0,
             defaultDelayBetweenShots: 200,
+            holdType: "pistol",
             type: "pistol",
             model: null,
             loaded: false,
@@ -1742,6 +1754,7 @@
             reticle: 2,
             bulletHole: 0,
             defaultDelayBetweenShots: 80,
+            holdType: "rifle",
             type: "rifle",
             model: null,
             loaded: false,
@@ -1777,6 +1790,7 @@
             reticle: 3,
             bulletHole: 0,
             defaultDelayBetweenShots: 65,
+            holdType: "rifle",
             type: "rifle",
             model: null,
             loaded: false,
@@ -1815,8 +1829,8 @@
             scopeRendered: false,
             delayBetweenShots: 700,
             defaultDelayBetweenShots: 700,
-            type: "rifle",
-            sniper: true,
+            holdType: "rifle",
+            type: "sniper-rifle",
             model: null,
             loaded: false,
             animationStructure: {
@@ -1851,6 +1865,7 @@
             reticle: 5,
             bulletHole: 0,
             defaultDelayBetweenShots: 200,
+            holdType: "pistol",
             type: "pistol",
             model: null,
             loaded: false,
@@ -1889,6 +1904,7 @@
             scopeRendered: false,
             delayBetweenShots: 200,
             defaultDelayBetweenShots: 300,
+            holdType: "rifle",
             type: "rifle",
             model: null,
             loaded: false,
@@ -1924,6 +1940,7 @@
             reticle: 7,
             bulletHole: 0,
             defaultDelayBetweenShots: 100,
+            holdType: "rifle",
             type: "rifle",
             model: null,
             loaded: false,
@@ -1962,8 +1979,8 @@
             scopeRendered: false,
             delayBetweenShots: 300,
             defaultDelayBetweenShots: 300,
-            type: "rifle",
-            sniper: true,
+            holdType: "rifle",
+            type: "sniper-rifle",
             model: null,
             loaded: false,
             animationStructure: {
@@ -1999,6 +2016,7 @@
             bulletHole: 0,
             delayBetweenShots: 200,
             defaultDelayBetweenShots: 250,
+            holdType: "pistol",
             type: "pistol",
             model: null,
             loaded: false,
@@ -2037,6 +2055,7 @@
             scopeRendered: false,
             delayBetweenShots: 100,
             defaultDelayBetweenShots: 400,
+            holdType: "rifle",
             type: "rifle",
             model: null,
             loaded: false,
@@ -2074,8 +2093,8 @@
             scopeRendered: false,
             delayBetweenShots: 700,
             defaultDelayBetweenShots: 750,
-            type: "rifle",
-            rocket: true,
+            holdType: "rifle",
+            type: "rocket-launcher",
             model: null,
             loaded: false,
             animationStructure: {
@@ -2110,6 +2129,7 @@
             reticle: 12,
             bulletHole: 0,
             defaultDelayBetweenShots: 150,
+            holdType: "pistol",
             type: "pistol",
             model: null,
             loaded: false,
@@ -2147,8 +2167,8 @@
             scopeRendered: false,
             delayBetweenShots: 400,
             defaultDelayBetweenShots: 450,
-            type: "rifle",
-            rocket: true,
+            holdType: "rifle",
+            type: "rocket-launcher",
             model: null,
             loaded: false,
             animationStructure: {
@@ -2159,6 +2179,45 @@
               throw: [4, 1.4, 1],
               walk: [5, 1, 1],
               run: [5, 1.2, 1]
+            }
+          },
+          "Remington-870": {
+            name: "Remington-870",
+            displayName: "Remington 870 Shotgun",
+            ammo: 12,
+            defaultAmmo: 12,
+            currentAmmo: 6,
+            maxAmmo: 6,
+            maxTotalAmmo: 18,
+            damage: 25,
+            headshotDamage: 25,
+            spread: 4,
+            distance: 3.5,
+            muzzleFlash: true,
+            zoomPosition: [0.02035,0.013,-0.0889,0.007,-0.014,0.02],
+            zoomFov: 27,
+            zoomDuration: 250,
+            fireMode: "semi",
+            fireRate: 200,
+            range: 5,
+            recoil: 2,
+            reticle: 13,
+            bulletHole: 1,
+            delayBetweenShots: 900,
+            defaultDelayBetweenShots: 950,
+            holdType: "rifle",
+            type: "shotgun",
+            model: null,
+            loaded: false,
+            animationStructure: {
+              idle: [0, 1, 1],
+              reload_reach: [1, 1, 1],
+              reload_insert: [4, 1.7, 1],
+              reload_pump: [5, 1.2, 1],
+              shoot: [2, 1, 1],
+              walk: [3, 1.2, .3],
+              run: [3, 1.4, 1],
+              throw: [2, 1, 1]
             }
           },
         }
@@ -2761,7 +2820,7 @@
               utils.health.subtract(realDamage, utils.players.objects[weapon.lastUsedBy] || null, null, false, false, false, true);
             } else {
               const realDamage = (shield.shieldType == "head" ? weapon.headshotDamage : weapon.damage) / Math.max(camera.getWorldPosition(vectors[31]).distanceTo(player.scene.position) / weapon.range, 1);
-              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, shield.shieldType == "head", false, false, false, (weapon.sniper && !utils.options.get("Zoomed"))]);
+              gametime.run("damage", [player.uuid, realDamage, gametime.player.uuid, shield.shieldType == "head", false, false, false, (weapon.type == "sniper-rifle" && !utils.options.get("Zoomed"))]);
               audio.hit();
             }
           },
@@ -2910,7 +2969,7 @@
           weapons: {
             set: function(player, weapon) {
               let type = "rifle";
-              if (sandbox.weapons[weapon].type == "pistol") {
+              if (sandbox.weapons[weapon].holdType == "pistol") {
                 type = "pistol";
               }
               utils.players.animations.stop(player, "rifle_walk");
@@ -2950,7 +3009,7 @@
             fire: function(player, point, spreadX, spreadY, bulletHole) {
               if (!player.isWalking && !player.isCrouching && (!player.vehicle || player.vehicle.seat == "gunner")) utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
               if (sandbox.weapons[player.weapon.name].muzzleFlash) utils.effects.muzzleFlash(player.weapon);
-              if (!sandbox.weapons[player.weapon.name].rocket) utils.players.effects.bulletHole(point, spreadX, spreadY, bulletHole);
+              if (sandbox.weapons[player.weapon.name].type != "rocket-launcher") utils.players.effects.bulletHole(point, spreadX, spreadY, bulletHole);
               audio.fire3D(player.weapon.name, player.scene.position);
             },
             reload: function(player) {
@@ -3730,7 +3789,14 @@
           fire: function(rounds = 1) {
             if (utils.vehicles.check()) return utils.vehicles.check().horn = true;
             const weapon = utils.weapons.getCurrentEntry();
-            if (utils.options.get("Firing") || utils.options.get("Reloading") || utils.options.get("Switching") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || weapon.currentAmmo <= 0) return;
+            if (utils.options.get("Reloading")) {
+              if (weapon.type == "shotgun" && weapon.currentAmmo > 0) {
+                utils.weapons.stopReload();
+              } else {
+                return;
+              }
+            }
+            if (utils.options.get("Firing") || utils.options.get("Switching") || utils.options.get("ThrowingGrenade") || utils.options.get("Melee") || weapon.currentAmmo <= 0) return;
             const zoomed = utils.options.get("Zoomed");
             const time = Date.now();
             if (time - weapon.lastShot < weapon.delayBetweenShots) return;
@@ -3758,8 +3824,11 @@
 
                   const spreadX = spreads[roundsFired];
                   const spreadY = spreads[roundsFired + 1];
-                  if (weapon.rocket) {
+                  if (weapon.type == "rocket-launcher") {
                     utils.rockets.launch(weapon.name);
+                  } else if (weapon.type == "shotgun") {
+                    let spreads = Array(6 * 2).fill(0).map(x => { const spread = Math.random() / 60 * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
+                    for (let i = 0; i < 6; i++) utils.effects.bulletHole(spreads[i], spreads[i + 1], weapon.bulletHole, camera, weapon);
                   } else {
                     utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
                   }
@@ -3887,41 +3956,92 @@
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.stop("walk");
             utils.weapons.animations.stop("shoot");
-            let animation = null;
-            if (full) {
-              animation = "reload_full";
-              audio.reload(weapon, "full");
+            if (weapon.type == "shotgun") {
+              let roundsToInsert = Math.min(weapon.maxAmmo - weapon.currentAmmo, weapon.ammo);
+              let callback = utils.weapons.animations.start("reload_reach", { loop: THREE.LoopOnce, reset: true, returnAnimationLength: true }, function() {
+                function loadNextRound() {
+                  audio.reload(weapon, "normal");
+                  let callback = utils.weapons.animations.start("reload_insert", { loop: THREE.LoopOnce, reset: true, returnAnimationLength: true }, function() {
+                    const weapon = utils.weapons.getCurrentEntry();
+                    const ammo = weapon.ammo;
+                    weapon.ammo--;
+                    weapon.currentAmmo++;
+                    if (weapon.currentAmmo >= weapon.maxAmmo || weapon.ammo <= 0) {
+                      audio.reload(weapon, "full");
+                      let callback = utils.weapons.animations.start("reload_pump", { loop: THREE.LoopOnce, reset: true, returnAnimationLength: true }, function() {
+                        utils.options.set("Reloading", false);
+                        if (utils.options.get("Walking")) {
+                          utils.weapons.animations.start("walk", { instant: true });
+                        } else {
+                          utils.weapons.animations.start("idle");
+                        }
+                      });
+                      utils.options.set("ReloadCallback", {
+                        startTime: Date.now(),
+                        totalTime: 0,
+                        _function: callback._function
+                      });
+                    } else {
+                      loadNextRound();
+                    }
+                  });
+                  utils.options.set("ReloadCallback", {
+                    startTime: Date.now(),
+                    totalTime: 100000,
+                    _function: callback._function
+                  });
+                }
+                loadNextRound();
+              });
+              utils.options.set("ReloadCallback", {
+                startTime: Date.now(),
+                totalTime: 100000,
+                _function: callback._function
+              });
             } else {
-              animation = "reload";
-              audio.reload(weapon, "normal");
-            }
-            const callback = utils.weapons.animations.start(animation, { loop: THREE.LoopOnce, reset: true, returnAnimationLength: true }, function() {
-              const weapon = utils.weapons.getCurrentEntry();
-              const ammo = weapon.ammo;
-              weapon.ammo = Math.max(weapon.ammo - (weapon.maxAmmo - weapon.currentAmmo), 0);
-              weapon.currentAmmo = Math.min(weapon.currentAmmo + Math.min(weapon.maxAmmo, ammo), weapon.maxAmmo);
-              utils.options.set("Reloading", false);
-              if (utils.options.get("Walking")) {
-                utils.weapons.animations.start("walk", { instant: true });
+              let animation = null;
+              if (full) {
+                animation = "reload_full";
+                audio.reload(weapon, "full");
               } else {
-                utils.weapons.animations.start("idle");
+                animation = "reload";
+                audio.reload(weapon, "normal");
               }
-            });
-            utils.options.set("ReloadCallback", {
-              startTime: Date.now(),
-              totalTime: callback.animationLength * 1000,
-              _function: callback._function
-            });
+              const callback = utils.weapons.animations.start(animation, { loop: THREE.LoopOnce, reset: true, returnAnimationLength: true }, function() {
+                const weapon = utils.weapons.getCurrentEntry();
+                const ammo = weapon.ammo;
+                weapon.ammo = Math.max(weapon.ammo - (weapon.maxAmmo - weapon.currentAmmo), 0);
+                weapon.currentAmmo = Math.min(weapon.currentAmmo + Math.min(weapon.maxAmmo, ammo), weapon.maxAmmo);
+                utils.options.set("Reloading", false);
+                if (utils.options.get("Walking")) {
+                  utils.weapons.animations.start("walk", { instant: true });
+                } else {
+                  utils.weapons.animations.start("idle");
+                }
+              });
+              utils.options.set("ReloadCallback", {
+                startTime: Date.now(),
+                totalTime: callback.animationLength * 1000,
+                _function: callback._function
+              });
+            }
             gametime.run("reloadWeapon", [gametime.player.uuid]);
           },
           stopReload: function() {
             if (utils.options.get("Reloading")) {
-              const reloadCallback = utils.options.get("ReloadCallback");
+              let weapon = utils.weapons.getCurrentEntry();
+              let reloadCallback = utils.options.get("ReloadCallback");
               if (Date.now() - reloadCallback.startTime > reloadCallback.totalTime - 800) reloadCallback._function();
               utils.weapons.animations.cancelCallback(reloadCallback._function);
-              utils.weapons.animations.stop("reload");
-              utils.weapons.animations.stop("reload_full");
-              audio.stopReload(utils.weapons.getCurrentEntry());
+              if (weapon.type == "shotgun") {
+                utils.weapons.animations.stop("reload_reach");
+                utils.weapons.animations.stop("reload_insert");
+                utils.weapons.animations.stop("reload_pump");
+              } else {
+                utils.weapons.animations.stop("reload");
+                utils.weapons.animations.stop("reload_full");
+              }
+              audio.stopReload(weapon);
               utils.options.set("Reloading", false);
             }
           },
@@ -5276,6 +5396,10 @@
         0: {
           size: vectors[23],
           material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
+        },
+        1: {
+          size: new THREE.Vector3(.02, .02, .02),
+          material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/1.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
         },
         20: {
           size: vectors[23],
