@@ -119,7 +119,7 @@
       .ui-section.top-section .ui-health-bar {
         position: relative;
         width: 100%;
-        height: 30px;
+        height: 20px;
         margin: 0;
         border: 2px solid rgba(100, 200, 255, 0.4);
         filter: drop-shadow(1px 1px 0px #fff);
@@ -585,7 +585,7 @@
       if (!location.hostname.includes("5.fps")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(45, 1440 / 900, 0.01, 1000);
+      const camera = new THREE.PerspectiveCamera(50, 1440 / 900, 0.01, 1000);
       const clock = new THREE.Clock();
       const worldOctree = new THREE.Octree();
 
@@ -826,7 +826,7 @@
       sandbox = {
         initialized: false,
         presets: {
-          map: "Lihid",
+          map: "Cargo_Port",
           mode: "slayer",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
@@ -845,6 +845,9 @@
             radar: false, // Whether the radar is enabled
             vehicles: true // Whether vehicles are enabled
           }
+        },
+        settings: {
+          cameraFov: 50
         },
         loadout: [],
         grenades: {},
@@ -3890,7 +3893,7 @@
                 out: {
                   position: new TWEEN.Tween(weapon.model.scene.children[0].position).to({ x: 0, y: 0, z: 0 }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).start(),
                   rotation: new TWEEN.Tween(weapon.model.scene.children[0].rotation).to({ x: 0, y: 0, z: 0 }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).start(),
-                  fov: new TWEEN.Tween(camera).to({ fov: 45 }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => { camera.updateProjectionMatrix() }).start(),
+                  fov: new TWEEN.Tween(camera).to({ fov: sandbox.settings.cameraFov }, weapon.zoomDuration).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => { camera.updateProjectionMatrix() }).start(),
                 }
               });
               weapon.animationStructure["walk"][2] *= 5;
@@ -4610,7 +4613,7 @@
                 if (shield.shieldType == "vehicle") {
                   const damage = weapon.damage / 10;
                   shield.vehicle.condition += -damage;
-                  particles.dust(intersect.point);
+                  particles.dust(intersect.point, .5);
                   if (Math.floor(Math.random() * 3) == 0) audio.ricochet(intersect.point);
                   gametime.run("vehicleHit", [gametime.player.uuid, shield.vehicle.id, damage]);
                 } else {
@@ -5169,7 +5172,7 @@
             playerCollider.end.set(spawnPoint[0], spawnPoint[1] + 1, spawnPoint[2]);
             camera.rotation.set(spawnPoint[3], spawnPoint[4], spawnPoint[5]);
             utils.ui.show();
-            camera.fov = 45;
+            camera.fov = sandbox.settings.cameraFov;
             camera.updateProjectionMatrix();
             PointerControls.isLocked = true;
             const primaryWeapon = utils.weapons.setNew("primary", sandbox.presets.loadout[0]);
@@ -5183,6 +5186,7 @@
             sandbox.grenades["plasma"] = sandbox.presets.grenades["plasma"];
             utils.health.reset();
             utils.ui.hideDeathInfo();
+            utils.weapons.stopWalking();
             gametime.run("playerRespawn", [gametime.player.uuid, spawnPoint]);
           }
         },
