@@ -927,11 +927,8 @@
             }
             utils.ui.radar.init();
             gametime.player.data.ready = true;
-            utils.health.respawn();
-            utils.options.set("GameStartTime", Date.now()); // This will be moved to the actual game start function later on
-            animate();
+            utils.game.start();
             renderer.shadowMap.needsUpdate = true;
-            audio.ambience();
           });
         },
         loadingManager: new THREE.LoadingManager(),
@@ -1332,6 +1329,20 @@
             requiredMaps: []
           },
           {
+            id: "weapon.M319-Grenade-Launcher",
+            path: "/models/weapons/M319-Grenade-Launcher.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "weapon.Grenade-Launcher",
+            path: "/models/weapons/Grenade-Launcher.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
             id: "propweapon.AK-74",
             path: "/models/characters/weapons/AK-74.glb",
             model: null,
@@ -1437,6 +1448,20 @@
             requiredMaps: []
           },
           {
+            id: "propweapon.M319-Grenade-Launcher",
+            path: "/models/characters/weapons/M319-Grenade-Launcher.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
+            id: "propweapon.Grenade-Launcher",
+            path: "/models/characters/weapons/Grenade-Launcher.glb",
+            model: null,
+            loaded: false,
+            requiredMaps: []
+          },
+          {
             id: "grenade.MK2",
             path: "/models/weapons/grenades/MK2.glb",
             model: null,
@@ -1472,6 +1497,21 @@
                 const grenade = i == 0 ? model.scene : model.scene.clone();
                 scene.add(grenade);
                 utils.grenades.add(grenade, "plasma");
+              }
+            }
+          },
+          {
+            id: "grenade.40mm",
+            path: "/models/weapons/grenades/40mm.glb",
+            model: null,
+            loaded: false,
+            removeAfterLoaded: false,
+            requiredMaps: "all",
+            callback: function(model) {
+              for (let i = 0; i < 6; i++) {
+                const grenade = i == 0 ? model.scene : model.scene.clone();
+                scene.add(grenade);
+                utils.grenades.add(grenade, "40mm");
               }
             }
           },
@@ -2195,7 +2235,6 @@
             damage: 23,
             headshotDamage: 25,
             spread: 4,
-            distance: 3.5,
             muzzleFlash: true,
             zoomPosition: [0.02035,0.013,-0.0889,0.007,-0.014,0.02],
             zoomFov: 27,
@@ -2210,12 +2249,81 @@
             defaultDelayBetweenShots: 950,
             holdType: "rifle",
             type: "shotgun",
+            useShotgunStyleReload: true,
             model: null,
             loaded: false,
             animationStructure: {
               idle: [0, 1, 1],
               reload_reach: [1, 1, 1],
               reload_insert: [4, 1.7, 1],
+              reload_pump: [5, 1.2, 1],
+              shoot: [2, 1, 1],
+              walk: [3, 1.2, .3],
+              run: [3, 1.4, 1],
+              throw: [6, 1.5, 1]
+            }
+          },
+          "M319-Grenade-Launcher": {
+            name: "M319-Grenade-Launcher",
+            displayName: "M319 Grenade Launcher",
+            ammo: 4,
+            defaultAmmo: 4,
+            currentAmmo: 1,
+            maxAmmo: 1,
+            maxTotalAmmo: 8,
+            muzzleFlash: true,
+            zoomPosition: [0.03415,-0.0103,-0.0389,0.007,0.01,0.06],
+            zoomFov: 34,
+            zoomDuration: 150,
+            fireMode: "semi",
+            fireRate: 200,
+            range: 10,
+            recoil: 1,
+            reticle: 14,
+            bulletHole: 0,
+            defaultDelayBetweenShots: 500,
+            holdType: "rifle",
+            type: "grenade-launcher",
+            useShotgunStyleReload: true,
+            model: null,
+            loaded: false,
+            animationStructure: {
+              idle: [0, 1, 1],
+              reload_reach: [1, 1, 1],
+              reload_insert: [4, 1.7, 1],
+              reload_pump: [5, 1.2, 1],
+              shoot: [2, 1, 1],
+              walk: [3, 1.2, .3],
+              run: [3, 1.4, 1],
+              throw: [6, 1.5, 1]
+            }
+          },
+          "Grenade-Launcher": {
+            name: "Grenade-Launcher",
+            displayName: "Revolving Grenade Launcher",
+            ammo: 6,
+            defaultAmmo: 6,
+            currentAmmo: 6,
+            maxAmmo: 6,
+            maxTotalAmmo: 12,
+            muzzleFlash: true,
+            zoom: false,
+            fireMode: "auto",
+            fireRate: 200,
+            range: 8,
+            recoil: 1,
+            reticle: 15,
+            bulletHole: 0,
+            defaultDelayBetweenShots: 200,
+            holdType: "rifle",
+            type: "grenade-launcher",
+            useShotgunStyleReload: true,
+            model: null,
+            loaded: false,
+            animationStructure: {
+              idle: [0, 1, 1],
+              reload_reach: [1, 1, 1],
+              reload_insert: [4, 2, 1],
               reload_pump: [5, 1.2, 1],
               shoot: [2, 1, 1],
               walk: [3, 1.2, .3],
@@ -3021,7 +3129,7 @@
           },
           grenades: {
             throw: function(player, type, position, grenadeId) {
-              utils.players.animations.start(player, "throw_grenade", { reset: true, loop: THREE.LoopOnce });
+              if (type != "40mm") utils.players.animations.start(player, "throw_grenade", { reset: true, loop: THREE.LoopOnce });
               const playerDirection = vectors[33].set(position[0], position[1], position[2]);
               const point = vectors[34].set(position[6], position[7], position[8]);
               const camera = utils.options.get("playerCamera");
@@ -3361,7 +3469,7 @@
               if (result) {
                 grenade.hits++;
                 grenade.velocity.addScaledVector(result.normal, -result.normal.dot(grenade.velocity) * 1.8);
-                if (grenade.type == "mk2") {
+                if (grenade.type != "plasma") {
                   grenade.doSound = true;
                   if (grenade.doSound && !grenade.didSound && grenade.hits < 8) {
                     grenade.didSound = true;
@@ -3829,6 +3937,8 @@
                   const spreadY = spreads[roundsFired + 1];
                   if (weapon.type == "rocket-launcher") {
                     utils.rockets.launch(weapon.name);
+                  } else if (weapon.type == "grenade-launcher") {
+                    utils.grenades.launch();
                   } else if (weapon.type == "shotgun") {
                     let spreads = Array(6 * 2).fill(0).map(x => { const spread = Math.random() / 60 * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
                     for (let i = 0; i < 6; i++) utils.effects.bulletHole(spreads[i], spreads[i + 1], weapon.bulletHole, camera, weapon);
@@ -3881,8 +3991,8 @@
           },
           zoom: function(force = false, callback = () => {}) {
             if (utils.vehicles.check()) return;
-            if ((utils.options.get("Reloading") || utils.options.get("Switching")) && !force) return;
             const weapon = utils.weapons.getCurrentEntry();
+            if (weapon.zoom == false || (utils.options.get("Reloading") || utils.options.get("Switching") || ((utils.options.get("Sprinting") || utils.options.get("CheckRunningAfterJump")) && weapon.currentAmmo <= 0)) && !force) return;
             if (utils.options.get("Zoomed")) {
               if (utils.options.get("globalZoomTween")) {
                 utils.options.get("globalZoomTween").in.position.stop();
@@ -3959,7 +4069,7 @@
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.stop("walk");
             utils.weapons.animations.stop("shoot");
-            if (weapon.type == "shotgun") {
+            if (weapon.useShotgunStyleReload) {
               let roundsToInsert = Math.min(weapon.maxAmmo - weapon.currentAmmo, weapon.ammo);
               let callback = utils.weapons.animations.start("reload_reach", { loop: THREE.LoopOnce, reset: true, returnAnimationLength: true }, function() {
                 function loadNextRound() {
@@ -4036,7 +4146,7 @@
               let reloadCallback = utils.options.get("ReloadCallback");
               if (Date.now() - reloadCallback.startTime > reloadCallback.totalTime - 800) reloadCallback._function();
               utils.weapons.animations.cancelCallback(reloadCallback._function);
-              if (weapon.type == "shotgun") {
+              if (weapon.useShotgunStyleReload) {
                 utils.weapons.animations.stop("reload_reach");
                 utils.weapons.animations.stop("reload_insert");
                 utils.weapons.animations.stop("reload_pump");
@@ -4059,6 +4169,8 @@
             utils.weapons.stopSprint(false);
             utils.effects.bob();
             function reset() {
+              utils.weapons.getChild().position.set(0, 0, 0);
+              utils.weapons.getChild().rotation.set(0, 0, 0);
               utils.options.set("CancelMelee", false);
               utils.options.set("Melee", false);
             }
@@ -4542,17 +4654,34 @@
             }, 300);
             return grenade.id;
           },
+          launch: function(isMultiplayer = false, point = camera, direction = playerDirection) {
+            let grenade = utils.grenades.objects[utils.grenades.getAvailable("40mm")];
+            if (!grenade) return;
+            if (isMultiplayer) {
+              grenade.explode = false;
+            } else {
+              gametime.run("throwGrenade", [gametime.player.uuid, "40mm", [direction.x, direction.y, direction.z, camera.rotation.x, camera.rotation.y, camera.rotation.z, camera.position.x, camera.position.y, camera.position.z], grenade.id]);
+            }
+            grenade.available = false;
+            point.getWorldDirection(direction);
+            grenade.collider.center.copy(point.getWorldPosition(new THREE.Vector3())).addScaledVector(direction, playerCollider.radius * 1.5);
+            grenade.velocity.copy(direction).multiplyScalar(45);
+            grenade.angularVelocity.set(0, 0, 0);
+            grenade.velocity.addScaledVector(playerVelocity, 2);
+            return grenade.id;
+          },
           explode: function(grenade, isMultiplayer = false) {
             const worldPosition = grenade.mesh.getWorldPosition(vectors[6]);
-            if (grenade.type == "plasma") {
-              particles.plasma(worldPosition);
-            } else {
+            if (grenade.type == "mk2") {
               particles.explosion(worldPosition);
               particles.dust(worldPosition, 6);
+            } else if (grenade.type == "plasma") {
+              particles.plasma(worldPosition);
+            } else if (grenade.type == "40mm") {
+              particles.explosion(worldPosition, .8);
+              particles.dust(worldPosition, 5);
             }
-            if (!grenade.stuck) {
-              audio.grenadeExplosion(worldPosition, grenade.type);
-            }
+            if (!grenade.stuck) audio.grenadeExplosion(worldPosition, grenade.type);
             utils.players.hit(null, null, grenade);
             const shakeIntensity = 2 / (Math.max(camera.getWorldPosition(vectors[31]).distanceTo(worldPosition), 1) / 2);
             utils.effects.shake(shakeIntensity);
@@ -4577,7 +4706,7 @@
           },
           add: function(mesh, type) {
             mesh.position.y = -2000;
-            utils.grenades.objects.push({
+            let entry = {
               type: type,
               mesh: mesh,
               collider: new THREE.Sphere(new THREE.Vector3(0, -2000, 0), 0.1),
@@ -4595,10 +4724,25 @@
               id: utils.grenades.objects.length,
               multiplayerId: null,
               playerUUID: null,
-              damage: type == "mk2" ? 100 : 125,
-              distance: type == "mk2" ? 5 : 3,
-              smoke: type == "mk2" ? true : false
-            });
+              damage: null,
+              distance: null,
+              smoke: null
+            };
+            if (type == "mk2") {
+              entry.damage = 100;
+              entry.distance = 5;
+              entry.smoke = true;
+            } else if (type == "plasma") {
+              entry.damage = 125;
+              entry.distance = 3;
+              entry.smoke = false;
+            } else if (type == "40mm") {
+              entry.explodeTime = 600;
+              entry.damage = 130;
+              entry.distance = 3.5;
+              entry.smoke = true;
+            }
+            utils.grenades.objects.push(entry);
           }
         },
         effects: {
@@ -5192,6 +5336,12 @@
         },
         game: {
           medals: {},
+          start: function() {
+            utils.health.respawn();
+            utils.options.set("GameStartTime", Date.now());
+            animate();
+            audio.ambience();
+          },
           end: function() {
             if (utils.options.get("GameEnded")) return;
             utils.options.set("GameEnded", true);

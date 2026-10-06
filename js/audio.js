@@ -251,7 +251,7 @@ audio = {
     sound.play();
   },
   grenadeExplosion: function(position, type, stuck = false) {
-    if (type == "mk2") {
+    if (type == "mk2" || type == "40mm") {
       let sound = null;
       if ((currentExplodeSound + 1) % 2 == 0) {
         sound = audio.sounds["grenade.explosion.mk2"].sound.alias;
