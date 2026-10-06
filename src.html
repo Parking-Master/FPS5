@@ -847,7 +847,7 @@
           }
         },
         settings: {
-          cameraFov: 50
+          cameraFov: 47
         },
         loadout: [],
         grenades: {},
@@ -3519,7 +3519,6 @@
                       if (grenade.mesh.position.distanceTo(playerPosition) < 0.5) {
                         audio.grenadeExplosion(grenade.mesh.position, grenade.type, true);
                         grenade.stuck = true;
-                        grenade.explodeTime = 1200;
                         grenade.hits = 1;
                         grenade.timestamp = time;
                         playerObject.scene.add(grenade.mesh);
@@ -3535,7 +3534,6 @@
                 if (!grenade.stuck && grenade.mesh.position.distanceTo(camera.position) < 0.5) {
                   audio.grenadeExplosion(grenade.mesh.position, grenade.type, true);
                   grenade.stuck = true;
-                  grenade.explodeTime = 1200;
                   grenade.hits = 1;
                   grenade.timestamp = time;
                   camera.add(grenade.mesh);
@@ -4693,7 +4691,6 @@
             grenade.hits = 0;
             grenade.timestamp = null;
             grenade.lastHitTimestamp = null;
-            grenade.explodeTime = 1500;
             grenade.stuck = false;
             grenade.explode = true;
             grenade.didSound = false;
@@ -4716,7 +4713,7 @@
               hits: 0,
               timestamp: null,
               lastHitTimestamp: null,
-              explodeTime: 1500,
+              explodeTime: null,
               stuck: false,
               explode: true,
               didSound: false,
@@ -4729,10 +4726,12 @@
               smoke: null
             };
             if (type == "mk2") {
+              entry.explodeTime = 1500;
               entry.damage = 100;
               entry.distance = 5;
               entry.smoke = true;
             } else if (type == "plasma") {
+              entry.explodeTime = 1200;
               entry.damage = 125;
               entry.distance = 3;
               entry.smoke = false;
