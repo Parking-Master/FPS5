@@ -513,6 +513,7 @@
     <script src="/js/Tween.js"></script>
     <script src="/js/PointerLockControls.js"></script>
     <script src="/js/TouchScreenControls.js"></script>
+    <script src="/js/GamepadControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
     <script src="/js/user.js"></script>
     <div class="ui-container">
@@ -642,7 +643,7 @@
         const weapon = utils.weapons.getCurrentEntry();
 
         for (let i = 0; i < 4; i++) {
-          utils.physics.controls(deltaTime, time);
+          utils.physics.controls(deltaTime, clockDelta, time);
           utils.physics.updatePlayer(deltaTime);
           utils.physics.updateGrenades(deltaTime, time, i);
           utils.physics.updateVehicles(deltaTime, time, i);
@@ -757,7 +758,7 @@
               utils.options.set("SpawnedWeapons", spawnedWeapons);
               delete tmpObjects[uuid];
             } else if (object.objectType == "displayMedal") {
-              utils.ui.displayMedal(object.medal);
+              utils.ui.displayMedal(object.medal, object.doSound);
               delete tmpObjects[uuid];
             } else if (object.objectType == "hideMedal") {
               utils.ui.cache.activeMedals.splice(utils.ui.cache.activeMedals.indexOf(object.medal), 1);
@@ -826,7 +827,7 @@
       sandbox = {
         initialized: false,
         presets: {
-          map: "Cargo_Port",
+          map: "Lihid",
           mode: "slayer",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
@@ -2643,7 +2644,7 @@
             utils.ui.elements.killStats.appendChild(row);
             utils.options.addTmpObject(row, "htmlElement", 6000);
           },
-          displayMedal: function(medal) {
+          displayMedal: function(medal, doSound = true) {
             utils.ui.cache.activePoints += sandbox.medals[medal].points;
             if (typeof utils.game.medals[medal] === "undefined") utils.game.medals[medal] = 0;
             utils.game.medals[medal] += sandbox.medals[medal].points;
@@ -2653,7 +2654,7 @@
             utils.ui.elements.killPopupMedals[medal].style = "animation: medal .3s ease-in";
             utils.options.addTmpObject({ medal: medal }, "hideMedal", 3000);
             utils.options.addTmpObject(utils.ui.elements.killPopupPoints, "hidePoints", 3000);
-            audio.medal();
+            if (doSound) audio.medal();
           },
           radar: {
             init: function(radarRange = 18) {
@@ -3287,7 +3288,7 @@
                   if (isSnapshot) medals.push("snapshot");
                   for (let i = 0; i < medals.length; i++) {
                     gametime.player.data.score += sandbox.medals[medals[i]].points;
-                    utils.options.addTmpObject({ medal: medals[i] }, "displayMedal", 500 * i);
+                    utils.options.addTmpObject({ medal: medals[i], doSound: i == 0 ? !isHeadshot : true }, "displayMedal", 500 * i);
                   }
                   utils.players.incrementScore();
                 }
@@ -3354,12 +3355,20 @@
             playerDirection.cross(camera.up);
             return playerDirection;
           },
-          controls: function(deltaTime, time) {
+          controls: function(deltaTime, clockDelta, time) {
             let upOrDownKey = keyStates["KeyW"] || keyStates["KeyS"] || keyStates["ArrowUp"] || keyStates["ArrowDown"];
             let leftOrRightKey = keyStates["KeyA"] || keyStates["KeyD"] || keyStates["ArrowLeft"] || keyStates["ArrowRight"];
             let sprinting = utils.options.get("Sprinting");
             let walkSpeed = deltaTime * (playerOnFloor ? 24 : 1.5) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1) * (upOrDownKey && leftOrRightKey ? .7 : 1);
-            if (utils.options.get("MobileGame")) TouchControls.update(deltaTime, time, walkSpeed);
+            let gamepadActive = GamepadControls.update(deltaTime, clockDelta, walkSpeed);
+            if (utils.options.get("MobileGame")) {
+              if (gamepadActive) {
+                TouchControls.hideUI();
+              } else {
+                TouchControls.showUI();
+                TouchControls.update(deltaTime, time, walkSpeed);
+              }
+            }
             if (deathScreen) return;
             let vehicle = utils.options.get("CurrentVehicle");
             if (vehicle) {
@@ -3911,7 +3920,7 @@
             if (time - weapon.lastShot < weapon.delayBetweenShots) return;
             utils.options.set("Firing", true);
             utils.options.set("ContinueFiring", true);
-            utils.weapons.stopSprint();
+            utils.weapons.stopSprint(false);
             utils.weapons.animations.stop("walk");
             utils.weapons.animations.stop("idle");
             if (weapon.fireMode == "auto") {
@@ -5382,6 +5391,29 @@
             audio.gameOver();
             document.body.style.background = "#000";
             utils.options.addTmpObject({}, "gameOverTransition", 4000);
+          },
+          keyDownFunction: function(key) {
+            if (!utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(key)) utils.weapons.startWalking();
+            if (sandbox.controls.fire.includes(key)) utils.weapons.fire();
+            if (sandbox.controls.zoom.includes(key)) utils.weapons.zoom();
+            if (sandbox.controls.reload.includes(key)) utils.weapons.reload();
+            if (sandbox.controls.switch.includes(key)) utils.weapons.switch();
+            if (sandbox.controls.grenade.includes(key)) utils.grenades.throw();
+            if (sandbox.controls.melee.includes(key)) utils.weapons.melee();
+            if (sandbox.controls.sprint.includes(key) && (keyStates["KeyW"] || keyStates["ArrowUp"])) utils.weapons.sprint();
+            if (sandbox.controls.crouch.includes(key)) utils.weapons.crouch();
+            if (sandbox.controls.enterVehicle.includes(key)) utils.vehicles.enter();
+            if (sandbox.controls.vehicleView.includes(key)) utils.vehicles.switchView();
+            if (sandbox.controls.interact.includes(key)) utils.weapons.pickup();
+          },
+          keyUpFunction: function(key) {
+            if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(key)) utils.weapons.stopWalking();
+            if (!keyStates["KeyW"] && !keyStates["KeyS"] && !keyStates["ArrowUp"] && !keyStates["ArrowDown"]) {
+              const vehicle = utils.options.get("CurrentVehicle");
+              if (vehicle) utils.vehicles.stopThrottle(vehicle);
+            }
+            if (sandbox.controls.fire.includes(key)) utils.weapons.stopFire();
+            if (sandbox.controls.sprint.includes(key)) utils.weapons.stopSprint(), utils.weapons.update();
           }
         }
       };
@@ -5438,6 +5470,9 @@
         sandbox.presets.options.scoreToWin = 25;
         sandbox.presets.options.timeLimit = 720;
       }
+      sandbox.presets.loadout = ["Grenade-Launcher","Desert-Eagle"];
+      sandbox.presets.options.playersNeeded = 1;
+      sandbox.presets.options.timeLimit = null;
       // End section
 
       if (!sandbox.presets.options.radar) utils.ui.elements.radar.style.display = "none";
@@ -5489,33 +5524,14 @@
         if (!event.repeat && sandbox.controls.leaderboard.includes(event.code)) utils.ui.showLeaderboard();
         if (!PointerControls.isLocked) return;
         keyStates[event.code] = true;
-        if (!event.repeat && !deathScreen) {
-          if (!utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.startWalking();
-          if (sandbox.controls.fire.includes(event.code)) utils.weapons.fire();
-          if (sandbox.controls.zoom.includes(event.code)) utils.weapons.zoom();
-          if (sandbox.controls.reload.includes(event.code)) utils.weapons.reload();
-          if (sandbox.controls.switch.includes(event.code)) utils.weapons.switch();
-          if (sandbox.controls.grenade.includes(event.code)) utils.grenades.throw();
-          if (sandbox.controls.melee.includes(event.code)) utils.weapons.melee();
-          if (sandbox.controls.sprint.includes(event.code) && (keyStates["KeyW"] || keyStates["ArrowUp"])) utils.weapons.sprint();
-          if (sandbox.controls.crouch.includes(event.code)) utils.weapons.crouch();
-          if (sandbox.controls.enterVehicle.includes(event.code)) utils.vehicles.enter();
-          if (sandbox.controls.vehicleView.includes(event.code)) utils.vehicles.switchView();
-          if (sandbox.controls.interact.includes(event.code)) utils.weapons.pickup();
-        }
+        if (!event.repeat && !deathScreen) utils.game.keyDownFunction(event.code);
       });
       document.addEventListener("keyup", function(event) {
         if (!sandbox.initialized) return;
         if (sandbox.controls.leaderboard.includes(event.code)) utils.ui.hideLeaderboard();
         if (!PointerControls.isLocked) return;
         keyStates[event.code] = false;
-        if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.stopWalking();
-        if (!keyStates["KeyW"] && !keyStates["KeyS"] && !keyStates["ArrowUp"] && !keyStates["ArrowDown"]) {
-          const vehicle = utils.options.get("CurrentVehicle");
-          if (vehicle) utils.vehicles.stopThrottle(vehicle);
-        }
-        if (sandbox.controls.fire.includes(event.code)) utils.weapons.stopFire();
-        if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint(), utils.weapons.update();
+        utils.game.keyUpFunction(event.code);
       });
       document.addEventListener("mousedown", function(event) {
         if (document.pointerLockElement != null || !sandbox.initialized) return;

@@ -20,7 +20,6 @@ TouchScreenControls = function() {
     let movementNode = mobileUI.querySelector(".movement-node");
     let interactNode = mobileUI.querySelector(".interact-node");
     let movementStick = mobileUI.querySelector(".movement-stick");
-    let movementStickTouchStartEvent = null;
     let walkVector = new THREE.Vector2();
     let run = false;
     let fire = false;
@@ -29,6 +28,7 @@ TouchScreenControls = function() {
     let drivingControls = false;
     let mobileUIHidden = false;
     let meleeIconChanged = false;
+    let uiHidden = false;
     function movementEvent(event) {
       if (deathScreen) return;
       if (!utils.options.get("Walking")) utils.weapons.startWalking();
@@ -55,10 +55,7 @@ TouchScreenControls = function() {
       walkVector.set(0, 0);
       run = false;
     }
-    movementTouchArea.addEventListener("touchstart", function(event) {
-      movementStickTouchStartEvent = event;
-      movementEvent(event);
-    });
+    movementTouchArea.addEventListener("touchstart", movementEvent);
     movementTouchArea.addEventListener("touchmove", movementEvent);
     movementTouchArea.addEventListener("touchend", stopMovementEvent);
     movementTouchArea.addEventListener("touchcancel", stopMovementEvent);
@@ -136,6 +133,12 @@ TouchScreenControls = function() {
     lookTouchArea.addEventListener("touchstart", event => event.preventDefault());
     lookTouchArea.addEventListener("touchend", event => (event.preventDefault(), previousTouch = null));
     lookTouchArea.addEventListener("touchcancel", event => event.preventDefault());
+    _this.hideUI = function() {
+      if (!uiHidden) uiHidden = true, mobileUI.style.display = "none";
+    };
+    _this.showUI = function() {
+      if (uiHidden) uiHidden = false, mobileUI.style.display = "";
+    };
     _this.update = function(deltaTime, time, walkSpeed) {
       let weapon = utils.weapons.getCurrentEntry();
       let inVehicle = utils.vehicles.check(true);
