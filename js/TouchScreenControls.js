@@ -60,9 +60,10 @@ TouchScreenControls = function() {
     movementTouchArea.addEventListener("touchend", stopMovementEvent);
     movementTouchArea.addEventListener("touchcancel", stopMovementEvent);
     function nodePress(event) {
+      let weapon = utils.weapons.getCurrentEntry();
       event.target.style = "transform:scale(.7)";
       if (event.target.dataset.node == "fire-weapon") {
-        if (manualZoom) {
+        if (manualZoom || weapon.zoom == false) {
           fire = true;
         } else {
           utils.weapons.zoom(false, function() {
