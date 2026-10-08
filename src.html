@@ -626,7 +626,7 @@
       let map = null;
       let deathScreen = false;
       let frameCount = 0;
-      let vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+      let vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Matrix4()];
       let keyStates = {};
       let playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
       let playerVelocity = vectors[7];
@@ -792,10 +792,9 @@
             } else {
               target = utils.players.objects[killer].scene;
             }
-            const targetQuaternion = vectors[16].set(0, 0, 0, 1);
-            const matrix = new THREE.Matrix4().lookAt(camera.position, target.position, camera.up);
-            targetQuaternion.setFromRotationMatrix(matrix);
-            camera.quaternion.slerp(targetQuaternion, 0.04);
+            const matrix = vectors[36].lookAt(camera.position, target.position, camera.up);
+            vectors[16].setFromRotationMatrix(matrix);
+            camera.quaternion.slerp(vectors[16], 0.04);
           }
         }
 
@@ -2806,6 +2805,7 @@
         players: {
           objects: {},
           shields: [],
+          autoLockSpheres: [],
           add: function(player) {
             utils.players.objects[player.uuid] = null;
             new THREE.GLTFLoader().load("/models/characters/" + player.data.character + ".glb", function(model) {
@@ -2844,6 +2844,12 @@
               bodyShield.isShield = true;
               headShield.isShield = true;
               utils.players.shields.push(bodyShield, headShield);
+              const autoLockSphere = new THREE.Mesh(new THREE.BoxGeometry(.9, 3.6, .9));
+              autoLockSphere.position.y = .7;
+              autoLockSphere.visible = false;
+              autoLockSphere.playerUUID = player.uuid;
+              utils.players.autoLockSpheres.push(autoLockSphere);
+              playerObject.scene.add(autoLockSphere);
               if (sandbox.presets.options.teamGame) {
                 const usernamePointer = text.createUsername(player.username, player.data.team != gametime.player.data.team);
                 playerObject.scene.add(usernamePointer);
@@ -5480,7 +5486,7 @@
         sandbox.presets.options.scoreToWin = 25;
         sandbox.presets.options.timeLimit = 720;
       }
-      sandbox.presets.loadout = ["Ruger-RPR","XD-Mod-2"];
+      sandbox.presets.loadout = ["Ace-35r", "FN-502"];
       sandbox.presets.options.playersNeeded = 1;
       sandbox.presets.options.timeLimit = null;
       // End section
