@@ -626,7 +626,7 @@
       let map = null;
       let deathScreen = false;
       let frameCount = 0;
-      let vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Matrix4()];
+      let vectors = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Quaternion(), new THREE.Euler(), new THREE.Quaternion(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0.04, 0.04, 0.04), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(0, 1, 0), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Matrix4(), new THREE.Vector2(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Quaternion()];
       let keyStates = {};
       let playerCollider = new THREE.Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.35);
       let playerVelocity = vectors[7];
@@ -792,8 +792,7 @@
             } else {
               target = utils.players.objects[killer].scene;
             }
-            const matrix = vectors[36].lookAt(camera.position, target.position, camera.up);
-            vectors[16].setFromRotationMatrix(matrix);
+            vectors[16].setFromRotationMatrix(vectors[36].lookAt(camera.position, target.position, camera.up));
             camera.quaternion.slerp(vectors[16], 0.04);
           }
         }
@@ -2806,7 +2805,7 @@
         players: {
           objects: {},
           shields: [],
-          autoLockSpheres: [],
+          autoLockBoxes: [],
           add: function(player) {
             utils.players.objects[player.uuid] = null;
             new THREE.GLTFLoader().load("/models/characters/" + player.data.character + ".glb", function(model) {
@@ -2845,12 +2844,12 @@
               bodyShield.isShield = true;
               headShield.isShield = true;
               utils.players.shields.push(bodyShield, headShield);
-              const autoLockSphere = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3.6, 1.2));
-              autoLockSphere.position.y = .7;
-              autoLockSphere.visible = false;
-              autoLockSphere.playerUUID = player.uuid;
-              utils.players.autoLockSpheres.push(autoLockSphere);
-              playerObject.scene.add(autoLockSphere);
+              const autoLockBox = new THREE.Mesh(new THREE.BoxGeometry(1.1, 3.6, 1.1));
+              autoLockBox.position.y = .7;
+              autoLockBox.visible = false;
+              autoLockBox.playerUUID = player.uuid;
+              utils.players.autoLockBoxes.push(autoLockBox);
+              playerObject.scene.add(autoLockBox);
               if (sandbox.presets.options.teamGame) {
                 const usernamePointer = text.createUsername(player.username, player.data.team != gametime.player.data.team);
                 playerObject.scene.add(usernamePointer);
@@ -3461,7 +3460,7 @@
                 rocketPoint.rotation.set(rocket.rotation.x, rocket.rotation.y, rocket.rotation.z);
                 rocketPoint.rotateY(-Math.PI / 2);
                 rocketPoint.updateMatrixWorld();
-                raycaster.setFromCamera(new THREE.Vector2(), rocketPoint);
+                raycaster.setFromCamera(vectors[37], rocketPoint);
                 let intersects = raycaster.intersectObjects(map.children.concat(utils.players.shields, utils.vehicles.shields));
                 if (!rocket.isMultiplayer && intersects.length > 0 && rocket.position.distanceTo(intersects[0].point) < Math.min(speed * 2, 5)) utils.rockets.explode(rocket);
               }
@@ -4356,6 +4355,7 @@
             gametime.run("jump", [gametime.player.uuid]);
           },
           updateAim: function(weapon) {
+            if (!utils.options.get("AllowAimUpdate")) return;
             const raycaster = utils.options.get("aimRaycaster");
             raycaster.setFromCamera(vectors[4], camera);
             const intersects = raycaster.intersectObjects(utils.players.shields);
@@ -4428,7 +4428,7 @@
             weaponFallPoint.position.set(position.x, position.y, position.z);
             weaponFallPoint.rotation.set(-Math.PI / 2, 0, 0);
             weaponFallPoint.updateMatrixWorld();
-            raycaster.setFromCamera(new THREE.Vector2(), weaponFallPoint);
+            raycaster.setFromCamera(vectors[37], weaponFallPoint);
             let intersects = raycaster.intersectObjects(map.children);
             if (intersects.length > 0) {
               weaponMesh.weapon = weapon;
@@ -4571,13 +4571,13 @@
             let projectileOrigin = utils.models.get("weapon." + weaponName).model.scene.getObjectByName("Missile_Projectile");
             let worldPosition, worldScale, worldQuaternion;
             if (point) {
-              worldPosition = new THREE.Vector3(point[0], point[1], point[2]);
-              worldScale = new THREE.Vector3(point[3], point[4], point[5]);
-              worldQuaternion = new THREE.Quaternion(point[6], point[7], point[8], point[9]);
+              worldPosition = vectors[38].set(point[0], point[1], point[2]);
+              worldScale = vectors[39].set(point[3], point[4], point[5]);
+              worldQuaternion = vectors[40].set(point[6], point[7], point[8], point[9]);
             } else {
-              worldPosition = projectileOrigin.getWorldPosition(new THREE.Vector3());
-              worldScale = projectileOrigin.getWorldScale(new THREE.Vector3());
-              worldQuaternion = projectileOrigin.getWorldQuaternion(new THREE.Quaternion());
+              worldPosition = projectileOrigin.getWorldPosition(vectors[38].set(0, 0, 0));
+              worldScale = projectileOrigin.getWorldScale(vectors[39].set(0, 0, 0));
+              worldQuaternion = projectileOrigin.getWorldQuaternion(vectors[40].set(0, 0, 0));
             }
             let projectile = projectileOrigin.clone();
             projectile.weapon = sandbox.weapons[weaponName];
@@ -4677,7 +4677,7 @@
             }
             grenade.available = false;
             point.getWorldDirection(direction);
-            grenade.collider.center.copy(point.getWorldPosition(new THREE.Vector3())).addScaledVector(direction, playerCollider.radius * 1.5);
+            grenade.collider.center.copy(point.getWorldPosition(vectors[31])).addScaledVector(direction, playerCollider.radius * 1.5);
             grenade.velocity.copy(direction).multiplyScalar(45);
             grenade.angularVelocity.set(0, 0, 0);
             grenade.velocity.addScaledVector(playerVelocity, 2);
@@ -5608,6 +5608,7 @@
       utils.options.set("StartedEndingMusic", false);
       utils.options.set("GameEnded", false);
       utils.options.set("StopFrame", false);
+      utils.options.set("AllowAimUpdate", true);
 
       scene.add(utils.options.get("playerCamera"));
 
