@@ -81,12 +81,12 @@
       }
       .crosshair {
         position: absolute;
-        width: 35px;
-        height: 35px;
+        width: 40px;
+        height: 40px;
         left: 50%;
         top: 50%;
-        margin-left: -17.5px;
-        margin-top: -17.5px;
+        margin-left: -20px;
+        margin-top: -20px;
       }
       .ui-container {
         position: fixed;
@@ -866,6 +866,7 @@
         primaryWeapon: null,
         secondaryWeapon: null,
         controls: {
+          "jump": ["Space"],
           "fire": ["KeyF", "BracketRight"],
           "zoom": ["KeyI"],
           "reload": ["KeyR"],
@@ -2844,7 +2845,7 @@
               bodyShield.isShield = true;
               headShield.isShield = true;
               utils.players.shields.push(bodyShield, headShield);
-              const autoLockSphere = new THREE.Mesh(new THREE.BoxGeometry(.9, 3.6, .9));
+              const autoLockSphere = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3.6, 1.2));
               autoLockSphere.position.y = .7;
               autoLockSphere.visible = false;
               autoLockSphere.playerUUID = player.uuid;
@@ -3366,7 +3367,7 @@
             let leftOrRightKey = keyStates["KeyA"] || keyStates["KeyD"] || keyStates["ArrowLeft"] || keyStates["ArrowRight"];
             let sprinting = utils.options.get("Sprinting");
             let walkSpeed = deltaTime * (playerOnFloor ? 48 : 3) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1) * (upOrDownKey && leftOrRightKey ? .7 : 1);
-            let gamepadActive = GamepadControls.update(clockDelta, walkSpeed);
+            let gamepadActive = GamepadControls.update(deltaTime, clockDelta, time, walkSpeed);
             if (utils.options.get("MobileGame")) {
               if (gamepadActive) {
                 TouchControls.hideUI();
@@ -3403,7 +3404,6 @@
               if ((keyStates["KeyD"] || keyStates["ArrowRight"]) && !sprinting) {
                 playerVelocity.add(utils.physics.getCameraSideVector().multiplyScalar(walkSpeed));
               }
-              if (keyStates["Space"]) utils.weapons.jump();
             }
           },
           updatePlayer: function(deltaTime) {
@@ -5416,6 +5416,7 @@
               if (sandbox.controls.enterVehicle.includes(event.code)) utils.vehicles.enter();
               if (sandbox.controls.vehicleView.includes(event.code)) utils.vehicles.switchView();
               if (sandbox.controls.interact.includes(event.code)) utils.weapons.pickup();
+              if (sandbox.controls.jump.includes(event.code)) utils.weapons.jump();
             }
           },
           keyUpFunction: function(event) {
@@ -5486,9 +5487,6 @@
         sandbox.presets.options.scoreToWin = 25;
         sandbox.presets.options.timeLimit = 720;
       }
-      sandbox.presets.loadout = ["Ace-35r", "FN-502"];
-      sandbox.presets.options.playersNeeded = 1;
-      sandbox.presets.options.timeLimit = null;
       // End section
 
       if (!sandbox.presets.options.radar) utils.ui.elements.radar.style.display = "none";
