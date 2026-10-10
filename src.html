@@ -666,9 +666,7 @@
         utils.vehicles.updateSpawned(deltaTime);
 
         for (let i = 0; i < sandbox.models.length; i++) {
-          if (sandbox.models[i].loaded && sandbox.models[i].model.animationMixer) {
-            sandbox.models[i].model.animationMixer.update(clockDelta);
-          }
+          if (sandbox.models[i].loaded && sandbox.models[i].model.animationMixer) sandbox.models[i].model.animationMixer.update(clockDelta);
         }
 
         let playersIterated = false;
@@ -825,7 +823,7 @@
       sandbox = {
         initialized: false,
         presets: {
-          map: "Lihid",
+          map: "Cargo_Port",
           mode: "slayer",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
@@ -846,7 +844,39 @@
           }
         },
         settings: {
-          cameraFov: 47
+          cameraFov: 47,
+          bindings: {
+            keyboard: {
+              "jump": ["Space"],
+              "fire": ["KeyF", "BracketRight"],
+              "zoom": ["KeyI"],
+              "reload": ["KeyR"],
+              "switch": ["KeyY", "Tab"],
+              "grenade": ["KeyG"],
+              "melee": ["KeyB"],
+              "sprint": ["ShiftLeft"],
+              "crouch": ["KeyC"],
+              "enterVehicle": ["KeyE", "KeyT"],
+              "vehicleView": ["KeyV"],
+              "interact": ["KeyT"],
+              "leaderboard": ["KeyL"]
+            },
+            gamepad: {
+              "jump": ["a"],
+              "fire": ["rt"],
+              "zoom": ["r"],
+              "reload": ["rb"],
+              "switch": ["y"],
+              "grenade": ["lt"],
+              "melee": ["b"],
+              "sprint": ["x"],
+              "crouch": ["l"],
+              "enterVehicle": ["rb"],
+              "vehicleView": ["x"],
+              "interact": ["rb"],
+              "leaderboard": ["back"]
+            }
+          }
         },
         loadout: [],
         grenades: {},
@@ -864,21 +894,6 @@
         currentWeapon: null,
         primaryWeapon: null,
         secondaryWeapon: null,
-        controls: {
-          "jump": ["Space"],
-          "fire": ["KeyF", "BracketRight"],
-          "zoom": ["KeyI"],
-          "reload": ["KeyR"],
-          "switch": ["KeyY", "Tab"],
-          "grenade": ["KeyG"],
-          "melee": ["KeyB"],
-          "sprint": ["ShiftLeft"],
-          "crouch": ["KeyC"],
-          "enterVehicle": ["KeyE", "KeyT"],
-          "vehicleView": ["KeyV"],
-          "interact": ["KeyT"],
-          "leaderboard": ["KeyL"],
-        },
         loadModels: function() {
           for (let i = 0; i < sandbox.models.length; i++) {
             const idSplit = sandbox.models[i].id.split(".");
@@ -5400,28 +5415,28 @@
           },
           keyDownFunction: function(event) {
             if (!sandbox.initialized) return;
-            if (!event.repeat && sandbox.controls.leaderboard.includes(event.code)) utils.ui.showLeaderboard();
+            if (!event.repeat && sandbox.settings.bindings.keyboard.leaderboard.includes(event.code)) utils.ui.showLeaderboard();
             if (!PointerControls.isLocked) return;
             keyStates[event.code] = true;
             if (!event.repeat && !deathScreen) {
               if (!utils.options.get("Walking") && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.startWalking();
-              if (sandbox.controls.fire.includes(event.code)) utils.weapons.fire();
-              if (sandbox.controls.zoom.includes(event.code)) utils.weapons.zoom();
-              if (sandbox.controls.reload.includes(event.code)) utils.weapons.reload();
-              if (sandbox.controls.switch.includes(event.code)) utils.weapons.switch();
-              if (sandbox.controls.grenade.includes(event.code)) utils.grenades.throw();
-              if (sandbox.controls.melee.includes(event.code)) utils.weapons.melee();
-              if (sandbox.controls.sprint.includes(event.code) && (keyStates["KeyW"] || keyStates["ArrowUp"])) utils.weapons.sprint();
-              if (sandbox.controls.crouch.includes(event.code)) utils.weapons.crouch();
-              if (sandbox.controls.enterVehicle.includes(event.code)) utils.vehicles.enter();
-              if (sandbox.controls.vehicleView.includes(event.code)) utils.vehicles.switchView();
-              if (sandbox.controls.interact.includes(event.code)) utils.weapons.pickup();
-              if (sandbox.controls.jump.includes(event.code)) utils.weapons.jump();
+              if (sandbox.settings.bindings.keyboard.fire.includes(event.code)) utils.weapons.fire();
+              if (sandbox.settings.bindings.keyboard.zoom.includes(event.code)) utils.weapons.zoom();
+              if (sandbox.settings.bindings.keyboard.reload.includes(event.code)) utils.weapons.reload();
+              if (sandbox.settings.bindings.keyboard.switch.includes(event.code)) utils.weapons.switch();
+              if (sandbox.settings.bindings.keyboard.grenade.includes(event.code)) utils.grenades.throw();
+              if (sandbox.settings.bindings.keyboard.melee.includes(event.code)) utils.weapons.melee();
+              if (sandbox.settings.bindings.keyboard.sprint.includes(event.code) && (keyStates["KeyW"] || keyStates["ArrowUp"])) utils.weapons.sprint();
+              if (sandbox.settings.bindings.keyboard.crouch.includes(event.code)) utils.weapons.crouch();
+              if (sandbox.settings.bindings.keyboard.enterVehicle.includes(event.code)) utils.vehicles.enter();
+              if (sandbox.settings.bindings.keyboard.vehicleView.includes(event.code)) utils.vehicles.switchView();
+              if (sandbox.settings.bindings.keyboard.interact.includes(event.code)) utils.weapons.pickup();
+              if (sandbox.settings.bindings.keyboard.jump.includes(event.code)) utils.weapons.jump();
             }
           },
           keyUpFunction: function(event) {
             if (!sandbox.initialized) return;
-            if (sandbox.controls.leaderboard.includes(event.code)) utils.ui.hideLeaderboard();
+            if (sandbox.settings.bindings.keyboard.leaderboard.includes(event.code)) utils.ui.hideLeaderboard();
             if (!PointerControls.isLocked) return;
             keyStates[event.code] = false;
             if (!keyStates["KeyW"] && !keyStates["KeyA"] && !keyStates["KeyS"] && !keyStates["KeyD"] && !keyStates["ArrowUp"] && !keyStates["ArrowLeft"] && !keyStates["ArrowDown"] && !keyStates["ArrowRight"] && /KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowLeft|ArrowDown|ArrowRight/i.test(event.code)) utils.weapons.stopWalking();
@@ -5429,8 +5444,8 @@
               const vehicle = utils.options.get("CurrentVehicle");
               if (vehicle) utils.vehicles.stopThrottle(vehicle);
             }
-            if (sandbox.controls.fire.includes(event.code)) utils.weapons.stopFire();
-            if (sandbox.controls.sprint.includes(event.code)) utils.weapons.stopSprint(), utils.weapons.update();
+            if (sandbox.settings.bindings.keyboard.fire.includes(event.code)) utils.weapons.stopFire();
+            if (sandbox.settings.bindings.keyboard.sprint.includes(event.code)) utils.weapons.stopSprint(), utils.weapons.update();
           }
         }
       };
@@ -5546,6 +5561,7 @@
 
       const PointerControls = new PointerLockControls(camera, renderer.domElement);
       const TouchControls = new TouchScreenControls();
+      const GamepadControls = new GamepadApiControls();
       PointerControls.maxPolarAngle = Math.PI - 0.15;
       PointerControls.minPolarAngle = 0.15;
       PointerControls.pointerSpeed = 0.6;
