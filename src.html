@@ -4090,6 +4090,7 @@
             const weapon = utils.weapons.getCurrentEntry();
             if (utils.options.get("Reloading") || weapon.ammo <= 0 || weapon.currentAmmo >= weapon.maxAmmo || utils.options.get("CheckRunningAfterJump")) return;
             utils.options.set("Reloading", true);
+            utils.weapons.stopFire();
             utils.weapons.stopZoom();
             utils.weapons.stopMelee();
             utils.weapons.stopSprint(false);

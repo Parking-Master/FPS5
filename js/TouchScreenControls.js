@@ -127,7 +127,7 @@ TouchScreenControls = function() {
       const touch = Object.values(event.touches).filter(touch => lookTouchArea.contains(touch.target))[0];
       if (previousTouch) {
         camera.rotation.y -= (touch.pageX - previousTouch.pageX) / (120 / _this.speed);
-        camera.rotation.x -= (touch.pageY - previousTouch.pageY) / (120 / _this.speed);
+        camera.rotation.x = Math.max(Math.min(camera.rotation.x - ((touch.pageY - previousTouch.pageY) / (120 / _this.speed)), Math.PI / 2 - .15), -Math.PI / 2 + .15);
       }
       previousTouch = touch;
     });

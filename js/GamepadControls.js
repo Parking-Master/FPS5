@@ -2,10 +2,11 @@ GamepadApiControls = function() {
   let _this = this;
   this.lookSpeed = 5; // Between 1 and 10
   this.lookSensitivity = 5; // Between 1 and 10
+  this.lookAxialDeadzone = .12; // Between .1 and .5
   this.data = {
     lookDelta: 0,
     autoLockPoint: null,
-    interactButtonTime: null
+    interactButtonTime: null,
   };
   this.buttonRepeats = {};
   this.buttonsDown = {};
@@ -68,21 +69,20 @@ GamepadApiControls = function() {
     let weapon = utils.weapons.getCurrentEntry();
     let lookX = gamepad.axes[2];
     let lookY = gamepad.axes[3];
-    let threshold = .4;
     let looking = false;
     if (vehicle && vehicle.currentView == 0) vehicle.physicsVariables.heading = Math.max(Math.min(camera.rotation.y * 1.5, vehicle.physicsVariables.maxHeading), -vehicle.physicsVariables.maxHeading);
-    if (Math.abs(lookX) > threshold || Math.abs(lookY) > threshold) {
+    if (Math.abs(lookX) > _this.lookAxialDeadzone || Math.abs(lookY) > _this.lookAxialDeadzone) {
       looking = true;
-      if (_this.data.lookDelta <= 0) _this.data.lookDelta = .4 * (_this.lookSpeed / 5);
+      if (_this.data.lookDelta <= 0) _this.data.lookDelta = .32 * (_this.lookSpeed / 5);
       _this.data.lookDelta = Math.min(_this.data.lookDelta + _this.lookSensitivity * clockDelta, _this.lookSpeed / 4.2);
       let rotationFactor = _this.data.lookDelta * Math.max(Math.min(_this.data.autoLockPoint ? 10 / _this.data.autoLockPoint.distance : 1, 1), .6);
       let rotationFactorX = rotationFactor * lookX;
       let rotationFactorY = rotationFactor * lookY * .65;
       let isAiming = utils.options.get("Aiming");
-      let lookDeltaX = Math.min(Math.pow(Math.abs(rotationFactorX), 2), _this.lookSpeed / 2) * (rotationFactorX < 0 ? -1 : 1) * PointerControls.pointerSpeed * (isAiming ? .8 : 1) * (_this.data.autoLockPoint ? .6 : 1) * (vehicle ? .25 : 1) * clockDelta;
-      let lookDeltaY = Math.min(Math.pow(Math.abs(rotationFactorY), 1.7), _this.lookSpeed / 2) * (rotationFactorY < 0 ? -1 : 1) * PointerControls.pointerSpeed * (isAiming ? .7 : 1) * (_this.data.autoLockPoint ? .6 : 1) * (vehicle ? .25 : 1) * clockDelta;
+      let lookDeltaX = Math.min(Math.pow(Math.abs(rotationFactorX), 4), _this.lookSpeed / 2) * (rotationFactorX < 0 ? -1 : 1) * PointerControls.pointerSpeed * (isAiming ? .8 : 1) * (_this.data.autoLockPoint ? .6 : 1) * (vehicle ? .25 : 1) * clockDelta;
+      let lookDeltaY = Math.min(Math.pow(Math.abs(rotationFactorY), 4), _this.lookSpeed / 2) * (rotationFactorY < 0 ? -1 : 1) * PointerControls.pointerSpeed * (isAiming ? .7 : 1) * (_this.data.autoLockPoint ? .6 : 1) * (vehicle ? .25 : 1) * clockDelta;
       camera.rotation.y -= lookDeltaX;
-      camera.rotation.x -= lookDeltaY;
+      camera.rotation.x = Math.max(Math.min(camera.rotation.x - lookDeltaY, Math.PI / 2 - .15), -Math.PI / 2 + .15);
       if (vehicle && vehicle.currentView == 1) vehicle.physicsVariables.heading = Math.max(Math.min(vehicle.physicsVariables.heading - (lookX / 120), vehicle.physicsVariables.maxHeading), -vehicle.physicsVariables.maxHeading);
     } else {
       _this.data.lookDelta = 0;
@@ -105,7 +105,7 @@ GamepadApiControls = function() {
       let autoLockPosition = utils.players.objects[_this.data.autoLockPoint.object.playerUUID].scene.position.clone();
       autoLockPosition.y += .8;
       vectors[16].setFromRotationMatrix(vectors[36].lookAt(camera.position, autoLockPosition, camera.up));
-      camera.quaternion.slerp(vectors[16], Math.min(.003 * (4 / _this.data.autoLockPoint.distance), .003));
+      camera.quaternion.slerp(vectors[16], Math.min(.006 * (4 / _this.data.autoLockPoint.distance), .006));
     }
   };
   this.updateWalking = function(deltaTime, gamepad, vehicle, walkSpeed) {
