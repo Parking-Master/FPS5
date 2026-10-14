@@ -413,6 +413,11 @@
         transform-origin: center top;
         top: 15px;
       }
+      body.auto-resize-mobile .ui-armor-ability {
+        transform: scale(.5);
+        left: 10px;
+        bottom: 165px;
+      }
       body.auto-resize-mobile .ui-radar {
         transform: scale(.6);
         transform-origin: bottom left;
@@ -497,6 +502,26 @@
         margin-left: 40px;
         margin-top: -8px;
       }
+      .ui-armor-ability {
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        left: 60px;
+        bottom: 200px;
+        border-radius: 100%;
+        box-shadow: 0 0 5px #fff;
+        box-shadow: inset 0 0 20px rgba(255, 255, 255, .5);
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 50px;
+        transform: scale(.7);
+      }
+      .ui-armor-ability .armor-ability-charge-track {
+        stroke: rgba(200, 200, 200, .2);
+      }
+      .ui-armor-ability .armor-ability-charge-thumb {
+        stroke: rgba(134, 255, 199, 0.9);
+      }
     </style>
   </head>
   <body>
@@ -567,6 +592,12 @@
           </div>
         </div>
         <div class="ui-section bottom-left-section">
+          <div class="ui-armor-ability">
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <circle class="armor-ability-charge-track" r="47" cx="50" cy="50" fill="transparent" stroke-width="6px"></circle>
+              <circle class="armor-ability-charge-thumb" r="47" cx="50" cy="50" fill="transparent" stroke-width="6px"></circle>
+            </svg>
+          </div>
           <div class="ui-radar">
             <canvas style="width: 100%; height: 100%" width="150" height="150"></canvas>
           </div>
@@ -657,6 +688,7 @@
         cameraRotation.setFromQuaternion(vectors[10]);
 
         utils.physics.updateRockets(clockDelta, time, cameraPosition);
+        utils.armorAbilities.update(deltaTime);
         TWEEN.update();
         particles.update(deltaTime);
         utils.ui.update(weapon.currentAmmo, weapon.ammo, sandbox.grenades, weapon.reticle, time);
@@ -823,7 +855,7 @@
       sandbox = {
         initialized: false,
         presets: {
-          map: "Cargo_Port",
+          map: "Lihid",
           mode: "slayer",
           character: "Raven",
           loadout: ["AK-74", "FN-502"],
@@ -831,6 +863,7 @@
             "mk2": 0,
             "plasma": 0
           },
+          armorAbility: "jet-pack",
           options: {
             scoreToWin: 25, // Kills, `null` for unlimited
             timeLimit: 720, // Seconds, `null` for unlimited
@@ -854,6 +887,7 @@
               "switch": ["KeyY", "Tab"],
               "grenade": ["KeyG"],
               "melee": ["KeyB"],
+              "armorAbility": ["KeyM"],
               "sprint": ["ShiftLeft"],
               "crouch": ["KeyC"],
               "enterVehicle": ["KeyE", "KeyT"],
@@ -869,6 +903,7 @@
               "switch": ["y"],
               "grenade": ["lt"],
               "melee": ["b"],
+              "armorAbility": ["lb"],
               "sprint": ["x"],
               "crouch": ["l"],
               "enterVehicle": ["rb"],
@@ -2390,7 +2425,9 @@
             activeMedals: [],
             activePoints: 0,
             currentVehicleSeatHovering: null,
-            leaderboardEntries: {}
+            leaderboardEntries: {},
+            armorAbilityCharge: null,
+            armorAbility: null
           },
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
@@ -2429,7 +2466,9 @@
             leaderboard: document.querySelector(".leaderboard"),
             leaderboardWrapper_none: document.querySelector(".leaderboard-wrapper-none"),
             leaderboardWrapper_red: document.querySelector(".leaderboard-wrapper-red"),
-            leaderboardWrapper_blue: document.querySelector(".leaderboard-wrapper-blue")
+            leaderboardWrapper_blue: document.querySelector(".leaderboard-wrapper-blue"),
+            armorAbilityCharge: document.querySelector(".ui-armor-ability svg .armor-ability-charge-thumb"),
+            armorAbility: document.querySelector(".ui-armor-ability")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle, time) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -2525,6 +2564,12 @@
             if (utils.options.get("GameEnded")) return;
             if (!deathScreen) utils.ui.show();
             utils.ui.elements.leaderboard.style.opacity = 0;
+          },
+          setArmorAbility: function(armorAbility) {
+            if (armorAbility != utils.ui.cache.armorAbility) {
+              utils.ui.cache.armorAbility = armorAbility;
+              utils.ui.elements.armorAbility.style.backgroundImage = "url(/images/armor-abilities/" + armorAbility + ".png)";
+            }
           },
           showBottomRightSection: function() {
             utils.ui.elements.bottomRightSection.style.opacity = 1;
@@ -2840,6 +2885,8 @@
                 isCrouching: false,
                 isDead: false,
                 weapon: null,
+                activeAbility: null,
+                previousActiveAbility: null,
                 weaponRotation: 0,
                 visibleOnRadar: false,
                 allowedToUpdate: true,
@@ -3005,10 +3052,11 @@
                   playerObject.weaponRotation = rotation[0];
                   playerObject.visibleOnRadar = gametime.players[player].data.visibleOnRadar;
                   playerObject.vehicle = gametime.players[player].data.vehicle;
+                  playerObject.activeAbility = gametime.players[player].data.activeAbility;
                   const distance = camera.getWorldPosition(vectors[31]).distanceTo(playerObject.scene.position);
                   const usernamePointer = playerObject.scene.getObjectByName("UsernamePointer");
                   if (usernamePointer) {
-                    if (distance < 2 || distance > 60 || playerObject.isDead || utils.options.get("Zoomed")) {
+                    if (distance < 2 || distance > 60 || playerObject.isDead || utils.options.get("Zoomed") || playerObject.activeAbility == "active-camo") {
                       usernamePointer.visible = false;
                     } else {
                       usernamePointer.visible = true;
@@ -3051,6 +3099,27 @@
                       playerObject.scene.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
                       playerObject.scene.translateY(-1);
                     }
+                  }
+                  if (playerObject.activeAbility == "jet-pack") {
+                    if (frameCount % 2 == 0) particles.dust(playerObject.scene.position, .9, 100);
+                  }
+                  if (playerObject.activeAbility != playerObject.previousActiveAbility) {
+                    if (playerObject.activeAbility != null) {
+                      if (playerObject.activeAbility == "thruster-pack") {
+                        particles.dust(playerObject.scene.position, 4, 100);
+                      } else if (playerObject.activeAbility == "active-camo") {
+                        playerObject.scene.traverse(child => {
+                          if (child.material && !child.name.includes("muzzleFlash") && !child.name.includes("PlayerShield")) child.material.blending = THREE.SubtractiveBlending;
+                        });
+                      }
+                    } else {
+                      if (playerObject.previousActiveAbility == "active-camo") {
+                        playerObject.scene.traverse(child => {
+                          if (child.material) child.material.blending = THREE.NormalBlending;
+                        });
+                      }
+                    }
+                    playerObject.previousActiveAbility = playerObject.activeAbility;
                   }
                 }
               }
@@ -4775,6 +4844,64 @@
             utils.grenades.objects.push(entry);
           }
         },
+        armorAbilities: {
+          charge: 100,
+          active: false,
+          reset: function() {
+            utils.armorAbilities.active = false;
+            utils.armorAbilities.charge = 100;
+          },
+          activate: function() {
+            if (sandbox.presets.armorAbility == "thruster-pack" && utils.armorAbilities.charge < 90) return;
+            utils.armorAbilities.active = true;
+          },
+          deactivate: function() {
+            if (sandbox.presets.armorAbility == "jet-pack") {
+              utils.armorAbilities.active = false;
+            }
+          },
+          update: function(deltaTime) {
+            utils.ui.setArmorAbility(sandbox.presets.armorAbility);
+            if (utils.armorAbilities.active && utils.armorAbilities.charge > 10) {
+              gametime.player.data.activeAbility = sandbox.presets.armorAbility;
+              if (sandbox.presets.armorAbility == "jet-pack") {
+                playerVelocity.y = playerVelocity.y + (((Math.pow(Math.min(Math.max(playerVelocity.y, 0), 2.5), 1.5)) + (deltaTime * 500)) / 10);
+                if (frameCount % 2 == 0) particles.dust(playerCollider.start, .4, 100);
+                utils.armorAbilities.charge -= deltaTime * 300;
+                utils.options.set("CameraShake", (Math.min(2 / Math.abs(playerVelocity.y), .5) / 100) * Math.max(utils.armorAbilities.charge, 30));
+              } else if (sandbox.presets.armorAbility == "thruster-pack") {
+                playerVelocity.add(new THREE.Vector3(Math.max(Math.min(playerVelocity.x, 3), -3) * deltaTime * 100, 0, Math.max(Math.min(playerVelocity.z, 3), -3) * deltaTime * 100));
+                particles.dust(playerCollider.start, 2, 50);
+                utils.armorAbilities.charge -= deltaTime * 2000;
+              } else if (sandbox.presets.armorAbility == "active-camo") {
+                sandbox.primaryWeapon.getObjectByName("Arms").material.blending = THREE.SubtractiveBlending;
+                sandbox.secondaryWeapon.getObjectByName("Arms").material.blending = THREE.SubtractiveBlending;
+                utils.armorAbilities.charge -= deltaTime * 50;
+              }
+            } else {
+              gametime.player.data.activeAbility = null;
+              if (sandbox.presets.armorAbility == "jet-pack") {
+                utils.armorAbilities.charge = Math.min(utils.armorAbilities.charge + (deltaTime * 100), 100);
+              } else if (sandbox.presets.armorAbility == "thruster-pack") {
+                utils.armorAbilities.active = false;
+                utils.armorAbilities.charge = Math.min(utils.armorAbilities.charge + (deltaTime * 90), 100);
+              } else if (sandbox.presets.armorAbility == "active-camo") {
+                utils.armorAbilities.active = false;
+                sandbox.primaryWeapon.getObjectByName("Arms").material.blending = THREE.NormalBlending;
+                sandbox.secondaryWeapon.getObjectByName("Arms").material.blending = THREE.NormalBlending;
+                utils.armorAbilities.charge = Math.min(utils.armorAbilities.charge + (deltaTime * 30), 100);
+              }
+            }
+            let thresholdProgress = Math.floor(utils.armorAbilities.charge / 10) * 10;
+            if (thresholdProgress != utils.ui.cache.armorAbilityCharge) {
+              utils.ui.cache.armorAbilityCharge = thresholdProgress;
+              let strokeDasharray = 2 * Math.PI * 47;
+              let strokeDashoffset = strokeDasharray * ((100 - utils.armorAbilities.charge) / 100);
+              utils.ui.elements.armorAbilityCharge.setAttribute("stroke-dasharray", strokeDasharray.toFixed(1) + "px");
+              utils.ui.elements.armorAbilityCharge.setAttribute("stroke-dashoffset", strokeDashoffset.toFixed(1) + "px");
+            }
+          }
+        },
         effects: {
           bulletHole: function(spreadX, spreadY, type, point = camera, weapon = null, checkDistance = false) {
             const raycaster = utils.options.get("effectsRaycaster");
@@ -5359,6 +5486,7 @@
             sandbox.grenades["mk2"] = sandbox.presets.grenades["mk2"];
             sandbox.grenades["plasma"] = sandbox.presets.grenades["plasma"];
             utils.health.reset();
+            utils.armorAbilities.reset();
             utils.ui.hideDeathInfo();
             utils.weapons.stopWalking();
             gametime.run("playerRespawn", [gametime.player.uuid, spawnPoint]);
@@ -5433,6 +5561,7 @@
               if (sandbox.settings.bindings.keyboard.vehicleView.includes(event.code)) utils.vehicles.switchView();
               if (sandbox.settings.bindings.keyboard.interact.includes(event.code)) utils.weapons.pickup();
               if (sandbox.settings.bindings.keyboard.jump.includes(event.code)) utils.weapons.jump();
+              if (sandbox.settings.bindings.keyboard.armorAbility.includes(event.code)) utils.armorAbilities.activate();
             }
           },
           keyUpFunction: function(event) {
@@ -5447,6 +5576,7 @@
             }
             if (sandbox.settings.bindings.keyboard.fire.includes(event.code)) utils.weapons.stopFire();
             if (sandbox.settings.bindings.keyboard.sprint.includes(event.code)) utils.weapons.stopSprint(), utils.weapons.update();
+            if (sandbox.settings.bindings.keyboard.armorAbility.includes(event.code)) utils.armorAbilities.deactivate();
           }
         }
       };
@@ -5708,6 +5838,7 @@
         rotation: [0, 0, 0],
         loadout: sandbox.presets.loadout,
         visibleOnRadar: false,
+        activeAbility: null,
         team: null,
         score: 0,
         kills: 0,
