@@ -242,7 +242,7 @@
         position: absolute;
         left: 40px;
         bottom: 30%;
-        margin-bottom: 100px;
+        margin-bottom: 150px;
         z-index: 10;
       }
       .ui-section.left-section .ui-kill-stats .row {
@@ -509,8 +509,7 @@
         left: 60px;
         bottom: 200px;
         border-radius: 100%;
-        box-shadow: 0 0 5px #fff;
-        box-shadow: inset 0 0 20px rgba(255, 255, 255, .5);
+        box-shadow: inset 0 0 20px rgba(255, 255, 255, .6), 0 0 5px rgba(255, 255, 255, 0.2);
         background-repeat: no-repeat;
         background-position: center;
         background-size: 50px;
@@ -679,7 +678,7 @@
           utils.physics.updateGrenades(deltaTime, time, i);
           utils.physics.updateVehicles(deltaTime, time, i);
           utils.physics.updateGravityLifts(deltaTime);
-          utils.players.update();
+          utils.players.update(i);
         }
 
         const cameraPosition = camera.getWorldPosition(vectors[31]);
@@ -3007,7 +3006,7 @@
           incrementScore: function() {
             gametime.player.data.kills++;
           },
-          update: function() {
+          update: function(i) {
             gametime.player.data.position = [camera.position.x, camera.position.y - 1, camera.position.z];
             gametime.player.data.rotation = [camera.rotation.x, camera.rotation.y, camera.rotation.z];
             if (sandbox.presets.loadout.indexOf("random") > -1) gametime.player.data.loadout = sandbox.loadout;
@@ -3101,18 +3100,20 @@
                     }
                   }
                   if (playerObject.activeAbility == "jet-pack") {
-                    if (frameCount % 2 == 0) particles.dust(playerObject.scene.position, .9, 100);
+                    if (i == 0 && frameCount % 2 == 0) particles.dust(playerObject.scene.position, .8, 100);
                   }
                   if (playerObject.activeAbility != playerObject.previousActiveAbility) {
                     if (playerObject.activeAbility != null) {
+                      audio.armorAbilityLoop3d(sandbox.presets.armorAbility, playerObject.uuid);
                       if (playerObject.activeAbility == "thruster-pack") {
-                        particles.dust(playerObject.scene.position, 4, 100);
+                        if (i == 0) particles.dust(playerObject.scene.position, 2, 100);
                       } else if (playerObject.activeAbility == "active-camo") {
                         playerObject.scene.traverse(child => {
                           if (child.material && !child.name.includes("muzzleFlash") && !child.name.includes("PlayerShield")) child.material.blending = THREE.SubtractiveBlending;
                         });
                       }
                     } else {
+                      audio.armorAbilityEnd3d(sandbox.presets.armorAbility, playerObject.uuid);
                       if (playerObject.previousActiveAbility == "active-camo") {
                         playerObject.scene.traverse(child => {
                           if (child.material) child.material.blending = THREE.NormalBlending;
@@ -4848,16 +4849,19 @@
           charge: 100,
           active: false,
           reset: function() {
+            if (utils.armorAbilities.active) utils.armorAbilities.deactivate();
             utils.armorAbilities.active = false;
             utils.armorAbilities.charge = 100;
           },
           activate: function() {
             if (sandbox.presets.armorAbility == "thruster-pack" && utils.armorAbilities.charge < 90) return;
             utils.armorAbilities.active = true;
+            audio.armorAbilityLoop(sandbox.presets.armorAbility);
           },
           deactivate: function() {
             if (sandbox.presets.armorAbility == "jet-pack") {
               utils.armorAbilities.active = false;
+              audio.armorAbilityEnd(sandbox.presets.armorAbility);
             }
           },
           update: function(deltaTime) {
@@ -4871,7 +4875,7 @@
                 utils.options.set("CameraShake", (Math.min(2 / Math.abs(playerVelocity.y), .5) / 100) * Math.max(utils.armorAbilities.charge, 30));
               } else if (sandbox.presets.armorAbility == "thruster-pack") {
                 playerVelocity.add(new THREE.Vector3(Math.max(Math.min(playerVelocity.x, 3), -3) * deltaTime * 100, 0, Math.max(Math.min(playerVelocity.z, 3), -3) * deltaTime * 100));
-                particles.dust(playerCollider.start, 2, 50);
+                particles.dust(playerCollider.start, 1, 50);
                 utils.armorAbilities.charge -= deltaTime * 2000;
               } else if (sandbox.presets.armorAbility == "active-camo") {
                 sandbox.primaryWeapon.getObjectByName("Arms").material.blending = THREE.SubtractiveBlending;
@@ -5458,6 +5462,7 @@
             if (zoomTween && zoomTween.out) zoomTween.out.fov.stop();
             camera.fov = 70;
             camera.updateProjectionMatrix();
+            utils.armorAbilities.reset();
             utils.effects.shake(3, 0, 1000);
             audio.dying(camera.position);
             PointerControls.isLocked = false;

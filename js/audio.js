@@ -137,6 +137,13 @@ audio = {
       "weapon.zoom-in": AudioWrapper("/sounds/weapons/zoom-in.mp3"),
       "weapon.zoom-out": AudioWrapper("/sounds/weapons/zoom-out.mp3"),
       "medal": AudioWrapper("/sounds/weapons/medal.mp3"),
+      "armor-abilities.jet-pack.loop": AudioWrapper("/sounds/armor-abilities/jet-pack.loop.mp3"),
+      "armor-abilities.jet-pack.end": AudioWrapper("/sounds/armor-abilities/jet-pack.end.mp3"),
+      "armor-abilities.thruster-pack.loop": AudioWrapper("/sounds/armor-abilities/thruster-pack.loop.mp3"),
+      "armor-abilities.active-camo.loop": AudioWrapper("/sounds/armor-abilities/active-camo.loop.mp3"),
+      "armor-abilities.3d.jet-pack": AudioWrapper3d("/sounds/armor-abilities/jet-pack.loop.mp3"),
+      "armor-abilities.3d.thruster-pack": AudioWrapper3d("/sounds/armor-abilities/thruster-pack.loop.mp3"),
+      "armor-abilities.3d.active-camo": AudioWrapper3d("/sounds/armor-abilities/active-camo.loop.mp3"),
       "rocket.launch": AudioWrapper3d("/sounds/weapons/rocket-launch.mp3", true),
       "rocket.explosion": AudioWrapper3d("/sounds/weapons/rocket-explode.mp3", true),
       "music.ending": AudioWrapper("/sounds/ending-music.mp3"),
@@ -173,6 +180,12 @@ audio = {
     for (id in rockets) {
       if (rockets[id].launchSound) rockets[id].launchSound.position.copy(rockets[id].position);
     }
+    let jetPack = audio.sounds["armor-abilities.3d.jet-pack"].sound;
+    let thrusterPack = audio.sounds["armor-abilities.3d.thruster-pack"].sound;
+    let activeCamo = audio.sounds["armor-abilities.3d.active-camo"].sound;
+    if (jetPack.playerUUID) jetPack.position.copy(utils.players.objects[jetPack.playerUUID].scene.position);
+    if (thrusterPack.playerUUID) jetPack.position.copy(utils.players.objects[jetPack.playerUUID].scene.position);
+    if (activeCamo.playerUUID) jetPack.position.copy(utils.players.objects[jetPack.playerUUID].scene.position);
   },
   updateVehicle: function(vehicle) {
     let accelerate, decelerate, idle;
@@ -480,6 +493,31 @@ audio = {
   gameOver: function() {
     let sound = audio.sounds["announcer.game-over"];
     sound.play();
+  },
+  armorAbilityLoop: function(armorAbility) {
+    let sound = audio.sounds["armor-abilities." + armorAbility + ".loop"];
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
+  },
+  armorAbilityLoop3d: function(armorAbility, playerUUID) {
+    let sound = audio.sounds["armor-abilities.3d." + armorAbility].sound;
+    sound.playerUUID = playerUUID;
+    if (sound.source) sound.stop();
+    sound.play();
+  },
+  armorAbilityEnd: function(armorAbility) {
+    let sound = audio.sounds["armor-abilities." + armorAbility + ".end"];
+    let loopSound = audio.sounds["armor-abilities." + armorAbility + ".loop"];
+    if (!sound) return;
+    loopSound.pause();
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
+  },
+  armorAbilityEnd3d: function(armorAbility, playerUUID) {
+    let sound = audio.sounds["armor-abilities.3d." + armorAbility].sound;
+    if (playerUUID == sound.playerUUID && sound.source) sound.stop();
   }
 };
 

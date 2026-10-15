@@ -74,8 +74,8 @@ let bloodMaterial = new THREE.ShaderMaterial({
       float noise = texture2D(noiseTexture, noiseCoord).r * 0.5 + 0.5;
       
       float alpha = 0.15 * vLife * noise * (1.0 - dist * 2.0);
-      vec3 dustColor = vec3(0.4, 0.1, 0.1);
-      gl_FragColor = vec4(dustColor, alpha);
+      vec3 bloodColor = vec3(0.4, 0.1, 0.1);
+      gl_FragColor = vec4(bloodColor, alpha);
     }`,
   transparent: true,
   blending: THREE.NormalBlending,
@@ -247,7 +247,7 @@ particles = {
         vz: (Math.random() - 0.5) * 2 * (size / 10),
         life: 2 * life,
         maxLife: 2 * life,
-        size: Math.random() * size * 2
+        size: Math.random() * size * window.devicePixelRatio * 2
       };
       burst.particles.push(particle);
     }
@@ -266,7 +266,7 @@ particles = {
         vz: (Math.random() - 0.5) * 2 * (size / 10),
         life: 2,
         maxLife: 2,
-        size: Math.random() * size * 2
+        size: Math.random() * size * window.devicePixelRatio
       };
       burst.particles.push(particle);
     }
@@ -316,22 +316,20 @@ particles = {
     }
   },
   update: function(deltaTime) {
-    const now = performance.now();
-    explosionMaterial.uniforms.time.value = now * deltaTime * .1;
-    plasmaMaterial.uniforms.time.value = now * deltaTime * .1;
+    const timeScale = deltaTime * 60;
     for (let b = bursts.length - 1; b >= 0; b--) {
       const particles = bursts[b].particles;
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
-        p.vx *= 0.88;
-        p.vy *= 0.88;
-        p.vz *= 0.92;
-        p.vy -= 0.002;
-        p.x += p.vx * 0.8;
-        p.y += p.vy * 0.8;
-        p.z += p.vz * 0.8;
-        p.size *= 0.98;
-        p.life -= 0.022;
+        p.vx *= Math.pow(0.96, timeScale);
+        p.vy *= Math.pow(0.96, timeScale);
+        p.vz *= Math.pow(0.96, timeScale);
+        p.vy += 0.0004 * timeScale;
+        p.x += p.vx * 0.8 * timeScale;
+        p.y += p.vy * 0.8 * timeScale;
+        p.z += p.vz * 0.8 * timeScale;
+        p.size *= Math.pow(0.98, timeScale);
+        p.life -= 0.022 * timeScale;
         if (p.life <= 0) particles.splice(i, 1);
       }
       if (particles.length === 0) bursts.splice(b, 1);
