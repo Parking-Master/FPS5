@@ -184,8 +184,8 @@ audio = {
     let thrusterPack = audio.sounds["armor-abilities.3d.thruster-pack"].sound;
     let activeCamo = audio.sounds["armor-abilities.3d.active-camo"].sound;
     if (jetPack.playerUUID) jetPack.position.copy(utils.players.objects[jetPack.playerUUID].scene.position);
-    if (thrusterPack.playerUUID) jetPack.position.copy(utils.players.objects[jetPack.playerUUID].scene.position);
-    if (activeCamo.playerUUID) jetPack.position.copy(utils.players.objects[jetPack.playerUUID].scene.position);
+    if (thrusterPack.playerUUID) jetPack.position.copy(utils.players.objects[thrusterPack.playerUUID].scene.position);
+    if (activeCamo.playerUUID) jetPack.position.copy(utils.players.objects[activeCamo.playerUUID].scene.position);
   },
   updateVehicle: function(vehicle) {
     let accelerate, decelerate, idle;

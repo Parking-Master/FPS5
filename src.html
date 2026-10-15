@@ -521,6 +521,74 @@
       .ui-armor-ability .armor-ability-charge-thumb {
         stroke: rgba(134, 255, 199, 0.9);
       }
+      .loading-screen {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+        background: #000;
+        z-index: 9999;
+        box-shadow: inset 100px 0 100px #000;
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
+        color: #eee;
+        font-family: "Arame";
+      }
+      .loading-screen-track {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, .5);
+      }
+      .loading-screen-progress-bar {
+        position: relative;
+        height: 4px;
+        background: #fff;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        width: 0;
+        transition: width 1s;
+      }
+      .loading-screen-text {
+        font-size: 18px;
+        margin: 10px;
+      }
+      .loading-screen-estimated-time {
+        color: #ffa10a;
+        font-family: "Arame";
+        font-size: 18px;
+        margin: 4px;
+      }
+      .loading-screen-player-list {
+        position: absolute;
+        width: 220px;
+        top: 50%;
+        margin-top: -160px;
+        left: 80px;
+      }
+      .loading-screen-player-list-entry {
+        position: relative;
+        background: rgba(20, 20, 20, .8);
+        border: 1px solid rgba(255, 255, 255, .5);
+        width: 100%;
+        padding: 3px 6px;
+        box-sizing: border-box;
+        font-size: 12px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 20px rgba(200, 200, 200, 0.2);
+      }
+      .loading-screen-player-list-entry::before {
+        position: absolute;
+        background: 1px solid rgba(255, 255, 255, .5);
+        height: 4px;
+        width: 500px;
+      }
     </style>
   </head>
   <body>
@@ -540,6 +608,22 @@
     <script src="/js/GamepadControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
     <script src="/js/user.js"></script>
+    <div class="loading-screen">
+      <div class="loading-screen-player-list">
+        <div class="loading-screen-player-list-entry">GuestUser1234</div>
+        <div class="loading-screen-player-list-entry">GuestUser1234</div>
+        <div class="loading-screen-player-list-entry">GuestUser1234</div>
+        <div class="loading-screen-player-list-entry">GuestUser1234</div>
+        <div class="loading-screen-player-list-entry">GuestUser1234</div>
+        <div class="loading-screen-player-list-entry">GuestUser1234</div>
+        <div class="loading-screen-player-list-entry">GuestUser1234</div>
+        <div class="loading-screen-player-list-entry">GuestUser1234</div>
+      </div>
+      <div class="loading-screen-track">
+        <div class="loading-screen-progress-bar"></div>
+        <div class="loading-screen-text">LOADING GAME <span class="loading-screen-estimated-time"></span> <span class="mode-value">SLAYER</span> | CARGO PORT | <span class="kill-value">25</span> kills | <span class="time-value">15</span> minutes</div>
+      </div>
+    </div>
     <div class="ui-container">
       <div class="leaderboard">
         <div class="winning-team"></div>
@@ -769,7 +853,7 @@
               object.style = "";
               delete tmpObjects[uuid];
             } else if (object.objectType == "gunCase") {
-              particles.dust(object.position, 2);
+              particles.smoke(object.position, 2);
               scene.remove(object);
               object.traverse(child => {
                 if (child.geometry) child.geometry.dispose();
@@ -941,6 +1025,7 @@
                 if (model.animations) sandbox.models[i].model.animationMixer = new THREE.AnimationMixer(model.scene);
                 if (typeof sandbox.models[i].callback == "function") sandbox.models[i].callback(model);
                 if (isWeapon) {
+                  model.scene.renderOrder = 1;
                   const name = idSplit[1];
                   model.scene.traverse(child => child.frustumCulled = false);
                   sandbox.weapons[name].model = model;
@@ -978,6 +1063,7 @@
             gametime.player.data.ready = true;
             utils.game.start();
             renderer.shadowMap.needsUpdate = true;
+            utils.ui.elements.loadingScreen.remove();
           });
         },
         loadingManager: new THREE.LoadingManager(),
@@ -1339,7 +1425,6 @@
             loaded: false,
             requiredMaps: [],
             callback: function(model) {
-              model.scene.renderOrder = 1;
               model.scene.getObjectByName("LensCover").material.blending = THREE.MultiplyBlending;
               model.scene.getObjectByName("LensCover").material.color.setHex(0x22ff11);
             }
@@ -1351,7 +1436,6 @@
             loaded: false,
             requiredMaps: [],
             callback: function(model) {
-              model.scene.renderOrder = 1;
               model.scene.getObjectByName("LensCover").material.blending = THREE.MultiplyBlending;
               model.scene.getObjectByName("LensCover").material.color.setHex(0x2244bb);
             }
@@ -2467,7 +2551,10 @@
             leaderboardWrapper_red: document.querySelector(".leaderboard-wrapper-red"),
             leaderboardWrapper_blue: document.querySelector(".leaderboard-wrapper-blue"),
             armorAbilityCharge: document.querySelector(".ui-armor-ability svg .armor-ability-charge-thumb"),
-            armorAbility: document.querySelector(".ui-armor-ability")
+            armorAbility: document.querySelector(".ui-armor-ability"),
+            loadingScreen: document.querySelector(".loading-screen"),
+            loadingScreenProgress: document.querySelector(".loading-screen-progress-bar"),
+            loadingScreenEstimatedTime: document.querySelector(".loading-screen-estimated-time")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle, time) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -2868,6 +2955,7 @@
           add: function(player) {
             utils.players.objects[player.uuid] = null;
             new THREE.GLTFLoader().load("/models/characters/" + player.data.character + ".glb", function(model) {
+              model.scene.renderOrder = 1;
               model.scene.traverse(child => child.frustumCulled = false);
               scene.add(model.scene);
               let animationStructure = null;
@@ -3009,6 +3097,7 @@
           update: function(i) {
             gametime.player.data.position = [camera.position.x, camera.position.y - 1, camera.position.z];
             gametime.player.data.rotation = [camera.rotation.x, camera.rotation.y, camera.rotation.z];
+            gametime.player.data.gameStartTime = utils.options.get("GameStartTime");
             if (sandbox.presets.loadout.indexOf("random") > -1) gametime.player.data.loadout = sandbox.loadout;
             gametime.update();
             let leftTeamUsername = null;
@@ -3016,6 +3105,7 @@
             let leftTeamScore = 0;
             let rightTeamScore = 0;
             for (player in gametime.players) {
+              let gametimePlayer = gametime.players[player];
               if (sandbox.presets.options.teamGame) {
                 if (gametime.player.data.team == "red") {
                   leftTeamUsername = "YOUR TEAM";
@@ -3024,17 +3114,17 @@
                   leftTeamUsername = "ENEMY TEAM";
                   rightTeamUsername = "YOUR TEAM";
                 }
-                if (gametime.players[player].data.team == "red") {
-                  leftTeamScore += gametime.players[player].data.kills;
+                if (gametimePlayer.data.team == "red") {
+                  leftTeamScore += gametimePlayer.data.kills;
                 } else {
-                  rightTeamScore += gametime.players[player].data.kills;
+                  rightTeamScore += gametimePlayer.data.kills;
                 }
               } else {
                 leftTeamUsername = "YOU";
                 leftTeamScore = gametime.player.data.kills;
-                if (player != gametime.player.uuid && gametime.players[player].data.kills >= rightTeamScore) {
-                  rightTeamUsername = gametime.players[player].username;
-                  rightTeamScore = gametime.players[player].data.kills;
+                if (player != gametime.player.uuid && gametimePlayer.data.kills >= rightTeamScore) {
+                  rightTeamUsername = gametimePlayer.username;
+                  rightTeamScore = gametimePlayer.data.kills;
                 }
               }
               utils.ui.updateScores(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore);
@@ -3042,16 +3132,17 @@
               if (sandbox.presets.options.scoreToWin != null && leftTeamScore >= sandbox.presets.options.scoreToWin || rightTeamScore >= sandbox.presets.options.scoreToWin) utils.game.end();
               const playerObject = utils.players.objects[player];
               if (player != gametime.player.uuid && typeof playerObject !== "undefined" && playerObject != null) {
+                if (gametimePlayer && gametimePlayer.data.gameStartTime != null && gametimePlayer.data.gameStartTime < utils.options.get("GameStartTime")) utils.options.set("GameStartTime", gametimePlayer.data.gameStartTime);
                 if (playerObject.allowedToUpdate) {
-                  const position = gametime.players[player].data.position;
-                  const rotation = gametime.players[player].data.rotation;
+                  const position = gametimePlayer.data.position;
+                  const rotation = gametimePlayer.data.rotation;
                   const target = vectors[12];
                   vectors[12].set(position[0], position[1], position[2]);
                   playerObject.scene.position.lerp(target, 0.25);
                   playerObject.weaponRotation = rotation[0];
-                  playerObject.visibleOnRadar = gametime.players[player].data.visibleOnRadar;
-                  playerObject.vehicle = gametime.players[player].data.vehicle;
-                  playerObject.activeAbility = gametime.players[player].data.activeAbility;
+                  playerObject.visibleOnRadar = gametimePlayer.data.visibleOnRadar;
+                  playerObject.vehicle = gametimePlayer.data.vehicle;
+                  playerObject.activeAbility = gametimePlayer.data.activeAbility;
                   const distance = camera.getWorldPosition(vectors[31]).distanceTo(playerObject.scene.position);
                   const usernamePointer = playerObject.scene.getObjectByName("UsernamePointer");
                   if (usernamePointer) {
@@ -3100,20 +3191,20 @@
                     }
                   }
                   if (playerObject.activeAbility == "jet-pack") {
-                    if (i == 0 && frameCount % 2 == 0) particles.dust(playerObject.scene.position, .8, 100);
+                    if (i == 0 && frameCount % 2 == 0) particles.smoke(playerObject.scene.position, .8, 100);
                   }
                   if (playerObject.activeAbility != playerObject.previousActiveAbility) {
                     if (playerObject.activeAbility != null) {
-                      audio.armorAbilityLoop3d(sandbox.presets.armorAbility, playerObject.uuid);
+                      audio.armorAbilityLoop3d(playerObject.activeAbility, playerObject.uuid);
                       if (playerObject.activeAbility == "thruster-pack") {
-                        if (i == 0) particles.dust(playerObject.scene.position, 2, 100);
+                        if (i == 0) particles.smoke(playerObject.scene.position, 2, 100);
                       } else if (playerObject.activeAbility == "active-camo") {
                         playerObject.scene.traverse(child => {
                           if (child.material && !child.name.includes("muzzleFlash") && !child.name.includes("PlayerShield")) child.material.blending = THREE.SubtractiveBlending;
                         });
                       }
                     } else {
-                      audio.armorAbilityEnd3d(sandbox.presets.armorAbility, playerObject.uuid);
+                      audio.armorAbilityEnd3d(playerObject.previousActiveAbility, playerObject.uuid);
                       if (playerObject.previousActiveAbility == "active-camo") {
                         playerObject.scene.traverse(child => {
                           if (child.material) child.material.blending = THREE.NormalBlending;
@@ -3540,7 +3631,7 @@
                 }
                 let speed = Math.min((time - rocket.fireTimestamp) / 700, 10) * 15 * deltaTime;
                 rocket.translateX(speed);
-                particles.dust(rocket.position, Math.min((time - rocket.fireTimestamp) / 500, .5), 10);
+                particles.smoke(rocket.position, Math.min((time - rocket.fireTimestamp) / 500, .5), 10);
                 rocketPoint.position.set(rocket.position.x, rocket.position.y, rocket.position.z);
                 rocketPoint.rotation.set(rocket.rotation.x, rocket.rotation.y, rocket.rotation.z);
                 rocketPoint.rotateY(-Math.PI / 2);
@@ -3556,7 +3647,7 @@
               const grenade = utils.grenades.objects[i];
               if (grenade.available) continue;
               if (grenade.collider.center.y < -40 && grenade.collider.center.y > -1000) grenade.hits++;
-              if (grenade.smoke && time % 3 == 0 && loop == 0) particles.dust(grenade.mesh.position, .5);
+              if (grenade.smoke && time % 3 == 0 && loop == 0) particles.smoke(grenade.mesh.position, .5);
               if (grenade.hits > 0 && time - grenade.timestamp > grenade.explodeTime && grenade.explode) utils.grenades.explode(grenade);
               if (grenade.type == "plasma") grenade.mesh.children[1].lookAt(camera.position);
               if (grenade.stuck) continue;
@@ -3751,7 +3842,7 @@
                   gametime.player.data.vehicle.position = [vehicle.body.velocity.x, vehicle.body.velocity.y, vehicle.body.velocity.z, vehicle.body.position.x, vehicle.body.position.y, vehicle.body.position.z, vehicle.body.quaternion.x, vehicle.body.quaternion.y, vehicle.body.quaternion.z, vehicle.body.quaternion.w, vehicle.physicsVariables.heading];
                   if (frameCount % 60 == 0 && speed < 1 && utils.vehicles.checkIfFlipped(vehicle)) utils.vehicles.exit();
                 }
-                if (vehicle.smoke && time % 6 == 0 && loop == 0) particles.dust(vehicle.mesh.position, 1);
+                if (vehicle.smoke && time % 6 == 0 && loop == 0) particles.smoke(vehicle.mesh.position, 1);
                 function applyDamageLevel(level) {
                   if (level == 0) {
                     const windshield = vehicle.mesh.getObjectByName("Windshield");
@@ -4691,7 +4782,7 @@
               distance: rocket.weapon.distance
             });
             particles.explosion(rocket.position, 1 * (rocket.weapon.damage / 200));
-            particles.dust(rocket.position, 7 * (rocket.weapon.damage / 200), 10);
+            particles.smoke(rocket.position, 7 * (rocket.weapon.damage / 200), 10);
             const shakeIntensity = 4 / (Math.max(camera.getWorldPosition(vectors[31]).distanceTo(rocket.position), 1) / 2) * (rocket.weapon.damage / 200);
             utils.effects.shake(shakeIntensity);
             audio.rocketExplosion(rocket);
@@ -4773,12 +4864,12 @@
             const worldPosition = grenade.mesh.getWorldPosition(vectors[6]);
             if (grenade.type == "mk2") {
               particles.explosion(worldPosition);
-              particles.dust(worldPosition, 6);
+              particles.smoke(worldPosition, 6);
             } else if (grenade.type == "plasma") {
               particles.plasma(worldPosition);
             } else if (grenade.type == "40mm") {
               particles.explosion(worldPosition, .8);
-              particles.dust(worldPosition, 5);
+              particles.smoke(worldPosition, 5);
             }
             if (!grenade.stuck) audio.grenadeExplosion(worldPosition, grenade.type);
             utils.players.hit(null, null, grenade);
@@ -4834,7 +4925,7 @@
             } else if (type == "plasma") {
               entry.explodeTime = 1200;
               entry.damage = 125;
-              entry.distance = 3;
+              entry.distance = 3.5;
               entry.smoke = false;
             } else if (type == "40mm") {
               entry.explodeTime = 600;
@@ -4854,11 +4945,13 @@
             utils.armorAbilities.charge = 100;
           },
           activate: function() {
+            if (utils.vehicles.check(true)) return;
             if (sandbox.presets.armorAbility == "thruster-pack" && utils.armorAbilities.charge < 90) return;
             utils.armorAbilities.active = true;
             audio.armorAbilityLoop(sandbox.presets.armorAbility);
           },
           deactivate: function() {
+            if (utils.vehicles.check(true)) return;
             if (sandbox.presets.armorAbility == "jet-pack") {
               utils.armorAbilities.active = false;
               audio.armorAbilityEnd(sandbox.presets.armorAbility);
@@ -4870,12 +4963,12 @@
               gametime.player.data.activeAbility = sandbox.presets.armorAbility;
               if (sandbox.presets.armorAbility == "jet-pack") {
                 playerVelocity.y = playerVelocity.y + (((Math.pow(Math.min(Math.max(playerVelocity.y, 0), 2.5), 1.5)) + (deltaTime * 500)) / 10);
-                if (frameCount % 2 == 0) particles.dust(playerCollider.start, .4, 100);
+                if (frameCount % 2 == 0) particles.smoke(playerCollider.start, .4, 100);
                 utils.armorAbilities.charge -= deltaTime * 300;
                 utils.options.set("CameraShake", (Math.min(2 / Math.abs(playerVelocity.y), .5) / 100) * Math.max(utils.armorAbilities.charge, 30));
               } else if (sandbox.presets.armorAbility == "thruster-pack") {
                 playerVelocity.add(new THREE.Vector3(Math.max(Math.min(playerVelocity.x, 3), -3) * deltaTime * 100, 0, Math.max(Math.min(playerVelocity.z, 3), -3) * deltaTime * 100));
-                particles.dust(playerCollider.start, 1, 50);
+                particles.smoke(playerCollider.start, 1, 50);
                 utils.armorAbilities.charge -= deltaTime * 2000;
               } else if (sandbox.presets.armorAbility == "active-camo") {
                 sandbox.primaryWeapon.getObjectByName("Arms").material.blending = THREE.SubtractiveBlending;
@@ -4918,7 +5011,7 @@
                 if (shield.shieldType == "vehicle") {
                   const damage = weapon.damage / 10;
                   shield.vehicle.condition += -damage;
-                  particles.dust(intersect.point, .5);
+                  particles.smoke(intersect.point, .5);
                   if (Math.floor(Math.random() * 3) == 0) audio.ricochet(intersect.point);
                   gametime.run("vehicleHit", [gametime.player.uuid, shield.vehicle.id, damage]);
                 } else {
@@ -4940,9 +5033,9 @@
                 const decalMesh = new THREE.Mesh(decalGeometry, bulletHole.material);
                 scene.add(decalMesh);
                 if (weapon) {
-                  particles.dust(intersect.point, .5 + (weapon.damage / 100));
+                  particles.smoke(intersect.point, .5 + (weapon.damage / 100));
                 } else {
-                  particles.dust(intersect.point);
+                  particles.smoke(intersect.point);
                 }
                 utils.options.addTmpObject(decalMesh, "bulletHole", 20000);
                 if (checkDistance) return true;
@@ -5131,7 +5224,7 @@
             utils.effects.shake(shakeIntensity);
             if (distance < 6) utils.health.subtract(Math.min((2 / distance) * 100, 150), null);
             particles.explosion(vehicle.mesh.position, 3);
-            particles.dust(vehicle.mesh.position, 8);
+            particles.smoke(vehicle.mesh.position, 8);
             audio.vehicleExplosion(vehicle);
             vehicle.despawnTime = Date.now();
             vehicle.physicsVariables.throttle = false;
@@ -5247,6 +5340,7 @@
                   utils.weapons.stopMelee();
                   utils.weapons.stopCrouch();
                   utils.weapons.stopWalking();
+                  utils.armorAbilities.deactivate();
                   vehicle.currentSeat = seat;
                   utils.options.set("CurrentVehicle", vehicle);
                   camera.position.set(0, 0, 0);
@@ -5319,7 +5413,7 @@
               if (intensity > 14) utils.health.subtract(intensity / 2, null);
             }
             if (intensity > 0.5) {
-              if (intensity / 4 > .8) particles.dust(point, Math.min(intensity / 4, 3));
+              if (intensity / 4 > .8) particles.smoke(point, Math.min(intensity / 4, 3));
               if (intensity < 2) {
                 if (time - vehicle.lastCollision > 250) audio.vehicleCrash(vehicle, intensity);
               } else {
@@ -5515,11 +5609,12 @@
             let highestPlayerScore = 0;
             let winnerText = null;
             for (player in gametime.players) {
+              let gametimePlayer = gametime.players[player];
               if (sandbox.presets.options.teamGame) {
-                if (gametime.players[player].data.team == "red") {
-                  redTeamScore += gametime.players[player].data.kills;
-                } else if (gametime.players[player].data.team == "blue") {
-                  blueTeamScore += gametime.players[player].data.kills;
+                if (gametimePlayer.data.team == "red") {
+                  redTeamScore += gametimePlayer.data.kills;
+                } else if (gametimePlayer.data.team == "blue") {
+                  blueTeamScore += gametimePlayer.data.kills;
                 }
                 if (redTeamScore > blueTeamScore) {
                   winnerText = "RED TEAM WINS!";
@@ -5530,13 +5625,13 @@
                 }
               } else {
                 if (winnerText == null) {
-                  highestPlayerScore = gametime.players[player].data.kills;
-                  winnerText = gametime.players[player].username + " WINS!";
+                  highestPlayerScore = gametimePlayer.data.kills;
+                  winnerText = gametimePlayer.username + " WINS!";
                 } else {
-                  if (gametime.players[player].data.kills > highestPlayerScore) {
-                    highestPlayerScore = gametime.players[player].data.kills;
-                    winnerText = gametime.players[player].username + " WINS!";
-                  } else if (gametime.players[player].data.kills == highestPlayerScore) {
+                  if (gametimePlayer.data.kills > highestPlayerScore) {
+                    highestPlayerScore = gametimePlayer.data.kills;
+                    winnerText = gametimePlayer.username + " WINS!";
+                  } else if (gametimePlayer.data.kills == highestPlayerScore) {
                     winnerText = "TIE GAME";
                   }
                 }
@@ -5638,12 +5733,28 @@
         sandbox.presets.options.scoreToWin = 25;
         sandbox.presets.options.timeLimit = 720;
       }
+      utils.ui.elements.loadingScreen.style.backgroundImage = "url(/images/maps/" + sandbox.presets.map + ".png)";
       // End section
 
       if (!sandbox.presets.options.radar) utils.ui.elements.radar.style.display = "none";
 
+      let highestProgress = 0;
+      let lastItemLoadedTime = null;
+      let progressTimeReports = [];
       sandbox.loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
         const progress = itemsLoaded / itemsTotal;
+        if (progress < highestProgress) return;
+        if (lastItemLoadedTime && progress > .3) {
+          let calibration = 800;
+          if (progressTimeReports.length > 10 && progressTimeReports.reduce((a, b) => a + b) / progressTimeReports.length) calibration = 500;
+          progressTimeReports.push((Date.now() - lastItemLoadedTime) + 1000);
+          let averageTimeBetweenItem = progressTimeReports.reduce((a, b) => a + b) / progressTimeReports.length;
+          let estimatedTime = Math.round((averageTimeBetweenItem * (Math.max(75, itemsTotal) - itemsLoaded)) / 1000);
+          utils.ui.elements.loadingScreenEstimatedTime.textContent = estimatedTime + " SECONDS LEFT";
+        }
+        lastItemLoadedTime = Date.now();
+        highestProgress = progress;
+        utils.ui.elements.loadingScreenProgress.style.width = (progress * 100) + "%";
       };
       sandbox.loadingManager.onLoad = function() {
         sandbox.models.forEach(model => {
