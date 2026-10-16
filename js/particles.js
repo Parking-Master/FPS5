@@ -29,7 +29,7 @@ particles = {
             vec2 noiseCoord = gl_PointCoord * 4.0 + fract(vLife * 10.0);
             float noise = texture2D(noiseTexture, noiseCoord).r * 0.5 + 0.5;
             float alpha = 0.15 * vLife * noise * (1.0 - dist * 2.0);
-            vec3 smokeColor = vec3(0.7, 0.65, 0.6);
+            vec3 smokeColor = vec3(.67, .57, .5);
             gl_FragColor = vec4(smokeColor, alpha);
           }
         `,

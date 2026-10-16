@@ -10,6 +10,7 @@ TouchScreenControls = function() {
     let mobileUI = document.createElement("div");
     mobileUI.className = "mobile-ui";
     mobileUI.innerHTML = '<div class="movement-touch-area"><div class="movement-node"><div class="movement-stick"></div></div></div><div class="look-touch-area"><div class="fps-nodes"><div class="button-node fire-weapon-node" data-node="fire-weapon"></div><div class="button-node reload-weapon-node" data-node="reload-weapon"></div><div class="button-node zoom-weapon-node" data-node="zoom-weapon"></div><div class="button-node throw-grenade-node" data-node="throw-grenade"></div><div class="button-node switch-weapon-node" data-node="switch-weapon"></div><div class="button-node jump-node" data-node="jump"></div><div class="button-node crouch-node" data-node="crouch"></div><div class="button-node armor-ability-node" data-node="armor-ability"></div></div><div class="button-node interact-node" data-node="interact"></div><div class="driving-nodes"><div class="button-node switch-view-node" data-node="switch-view"></div><div class="button-node horn-node" data-node="horn"></div></div>';
+    if (!sandbox.presets.armorAbility) mobileUI.querySelector(".armor-ability-node").style.display = "none";
     container.appendChild(mobileUI);
     let movementStickThumb = document.createElement("div");
     movementStickThumb.className = "mobile-ui-movement-stick-thumb";

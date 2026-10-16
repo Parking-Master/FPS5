@@ -189,6 +189,7 @@ user = {
             "mk2": 2,
             "plasma": 0
           },
+          "armorAbility": null,
           "character": "Raven",
           "profilePicture": "https://cdn.jsdelivr.net/gh/Parking-Master/Parking-Master@latest/img/profile-picture.png"
         }));

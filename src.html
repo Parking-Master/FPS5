@@ -532,12 +532,22 @@
         margin: 0;
         background: #000;
         z-index: 9999;
+        opacity: 1;
+        transition: opacity .3s ease-out;
+      }
+      .main-loading-screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        margin: 0;
         box-shadow: inset 100px 0 100px #000;
         background-position: center;
         background-size: cover;
         background-repeat: no-repeat;
         color: #eee;
         font-family: "Arame";
+        opacity: 0;
+        transition: opacity 1s ease-in;
       }
       .loading-screen-track {
         position: absolute;
@@ -589,6 +599,34 @@
         height: 4px;
         width: 500px;
       }
+      .loading-screen-indicator {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        color: #eee;
+        font-family: "Arame";
+        font-size: 24px;
+        opacity: 0;
+      }
+      .loading-screen-dialog {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        font-family: "Arame";
+        font-size: 22px;
+        color: #eee;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+      }
+      .gamepad-button-icon {
+        position: relative;
+        width: 45px;
+        margin: 0;
+        vertical-align: middle;
+      }
     </style>
   </head>
   <body>
@@ -609,19 +647,14 @@
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
     <script src="/js/user.js"></script>
     <div class="loading-screen">
-      <div class="loading-screen-player-list">
-        <div class="loading-screen-player-list-entry">GuestUser1234</div>
-        <div class="loading-screen-player-list-entry">GuestUser1234</div>
-        <div class="loading-screen-player-list-entry">GuestUser1234</div>
-        <div class="loading-screen-player-list-entry">GuestUser1234</div>
-        <div class="loading-screen-player-list-entry">GuestUser1234</div>
-        <div class="loading-screen-player-list-entry">GuestUser1234</div>
-        <div class="loading-screen-player-list-entry">GuestUser1234</div>
-        <div class="loading-screen-player-list-entry">GuestUser1234</div>
-      </div>
-      <div class="loading-screen-track">
-        <div class="loading-screen-progress-bar"></div>
-        <div class="loading-screen-text">LOADING GAME <span class="loading-screen-estimated-time"></span> <span class="mode-value">SLAYER</span> | CARGO PORT | <span class="kill-value">25</span> kills | <span class="time-value">15</span> minutes</div>
+      <div class="loading-screen-dialog"></div>
+      <div class="loading-screen-indicator">STARTING GAME...</div>
+      <div class="main-loading-screen">
+        <div class="loading-screen-player-list"></div>
+        <div class="loading-screen-track">
+          <div class="loading-screen-progress-bar"></div>
+          <div class="loading-screen-text">LOADING GAME <span class="loading-screen-estimated-time"></span> <span class="mode-value">SLAYER</span> | <span class="map-value">CARGO PORT</span> | <span class="kill-limit-value">25</span> kills | <span class="time-limit-value">15</span> minutes</div>
+        </div>
       </div>
     </div>
     <div class="ui-container">
@@ -655,12 +688,12 @@
           <div class="ui-health-bar">
             <div class="ui-health-value"></div>
           </div>
-          <div class="ui-ammo-info">NO AMMO LEFT IN WEAPON. PRESS [Y] TO SWITCH WEAPON.</div>
+          <div class="ui-ammo-info">NO AMMO LEFT IN WEAPON. PRESS [] TO SWITCH WEAPON.</div>
         </div>
         <div class="ui-section bottom-section">
           <div class="ui-pickup-weapon">
             <img src="/images/weapons/AK-74.png" class="ui-pickup-weapon-icon">
-            <p>PRESS [T] TO PICK UP AK-74 ASSAULT RIFLE</p>
+            <p>PRESS [] TO PICK UP AK-74 ASSAULT RIFLE</p>
           </div>
           <div class="scores">
             <div class="time">12:00</div>
@@ -726,7 +759,6 @@
       directionalLight.shadow.mapSize.height = 1024;
       directionalLight.shadow.radius = 2;
       directionalLight.shadow.bias = -0.00006;
-      ambientLight.position.set(2, 1, 1);
       scene.add(directionalLight);
       scene.add(ambientLight);
       let textureLoader = new THREE.TextureLoader();
@@ -1052,6 +1084,8 @@
         initialize: function() {
           if (sandbox.initialized) return;
           sandbox.initialized = true;
+          utils.ui.elements.loadingScreenMain.style.opacity = "0";
+          utils.ui.elements.loadingScreen.querySelector(".loading-screen-indicator").style.opacity = "1";
           audio.initialize(function() {
             if (utils.options.get("MobileGame")) TouchControls.initialize(utils.ui.elements.container);
             onWindowResize();
@@ -1061,9 +1095,26 @@
             }
             utils.ui.radar.init();
             gametime.player.data.ready = true;
-            utils.game.start();
-            renderer.shadowMap.needsUpdate = true;
-            utils.ui.elements.loadingScreen.remove();
+            gametime.update();
+            function check() {
+              let playersReady = 0;
+              for (player in gametime.players) {
+                if (gametime.players[player].data.ready) playersReady++;
+              }
+              if (playersReady == Object.keys(gametime.players).length) {
+                utils.game.start();
+                utils.ui.elements.loadingScreen.querySelector(".loading-screen-indicator").style.opacity = "0";
+                setTimeout(() => {
+                  utils.ui.elements.loadingScreen.style = "pointer-events: none; opacity: 0";
+                  utils.ui.elements.loadingScreen.addEventListener("transitionend", function() {
+                    this.remove();
+                  });
+                }, 500);
+              } else {
+                requestAnimationFrame(check);
+              }
+            }
+            check();
           });
         },
         loadingManager: new THREE.LoadingManager(),
@@ -2553,6 +2604,7 @@
             armorAbilityCharge: document.querySelector(".ui-armor-ability svg .armor-ability-charge-thumb"),
             armorAbility: document.querySelector(".ui-armor-ability"),
             loadingScreen: document.querySelector(".loading-screen"),
+            loadingScreenMain: document.querySelector(".main-loading-screen"),
             loadingScreenProgress: document.querySelector(".loading-screen-progress-bar"),
             loadingScreenEstimatedTime: document.querySelector(".loading-screen-estimated-time")
           },
@@ -2668,7 +2720,7 @@
               utils.ui.cache.currentPickupWeapon = weapon;
               utils.ui.elements.pickupWeaponIcon.style.opacity = 1;
               utils.ui.elements.pickupWeaponIcon.src = "/images/weapons/" + weapon + ".png";
-              utils.ui.elements.pickupWeaponText.textContent = "PRESS [T] TO PICK UP " + sandbox.weapons[weapon].displayName.toUpperCase();
+              utils.ui.elements.pickupWeaponText.innerHTML = "PRESS " + utils.game.getBindingDisplay("interact") + " TO PICK UP " + sandbox.weapons[weapon].displayName.toUpperCase();
               utils.ui.elements.pickupWeapon.style.opacity = 1;
             }
           },
@@ -2690,7 +2742,7 @@
               }
               utils.ui.cache.currentVehicleSeatHovering = seatType;
               utils.ui.elements.pickupWeaponIcon.style.opacity = 0;
-              utils.ui.elements.pickupWeaponText.textContent = "PRESS [E] TO ENTER VEHICLE " + seatName;
+              utils.ui.elements.pickupWeaponText.innerHTML = "PRESS " + utils.game.getBindingDisplay("enterVehicle") + " TO ENTER VEHICLE " + seatName;
               utils.ui.elements.pickupWeapon.style.opacity = 1;
             }
           },
@@ -2739,7 +2791,7 @@
               if (bothWeapons) {
                 utils.ui.elements.ammoInfo.textContent = "NO AMMO LEFT. FIND MORE WEAPONS ON THE BATTLEFIELD.";
               } else {
-                utils.ui.elements.ammoInfo.textContent = "NO AMMO LEFT IN WEAPON. PRESS [Y] TO SWITCH WEAPON.";
+                utils.ui.elements.ammoInfo.innerHTML = "NO AMMO LEFT IN WEAPON. PRESS " + utils.game.getBindingDisplay("switch") + " TO SWITCH WEAPON.";
               }
               utils.ui.elements.ammoInfo.style.opacity = 1;
             } else {
@@ -4945,13 +4997,13 @@
             utils.armorAbilities.charge = 100;
           },
           activate: function() {
-            if (utils.vehicles.check(true)) return;
+            if (utils.vehicles.check(true) || !sandbox.presets.armorAbility) return;
             if (sandbox.presets.armorAbility == "thruster-pack" && utils.armorAbilities.charge < 90) return;
             utils.armorAbilities.active = true;
             audio.armorAbilityLoop(sandbox.presets.armorAbility);
           },
           deactivate: function() {
-            if (utils.vehicles.check(true)) return;
+            if (utils.vehicles.check(true) || !sandbox.presets.armorAbility) return;
             if (sandbox.presets.armorAbility == "jet-pack") {
               utils.armorAbilities.active = false;
               audio.armorAbilityEnd(sandbox.presets.armorAbility);
@@ -5598,6 +5650,7 @@
             utils.options.set("GameStartTime", Date.now());
             animate();
             audio.ambience();
+            renderer.shadowMap.needsUpdate = true;
           },
           end: function() {
             if (utils.options.get("GameEnded")) return;
@@ -5677,6 +5730,13 @@
             if (sandbox.settings.bindings.keyboard.fire.includes(event.code)) utils.weapons.stopFire();
             if (sandbox.settings.bindings.keyboard.sprint.includes(event.code)) utils.weapons.stopSprint(), utils.weapons.update();
             if (sandbox.settings.bindings.keyboard.armorAbility.includes(event.code)) utils.armorAbilities.deactivate();
+          },
+          getBindingDisplay: function(action) {
+            if (GamepadControls.connected) {
+              return `<img class="gamepad-button-icon" src="/images/assets/gamepad-buttons/${sandbox.settings.bindings.gamepad[action][0]}.png">`;
+            } else {
+              return "[" + sandbox.settings.bindings.keyboard[action][0].replace("Key", "") + "]";
+            }
           }
         }
       };
@@ -5701,6 +5761,7 @@
       if (sandbox.presets.mode == "slayer") {
         sandbox.presets.loadout = user.data.loadout;
         sandbox.presets.grenades = user.data.grenades;
+        sandbox.presets.armorAbility = user.data.armorAbility;
         sandbox.presets.options.teamGame = false;
         sandbox.presets.options.playersNeeded = 2;
         sandbox.presets.options.radar = true;
@@ -5709,6 +5770,7 @@
       } else if (sandbox.presets.mode == "team-slayer") {
         sandbox.presets.loadout = user.data.loadout;
         sandbox.presets.grenades = user.data.grenades;
+        sandbox.presets.armorAbility = user.data.armorAbility;
         sandbox.presets.options.teamGame = true;
         sandbox.presets.options.teamSize = 2;
         sandbox.presets.options.playersNeeded = 4;
@@ -5718,6 +5780,7 @@
       } else if (sandbox.presets.mode == "snipers") {
         sandbox.presets.loadout = ["HK-G28"];
         sandbox.presets.grenades = { "mk2": 0, "plasma": 0 };
+        sandbox.presets.armorAbility = null;
         sandbox.presets.options.teamGame = false;
         sandbox.presets.options.playersNeeded = 2;
         sandbox.presets.options.radar = false;
@@ -5727,16 +5790,22 @@
         sandbox.models.forEach(model => { if (model.id.startsWith("weapon.") || model.id.startsWith("propweapon.")) model.requiredMaps.push(sandbox.presets.map) });
         sandbox.presets.loadout = ["random", "random"];
         sandbox.presets.grenades = { "mk2": 0, "plasma": 1 };
+        sandbox.presets.armorAbility = null;
         sandbox.presets.options.teamGame = false;
         sandbox.presets.options.playersNeeded = 2;
         sandbox.presets.options.radar = true;
         sandbox.presets.options.scoreToWin = 25;
         sandbox.presets.options.timeLimit = 720;
       }
-      utils.ui.elements.loadingScreen.style.backgroundImage = "url(/images/maps/" + sandbox.presets.map + ".png)";
+      utils.ui.elements.loadingScreenMain.style.backgroundImage = "url(/images/maps/" + sandbox.presets.map + ".png)";
+      utils.ui.elements.loadingScreenMain.querySelector(".mode-value").textContent = sandbox.presets.mode;
+      utils.ui.elements.loadingScreenMain.querySelector(".map-value").textContent = sandbox.presets.map.replace(/_/g, " ");
+      utils.ui.elements.loadingScreenMain.querySelector(".kill-limit-value").textContent = sandbox.presets.options.scoreToWin;
+      utils.ui.elements.loadingScreenMain.querySelector(".time-limit-value").textContent = sandbox.presets.options.timeLimit == null ? "unlimited" : Math.round(sandbox.presets.options.timeLimit / 60);
       // End section
 
       if (!sandbox.presets.options.radar) utils.ui.elements.radar.style.display = "none";
+      if (!sandbox.presets.armorAbility) utils.ui.elements.armorAbility.style.display = "none";
 
       let highestProgress = 0;
       let lastItemLoadedTime = null;
@@ -5965,9 +6034,14 @@
       gametime.onconnect = function() {
         if (connected) return;
         connected = true;
+        let previousPlayerAmount = 0;
         function check() {
-          if (Object.values(gametime.players).length >= sandbox.presets.options.playersNeeded) {
+          let players = Object.values(gametime.players);
+          if (players.length >= sandbox.presets.options.playersNeeded) {
+            utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "0";
+            utils.ui.elements.loadingScreenMain.style.opacity = "1";
             for (player in gametime.players) {
+              utils.ui.elements.loadingScreenMain.querySelector(".loading-screen-player-list").innerHTML += `<div class="loading-screen-player-list-entry">${gametime.players[player].username}</div>`;
               gametime.players[player].data.loadout.forEach(weapon => {
                 if (!utils.models.get("weapon." + weapon)) return;
                 if (utils.models.get("weapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("weapon." + weapon).requiredMaps.push(sandbox.presets.map);
@@ -5987,6 +6061,12 @@
             sandbox.loadModels();
           } else {
             requestAnimationFrame(check);
+            if (players.length != previousPlayerAmount) {
+              previousPlayerAmount = players.length;
+              let playersNeededToStart = sandbox.presets.options.playersNeeded - players.length;
+              utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
+              utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").textContent = `WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START`;
+            }
           }
         }
         check();

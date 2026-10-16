@@ -1,5 +1,6 @@
 GamepadApiControls = function() {
   let _this = this;
+  this.connected = false;
   this.lookSpeed = 5; // Between 1 and 10
   this.lookSensitivity = 5; // Between 1 and 10
   this.lookAxialDeadzone = .12; // Between .1 and .5
@@ -14,7 +15,8 @@ GamepadApiControls = function() {
   this.buttonKeyMappings = [];
   this.update = function(deltaTime, clockDelta, time, walkSpeed) {
     let gamepads = navigator.getGamepads();
-    if (gamepads.length < 1 || gamepads[0] == null) return false;
+    if (gamepads.length < 1 || gamepads[0] == null) return _this.connected = false, false;
+    _this.connected = true;
     let gamepad = gamepads[0];
     for (let i = 0; i < gamepad.buttons.length; i++) {
       let button = gamepad.buttons[i];
