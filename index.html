@@ -67,6 +67,7 @@
         bottom: 50px;
       }
       .buttons-wrapper button.button {
+        position: relative;
         width: 100%;
         background: #cdd3d8;
         padding: 6px;
@@ -81,11 +82,12 @@
         content: "";
         position: absolute;
         width: 100%;
-        height: 14px;
+        height: 12px;
         background: #5aace1;
+        transform: perspective(50px) rotateX(-40deg) scale(.92);
+        display: block;
         left: 0;
-        transform: perspective(50px) rotateX(-40deg) scale(.9);
-        margin-top: 25px;
+        top: 31px;
       }
       .buttons-wrapper button.button:hover {
         transform: scale(1.1);
@@ -217,19 +219,19 @@
       }
       .loadout-container .loadout-item-tag {
         position: relative;
-        width: 40px;
+        width: 60px;
         margin: 0 auto;
         background: #cdd3d8;
         font-family: "Aperture";
         font-size: 9px;
         color: #2b78aa;
-        padding: 2px;
-        border: 3px solid #a7bbcc;
+        padding: 2px 0;
+        border: 2px solid #a7bbcc;
         text-align: center;
-        bottom: calc(-100% + 12px);
+        bottom: calc(-100% + 8px);
       }
       .loadout-container .loadout-primary-weapon .loadout-item-tag {
-        top: -6px;
+        top: -10px;
       }
       .points {
         position: absolute;
