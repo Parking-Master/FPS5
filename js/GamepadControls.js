@@ -46,8 +46,8 @@ GamepadApiControls = function() {
       }
     }
     if (_this.data.interactButtonTime != null && time - _this.data.interactButtonTime > 200) {
+      if (utils.options.get("CurrentWeaponHovering") || utils.options.get("CurrentVehicleHovering")) _this.data.interactButtonTime = null;
       utils.game.keyDownFunction({ code: sandbox.settings.bindings.keyboard.interact[0], repeat: false });
-      _this.data.interactButtonTime = null;
     }
     let vehicle = utils.vehicles.check();
     _this.updateLooking(clockDelta, gamepad, vehicle);
@@ -81,8 +81,8 @@ GamepadApiControls = function() {
       let rotationFactorX = rotationFactor * lookX;
       let rotationFactorY = rotationFactor * lookY * .65;
       let isAiming = utils.options.get("Aiming");
-      let lookDeltaX = Math.min(Math.pow(Math.abs(rotationFactorX), 4), _this.lookSpeed / 2) * (rotationFactorX < 0 ? -1 : 1) * PointerControls.pointerSpeed * (isAiming ? .8 : 1) * (_this.data.autoLockPoint ? .6 : 1) * (vehicle ? .25 : 1) * clockDelta;
-      let lookDeltaY = Math.min(Math.pow(Math.abs(rotationFactorY), 4), _this.lookSpeed / 2) * (rotationFactorY < 0 ? -1 : 1) * PointerControls.pointerSpeed * (isAiming ? .7 : 1) * (_this.data.autoLockPoint ? .6 : 1) * (vehicle ? .25 : 1) * clockDelta;
+      let lookDeltaX = Math.min(Math.pow(Math.abs(rotationFactorX), 2), _this.lookSpeed / 2) * (rotationFactorX < 0 ? -1 : 1) * PointerControls.pointerSpeed * (isAiming ? .8 : 1) * (_this.data.autoLockPoint ? .6 : 1) * (vehicle ? .25 : 1) * clockDelta;
+      let lookDeltaY = Math.min(Math.pow(Math.abs(rotationFactorY), 1.7), _this.lookSpeed / 2) * (rotationFactorY < 0 ? -1 : 1) * PointerControls.pointerSpeed * (isAiming ? .7 : 1) * (_this.data.autoLockPoint ? .6 : 1) * (vehicle ? .25 : 1) * clockDelta;
       camera.rotation.y -= lookDeltaX;
       camera.rotation.x = Math.max(Math.min(camera.rotation.x - lookDeltaY, Math.PI / 2 - .15), -Math.PI / 2 + .15);
       if (vehicle && vehicle.currentView == 1) vehicle.physicsVariables.heading = Math.max(Math.min(vehicle.physicsVariables.heading - (lookX / 120), vehicle.physicsVariables.maxHeading), -vehicle.physicsVariables.maxHeading);

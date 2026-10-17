@@ -548,6 +548,7 @@
         font-family: "Arame";
         opacity: 0;
         transition: opacity 1s ease-in;
+        pointer-events: none;
       }
       .loading-screen-track {
         position: absolute;
@@ -611,15 +612,26 @@
       .loading-screen-dialog {
         position: absolute;
         width: 100%;
-        height: 100%;
         font-family: "Arame";
         font-size: 22px;
         color: #eee;
         text-align: center;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        top: 50%;
+        margin-top: -80px;
         opacity: 0;
+      }
+      .loading-screen-dialog button {
+        padding: 4px 10px;
+        background: #eee;
+        border-radius: 0;
+        border: none;
+        font-family: "Arame";
+        font-size: 18px;
+        color: #000;
+        cursor: pointer;
+      }
+      .loading-screen-dialog button:active {
+        background: #777;
       }
       .gamepad-button-icon {
         position: relative;
@@ -2561,7 +2573,9 @@
             currentVehicleSeatHovering: null,
             leaderboardEntries: {},
             armorAbilityCharge: null,
-            armorAbility: null
+            armorAbility: null,
+            respawnTimeLeft: null,
+            previousOutOfAmmo: 0
           },
           elements: {
             crosshair: document.querySelector(".ui .crosshair"),
@@ -2657,7 +2671,11 @@
             }
             if (deathScreen) {
               let respawnTimeLeft = Math.ceil(((sandbox.presets.options.respawnTime * 1000) - (time - utils.options.get("DeathTime"))) / 1000);
-              utils.ui.elements.respawnCountdown.textContent = respawnTimeLeft;
+              if (respawnTimeLeft != utils.ui.cache.respawnTimeLeft) {
+                utils.ui.cache.respawnTimeLeft = respawnTimeLeft;
+                utils.ui.elements.respawnCountdown.textContent = respawnTimeLeft;
+                if (respawnTimeLeft > 0 && respawnTimeLeft < 4) audio.timerTick();
+              }
             }
           },
           updateScores: function(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore) {
@@ -2789,13 +2807,23 @@
           outOfAmmo: function(outOfAmmo, bothWeapons) {
             if (outOfAmmo) {
               if (bothWeapons) {
-                utils.ui.elements.ammoInfo.textContent = "NO AMMO LEFT. FIND MORE WEAPONS ON THE BATTLEFIELD.";
+                if (utils.ui.cache.previousOutOfAmmo != 1) {
+                  utils.ui.cache.previousOutOfAmmo = 1;
+                  utils.ui.elements.ammoInfo.textContent = "NO AMMO LEFT. FIND MORE WEAPONS ON THE BATTLEFIELD.";
+                  utils.ui.elements.ammoInfo.style.opacity = 1;
+                }
               } else {
-                utils.ui.elements.ammoInfo.innerHTML = "NO AMMO LEFT IN WEAPON. PRESS " + utils.game.getBindingDisplay("switch") + " TO SWITCH WEAPON.";
+                if (utils.ui.cache.previousOutOfAmmo != 2) {
+                  utils.ui.cache.previousOutOfAmmo = 2;
+                  utils.ui.elements.ammoInfo.innerHTML = "NO AMMO LEFT IN WEAPON. PRESS " + utils.game.getBindingDisplay("switch") + " TO SWITCH WEAPON.";
+                  utils.ui.elements.ammoInfo.style.opacity = 1;
+                }
               }
-              utils.ui.elements.ammoInfo.style.opacity = 1;
             } else {
-              utils.ui.elements.ammoInfo.style.opacity = 0;
+              if (utils.ui.cache.previousOutOfAmmo != 0) {
+                utils.ui.cache.previousOutOfAmmo = 0;
+                utils.ui.elements.ammoInfo.style.opacity = 0;
+              }
             }
           },
           setVignette: function(mode = 0) {
@@ -5737,6 +5765,10 @@
             } else {
               return "[" + sandbox.settings.bindings.keyboard[action][0].replace("Key", "") + "]";
             }
+          },
+          copyLink: function() {
+            let link = location.protocol + "//" + location.host + "/src.html?lobby=" + gametime.channel;
+            navigator.clipboard.writeText(link);
           }
         }
       };
@@ -6065,7 +6097,7 @@
               previousPlayerAmount = players.length;
               let playersNeededToStart = sandbox.presets.options.playersNeeded - players.length;
               utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
-              utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").textContent = `WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START`;
+              utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button>`;
             }
           }
         }

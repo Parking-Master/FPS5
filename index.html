@@ -44,11 +44,10 @@
         margin-top: -540px;
       }
       .header {
-        font-family: "Aperture", monospace, Arial;
-        font-size: 80px;
-        color: #5aace1;
-        text-align: center;
-        margin: 0;
+        position: relative;
+        width: 500px;
+        left: 50%;
+        margin-left: -250px;
         margin-top: 50px;
       }
       .subheader {
@@ -72,15 +71,26 @@
         background: #cdd3d8;
         padding: 6px;
         font-size: 16px;
-        border: 4px solid #5aace1;
+        border: 2px solid #ddd;
+        box-shadow: 0 2px 20px rgba(255, 255, 255, .2);
         box-sizing: border-box;
         color: #5aace1;
         margin-top: 20px;
       }
+      .buttons-wrapper button.button::after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 14px;
+        background: #5aace1;
+        left: 0;
+        transform: perspective(50px) rotateX(-40deg) scale(.9);
+        margin-top: 25px;
+      }
       .buttons-wrapper button.button:hover {
         transform: scale(1.1);
       }
-      .button.menu-button:focus {
+      .button.menu-button:focus, .buttons-wrapper button.button:focus {
         animation: active-animation .15s step-start;
         animation-iteration-count: 4;
       }
@@ -244,7 +254,7 @@
     <script src="https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js"></script>
     <script src="/js/user.js"></script>
     <div class="wrapper">
-      <h1 class="header">FPS 5</h1>
+      <img src="/images/menu/heading.png" class="header">
       <p class="subheader">MULTIPLAYER SHOOTER</p>
       <img class="sniper" src="/images/menu/sniper.png">
       <div class="login-buttons">

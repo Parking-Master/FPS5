@@ -43,7 +43,8 @@
       @media only screen and (max-height:480px) {
         .header {
           margin-top: 20px;
-          font-size: 60px;
+          width: 350px;
+          margin-left: -175px;
         }
       }
       @media only screen and (max-height:460px) {

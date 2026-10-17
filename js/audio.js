@@ -136,7 +136,8 @@ audio = {
       "weapon.walk": AudioWrapper("/sounds/weapons/walking.mp3"),
       "weapon.zoom-in": AudioWrapper("/sounds/weapons/zoom-in.mp3"),
       "weapon.zoom-out": AudioWrapper("/sounds/weapons/zoom-out.mp3"),
-      "medal": AudioWrapper("/sounds/weapons/medal.mp3"),
+      "medal": AudioWrapper("/sounds/medal.mp3"),
+      "timer-tick": AudioWrapper("/sounds/timer-tick.mp3"),
       "armor-abilities.jet-pack.loop": AudioWrapper("/sounds/armor-abilities/jet-pack.loop.mp3"),
       "armor-abilities.jet-pack.end": AudioWrapper("/sounds/armor-abilities/jet-pack.end.mp3"),
       "armor-abilities.thruster-pack.loop": AudioWrapper("/sounds/armor-abilities/thruster-pack.loop.mp3"),
@@ -518,7 +519,13 @@ audio = {
   armorAbilityEnd3d: function(armorAbility, playerUUID) {
     let sound = audio.sounds["armor-abilities.3d." + armorAbility].sound;
     if (playerUUID == sound.playerUUID && sound.source) sound.stop();
-  }
+  },
+  timerTick: function() {
+    let sound = audio.sounds["timer-tick"];
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
+  },
 };
 
 document.addEventListener("touchstart", () => {
