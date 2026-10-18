@@ -116,3 +116,35 @@
           right: auto;
         }
       }
+      @media only screen and (max-width:600px) {
+        .login-buttons {
+          padding: 10px;
+        }
+      }
+      @media only screen and (max-width:450px) {
+        .login-buttons {
+          padding: 10px;
+        }
+        .login-buttons .button {
+          transform: scale(.8);
+        }
+        .header {
+          margin-top: 100px;
+        }
+        .sniper {
+          width: 280px;
+          margin-left: -140px;
+        }
+        .wrapper {
+          background-size: 100%;
+        }
+      }
+      @media only screen and (max-width:800px) {
+        .header {
+          width: 300px;
+          margin-left: -150px;
+        }
+        .subheader {
+          font-size: 20px;
+        }
+      }

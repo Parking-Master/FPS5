@@ -20,18 +20,17 @@
           box-shadow: inset 0 0 40px rgba(220, 30, 20, 0.8);
         }
       }
-      @keyframes points-flashing {
-        50% {
-          color: #555;
-          text-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
-        }
-      }
       @keyframes medal {
         0% {
           transform: scale(1.5);
         }
         100% {
           transform: scale(1);
+        }
+      }
+      @keyframes active-animation {
+        50% {
+          box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.4);
         }
       }
       html, body {
@@ -592,12 +591,6 @@
         margin-bottom: 15px;
         box-shadow: 0 1px 20px rgba(200, 200, 200, 0.2);
       }
-      .loading-screen-player-list-entry::before {
-        position: absolute;
-        background: 1px solid rgba(255, 255, 255, .5);
-        height: 4px;
-        width: 500px;
-      }
       .loading-screen-indicator {
         position: absolute;
         bottom: 20px;
@@ -637,6 +630,69 @@
         margin: 0;
         vertical-align: middle;
       }
+      .pause-menu {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(20, 20, 20, .3);
+        backdrop-filter: blur(10px);
+        z-index: 9999;
+        display: none;
+      }
+      .pause-menu-wrapper {
+        position: relative;
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        max-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        top: 10%;
+      }
+      .pause-menu-header {
+        font-family: "Arame";
+        font-size: 30px;
+        color: #eee;
+        text-align: center;
+        width: 100%;
+      }
+      .pause-menu-option {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        background: rgba(0, 0, 0, .25);
+        border: 1px solid #fff;
+        box-shadow: 0 2px 10px rgba(255, 255, 255, .2), inset 0 0 50px rgba(255, 255, 255, .1);
+        display: inline-block;
+        margin-left: 5px;
+        margin-right: 5px;
+        background-size: 50%;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+      .pause-menu-option:hover {
+        box-shadow: 0 2px 10px rgba(255, 255, 255, .4), inset 0 0 50px rgba(255, 255, 255, .4);
+      }
+      .pause-menu-option-resume { background-image: url(/images/ui/pause-menu-resume.png) }
+      .pause-menu-option-leave-game { background-image: url(/images/ui/pause-menu-leave-game.png) }
+      .pause-menu-option-settings { background-image: url(/images/ui/pause-menu-settings.png) }
+      .pause-menu-option-report-bug { background-image: url(/images/ui/pause-menu-report-bug.png) }
+      .pause-menu-tooltip {
+        position: absolute;
+        bottom: -20px;
+        color: #eee;
+        font-family: "Arame";
+        font-size: 14px;
+        text-align: center;
+        width: 100%;
+      }
     </style>
   </head>
   <body>
@@ -656,6 +712,15 @@
     <script src="/js/GamepadControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
     <script src="/js/user.js"></script>
+    <div class="pause-menu">
+      <div class="pause-menu-wrapper">
+        <div class="pause-menu-header">PAUSE MENU</div>
+        <div class="pause-menu-option pause-menu-option-resume" onclick="utils.game.pauseMenuAction('resume')"><div class="pause-menu-tooltip">RESUME</div></div>
+        <div class="pause-menu-option pause-menu-option-leave-game" onclick="utils.game.pauseMenuAction('leave-game')"><div class="pause-menu-tooltip">LEAVE GAME</div></div>
+        <div class="pause-menu-option pause-menu-option-settings" onclick="utils.game.pauseMenuAction('settings')"><div class="pause-menu-tooltip">SETTINGS</div></div>
+        <div class="pause-menu-option pause-menu-option-report-bug" onclick="utils.game.pauseMenuAction('report-bug')"><div class="pause-menu-tooltip">REPORT BUG</div></div>
+      </div>
+    </div>
     <div class="loading-screen">
       <div class="loading-screen-dialog"></div>
       <div class="loading-screen-indicator">STARTING GAME...</div>
@@ -1018,7 +1083,8 @@
               "enterVehicle": ["KeyE", "KeyT"],
               "vehicleView": ["KeyV"],
               "interact": ["KeyT"],
-              "leaderboard": ["KeyL"]
+              "leaderboard": ["KeyL"],
+              "pause": ["KeyP"]
             },
             gamepad: {
               "jump": ["a"],
@@ -1034,7 +1100,8 @@
               "enterVehicle": ["rb"],
               "vehicleView": ["x"],
               "interact": ["rb"],
-              "leaderboard": ["back"]
+              "leaderboard": ["back"],
+              "pause": ["start"]
             }
           }
         },
@@ -2618,7 +2685,8 @@
             loadingScreen: document.querySelector(".loading-screen"),
             loadingScreenMain: document.querySelector(".main-loading-screen"),
             loadingScreenProgress: document.querySelector(".loading-screen-progress-bar"),
-            loadingScreenEstimatedTime: document.querySelector(".loading-screen-estimated-time")
+            loadingScreenEstimatedTime: document.querySelector(".loading-screen-estimated-time"),
+            pauseMenu: document.querySelector(".pause-menu")
           },
           update: function(currentAmmo, remainingAmmo, grenades, reticle, time) {
             if (utils.ui.cache.ammoCurrentValue != currentAmmo) {
@@ -5594,7 +5662,7 @@
             utils.ui.setHealthBar(100, "instant");
           },
           die: function(killer, isHeadshot = false, isMelee = false, isGrenade = false, isVehicle = false, isSnapshot = false, isRocket = false) {
-            for (key in keyStates) keyStates[key] = false;
+            utils.game.clearKeyStates();
             audio.stopShieldsWarning();
             audio.stopShieldsLow();
             utils.vehicles.exit();
@@ -5721,9 +5789,49 @@
             document.body.style.background = "#000";
             utils.options.addTmpObject({}, "gameOverTransition", 4000);
           },
+          togglePause: function() {
+            audio.pause();
+            if (utils.options.get("GamePaused")) {
+              utils.options.set("GamePaused", false);
+              utils.ui.elements.pauseMenu.style.display = "";
+              utils.game.clearKeyStates();
+              audio.sounds["map.ambience"].gain.gain.value = 1;
+              if (document.hasFocus()) document.body.requestPointerLock(), PointerControls.lock();
+            } else {
+              utils.options.set("GamePaused", true);
+              utils.ui.elements.pauseMenu.style.display = "block";
+              utils.game.clearKeyStates();
+              audio.sounds["map.ambience"].gain.gain.value = .3;
+              utils.weapons.stopFire();
+              utils.weapons.stopWalking();
+              if (document.exitPointerLock) document.exitPointerLock();
+              PointerControls.isLocked = false;
+            }
+          },
+          pauseMenuAction: function(action) {
+            if (action == "resume") {
+              utils.game.togglePause();
+            } else if (action == "leave-game") {
+              audio.pause();
+              if (confirm("This will return you to the main menu. You do not earn rewards when you leave a game. Are you sure?")) {
+                location.replace("/");
+              }
+            } else if (action == "settings") {
+              audio.pause();
+            } else if (action == "report-bug") {
+              audio.pause();
+              let report = prompt("Write your bug report here, and we'll try our best to fix it.");
+              if (report) {
+                alert("Report sent! Thanks for your contribution.");
+              }
+            }
+          },
           keyDownFunction: function(event) {
             if (!sandbox.initialized) return;
-            if (!event.repeat && sandbox.settings.bindings.keyboard.leaderboard.includes(event.code)) utils.ui.showLeaderboard();
+            if (!event.repeat) {
+              if (!utils.options.get("GamePaused") && sandbox.settings.bindings.keyboard.leaderboard.includes(event.code)) utils.ui.showLeaderboard();
+              if (sandbox.settings.bindings.keyboard.pause.includes(event.code)) utils.game.togglePause();
+            }
             if (!PointerControls.isLocked) return;
             keyStates[event.code] = true;
             if (!event.repeat && !deathScreen) {
@@ -5756,6 +5864,9 @@
             if (sandbox.settings.bindings.keyboard.fire.includes(event.code)) utils.weapons.stopFire();
             if (sandbox.settings.bindings.keyboard.sprint.includes(event.code)) utils.weapons.stopSprint(), utils.weapons.update();
             if (sandbox.settings.bindings.keyboard.armorAbility.includes(event.code)) utils.armorAbilities.deactivate();
+          },
+          clearKeyStates: function() {
+            for (key in keyStates) keyStates[key] = false;
           },
           getBindingDisplay: function(action) {
             if (GamepadControls.connected) {
@@ -5897,11 +6008,11 @@
       document.addEventListener("keydown", utils.game.keyDownFunction);
       document.addEventListener("keyup", utils.game.keyUpFunction);
       document.addEventListener("mousedown", function(event) {
-        if (document.pointerLockElement != null || !sandbox.initialized) return;
+        if (document.pointerLockElement != null || !sandbox.initialized || utils.options.get("GamePaused")) return;
         if (document.hasFocus()) document.body.requestPointerLock(), PointerControls.lock();
       });
       document.addEventListener("mouseup", (event) => {
-        if (!PointerControls.isLocked || !sandbox.initialized) return;
+        if (!PointerControls.isLocked || !sandbox.initialized || utils.options.get("GamePaused")) return;
         if (document.hasFocus()) PointerControls.lock();
       });
 
@@ -5971,6 +6082,7 @@
       utils.options.set("GameEnded", false);
       utils.options.set("StopFrame", false);
       utils.options.set("AllowAimUpdate", true);
+      utils.options.set("GamePaused", false);
 
       scene.add(utils.options.get("playerCamera"));
 

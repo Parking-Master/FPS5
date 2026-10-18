@@ -138,6 +138,7 @@ audio = {
       "weapon.zoom-out": AudioWrapper("/sounds/weapons/zoom-out.mp3"),
       "medal": AudioWrapper("/sounds/medal.mp3"),
       "timer-tick": AudioWrapper("/sounds/timer-tick.mp3"),
+      "pause": AudioWrapper("/sounds/pause.mp3"),
       "armor-abilities.jet-pack.loop": AudioWrapper("/sounds/armor-abilities/jet-pack.loop.mp3"),
       "armor-abilities.jet-pack.end": AudioWrapper("/sounds/armor-abilities/jet-pack.end.mp3"),
       "armor-abilities.thruster-pack.loop": AudioWrapper("/sounds/armor-abilities/thruster-pack.loop.mp3"),
@@ -526,6 +527,12 @@ audio = {
     sound.currentTime = 0;
     sound.play();
   },
+  pause: function() {
+    let sound = audio.sounds["pause"];
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
+  }
 };
 
 document.addEventListener("touchstart", () => {

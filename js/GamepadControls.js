@@ -67,7 +67,7 @@ GamepadApiControls = function() {
     if (sandbox.settings.bindings.gamepad.interact.includes(event.button)) _this.data.interactButtonTime = null;
   };
   this.updateLooking = function(clockDelta, gamepad, vehicle) {
-    if (deathScreen) return;
+    if (deathScreen || !PointerControls.isLocked) return;
     let weapon = utils.weapons.getCurrentEntry();
     let lookX = gamepad.axes[2];
     let lookY = gamepad.axes[3];
