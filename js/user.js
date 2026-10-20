@@ -227,14 +227,15 @@ user = {
       callback(lobbies);
     });
   },
-  createLobby: function(lobbyName, callback = () => {}) {
+  createLobby: function(lobbyName, lobbyOptions, callback = () => {}) {
     fetch(user.serverURL + "/lobbies/create", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        lobbyName: lobbyName
+        lobbyName: lobbyName,
+        lobbyOptions: lobbyOptions
       })
     }).then(function(response) {
       if (response.status == 200) {

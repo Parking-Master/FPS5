@@ -5895,59 +5895,6 @@
       }
       utils.ui.elements.killPopupPoints.style.opacity = 0;
 
-      sandbox.presets.character = user.data.character;
-      gametime.set("username", user.data.username);
-
-      // All of these presets will soon be set when the user creates the lobby, and this code will be replaced by something that fetches and applies the lobby presets
-      if (sandbox.presets.mode == "slayer") {
-        sandbox.presets.loadout = user.data.loadout;
-        sandbox.presets.grenades = user.data.grenades;
-        sandbox.presets.armorAbility = user.data.armorAbility;
-        sandbox.presets.options.teamGame = false;
-        sandbox.presets.options.playersNeeded = 2;
-        sandbox.presets.options.radar = true;
-        sandbox.presets.options.scoreToWin = 25;
-        sandbox.presets.options.timeLimit = 900;
-      } else if (sandbox.presets.mode == "team-slayer") {
-        sandbox.presets.loadout = user.data.loadout;
-        sandbox.presets.grenades = user.data.grenades;
-        sandbox.presets.armorAbility = user.data.armorAbility;
-        sandbox.presets.options.teamGame = true;
-        sandbox.presets.options.teamSize = 2;
-        sandbox.presets.options.playersNeeded = 4;
-        sandbox.presets.options.radar = true;
-        sandbox.presets.options.scoreToWin = 50;
-        sandbox.presets.options.timeLimit = 720;
-      } else if (sandbox.presets.mode == "snipers") {
-        sandbox.presets.loadout = ["HK-G28"];
-        sandbox.presets.grenades = { "mk2": 0, "plasma": 0 };
-        sandbox.presets.armorAbility = null;
-        sandbox.presets.options.teamGame = false;
-        sandbox.presets.options.playersNeeded = 2;
-        sandbox.presets.options.radar = false;
-        sandbox.presets.options.scoreToWin = 15;
-        sandbox.presets.options.timeLimit = 600;
-      } else if (sandbox.presets.mode == "fiesta") {
-        sandbox.models.forEach(model => { if (model.id.startsWith("weapon.") || model.id.startsWith("propweapon.")) model.requiredMaps.push(sandbox.presets.map) });
-        sandbox.presets.loadout = ["random", "random"];
-        sandbox.presets.grenades = { "mk2": 0, "plasma": 1 };
-        sandbox.presets.armorAbility = null;
-        sandbox.presets.options.teamGame = false;
-        sandbox.presets.options.playersNeeded = 2;
-        sandbox.presets.options.radar = true;
-        sandbox.presets.options.scoreToWin = 25;
-        sandbox.presets.options.timeLimit = 720;
-      }
-      utils.ui.elements.loadingScreenMain.style.backgroundImage = "url(/images/maps/" + sandbox.presets.map + ".png)";
-      utils.ui.elements.loadingScreenMain.querySelector(".mode-value").textContent = sandbox.presets.mode;
-      utils.ui.elements.loadingScreenMain.querySelector(".map-value").textContent = sandbox.presets.map.replace(/_/g, " ");
-      utils.ui.elements.loadingScreenMain.querySelector(".kill-limit-value").textContent = sandbox.presets.options.scoreToWin;
-      utils.ui.elements.loadingScreenMain.querySelector(".time-limit-value").textContent = sandbox.presets.options.timeLimit == null ? "unlimited" : Math.round(sandbox.presets.options.timeLimit / 60);
-      // End section
-
-      if (!sandbox.presets.options.radar) utils.ui.elements.radar.style.display = "none";
-      if (!sandbox.presets.armorAbility) utils.ui.elements.armorAbility.style.display = "none";
-
       let highestProgress = 0;
       let lastItemLoadedTime = null;
       let progressTimeReports = [];
@@ -6159,64 +6106,136 @@
       // - Sandbox initialized
       // - Sounds loaded
       // - Game starts
-      gametime.set("player", {
-        character: sandbox.presets.character,
-        position: [0, 0, 0],
-        rotation: [0, 0, 0],
-        loadout: sandbox.presets.loadout,
-        visibleOnRadar: false,
-        activeAbility: null,
-        team: null,
-        score: 0,
-        kills: 0,
-        ready: false,
-        profilePicture: user.data.profilePicture
-      });
-      let connected = false;
-      gametime.onconnect = function() {
-        if (connected) return;
-        connected = true;
-        let previousPlayerAmount = 0;
-        function check() {
-          let players = Object.values(gametime.players);
-          if (players.length >= sandbox.presets.options.playersNeeded) {
-            utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "0";
-            utils.ui.elements.loadingScreenMain.style.opacity = "1";
-            for (player in gametime.players) {
-              utils.ui.elements.loadingScreenMain.querySelector(".loading-screen-player-list").innerHTML += `<div class="loading-screen-player-list-entry">${gametime.players[player].username}</div>`;
-              gametime.players[player].data.loadout.forEach(weapon => {
-                if (!utils.models.get("weapon." + weapon)) return;
-                if (utils.models.get("weapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("weapon." + weapon).requiredMaps.push(sandbox.presets.map);
-                if (utils.models.get("propweapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("propweapon." + weapon).requiredMaps.push(sandbox.presets.map);
-              });
-            }
-            if (sandbox.presets.options.teamGame) {
-              if (gametime.player.position > sandbox.presets.options.teamSize) {
-                gametime.player.data.team = "blue";
-              } else {
-                gametime.player.data.team = "red";
-              }
-              utils.ui.addToLeaderboard(gametime.player.uuid, gametime.player.username, gametime.player.data.profilePicture, gametime.player.data.team, true);
+      user.getLobbies(function(lobbies) {
+        let currentLobbyName = new URLSearchParams(location.search).get("lobby");
+        for (id in lobbies) {
+          let lobby = lobbies[id];
+          if (lobby.name == currentLobbyName) {
+            sandbox.presets.character = user.data.character;
+            gametime.set("username", user.data.username);
+            if (lobby.customLoadoutsEnabled) {
+              sandbox.presets.loadout = user.data.loadout;
+              sandbox.presets.armorAbility = user.data.armorAbility;
+              sandbox.presets.grenades = user.data.grenades;
             } else {
-              utils.ui.addToLeaderboard(gametime.player.uuid, gametime.player.username, gametime.player.data.profilePicture, null, true);
+              sandbox.presets.loadout = lobby.presets.loadout;
+              sandbox.presets.armorAbility = loadout.presets.armorAbility;
+              sandbox.presets.grenades = loadout.presets.grenades;
             }
-            sandbox.loadModels();
-          } else {
-            requestAnimationFrame(check);
-            if (players.length != previousPlayerAmount) {
-              previousPlayerAmount = players.length;
-              let playersNeededToStart = sandbox.presets.options.playersNeeded - players.length;
-              utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
-              utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button>`;
-            }
+            sandbox.presets.options.teamGame = lobby.teamsEnabled;
+            sandbox.presets.options.playersNeeded = 2;
+            sandbox.presets.options.radar = lobby.radarEnabled;
+            sandbox.presets.options.vehicles = lobby.vehiclesEnabled;
+            sandbox.presets.options.scoreToWin = lobby.scoreToWin;
+            sandbox.presets.options.timeLimit = lobby.timeLimit * 60;
+            sandbox.presets.map = lobby.map;
+            // if (sandbox.presets.mode == "slayer") {
+            //   sandbox.presets.loadout = user.data.loadout;
+            //   sandbox.presets.grenades = user.data.grenades;
+            //   sandbox.presets.armorAbility = user.data.armorAbility;
+            //   sandbox.presets.options.teamGame = false;
+            //   sandbox.presets.options.playersNeeded = 2;
+            //   sandbox.presets.options.radar = true;
+            //   sandbox.presets.options.scoreToWin = 25;
+            //   sandbox.presets.options.timeLimit = 900;
+            // } else if (sandbox.presets.mode == "team-slayer") {
+            //   sandbox.presets.loadout = user.data.loadout;
+            //   sandbox.presets.grenades = user.data.grenades;
+            //   sandbox.presets.armorAbility = user.data.armorAbility;
+            //   sandbox.presets.options.teamGame = true;
+            //   sandbox.presets.options.teamSize = 2;
+            //   sandbox.presets.options.playersNeeded = 4;
+            //   sandbox.presets.options.radar = true;
+            //   sandbox.presets.options.scoreToWin = 50;
+            //   sandbox.presets.options.timeLimit = 720;
+            // } else if (sandbox.presets.mode == "snipers") {
+            //   sandbox.presets.loadout = ["HK-G28"];
+            //   sandbox.presets.grenades = { "mk2": 0, "plasma": 0 };
+            //   sandbox.presets.armorAbility = null;
+            //   sandbox.presets.options.teamGame = false;
+            //   sandbox.presets.options.playersNeeded = 2;
+            //   sandbox.presets.options.radar = false;
+            //   sandbox.presets.options.scoreToWin = 15;
+            //   sandbox.presets.options.timeLimit = 600;
+            // } else if (sandbox.presets.mode == "fiesta") {
+            //   sandbox.models.forEach(model => { if (model.id.startsWith("weapon.") || model.id.startsWith("propweapon.")) model.requiredMaps.push(sandbox.presets.map) });
+            //   sandbox.presets.loadout = ["random", "random"];
+            //   sandbox.presets.grenades = { "mk2": 0, "plasma": 1 };
+            //   sandbox.presets.armorAbility = null;
+            //   sandbox.presets.options.teamGame = false;
+            //   sandbox.presets.options.playersNeeded = 2;
+            //   sandbox.presets.options.radar = true;
+            //   sandbox.presets.options.scoreToWin = 25;
+            //   sandbox.presets.options.timeLimit = 720;
+            // }
+            utils.ui.elements.loadingScreenMain.style.backgroundImage = "url(/images/maps/" + sandbox.presets.map + ".png)";
+            utils.ui.elements.loadingScreenMain.querySelector(".mode-value").textContent = sandbox.presets.mode;
+            utils.ui.elements.loadingScreenMain.querySelector(".map-value").textContent = sandbox.presets.map.replace(/_/g, " ");
+            utils.ui.elements.loadingScreenMain.querySelector(".kill-limit-value").textContent = sandbox.presets.options.scoreToWin;
+            utils.ui.elements.loadingScreenMain.querySelector(".time-limit-value").textContent = sandbox.presets.options.timeLimit == null ? "unlimited" : Math.round(sandbox.presets.options.timeLimit / 60);
+            if (!sandbox.presets.options.radar) utils.ui.elements.radar.style.display = "none";
+            if (!sandbox.presets.armorAbility) utils.ui.elements.armorAbility.style.display = "none";
+            gametime.set("player", {
+              character: sandbox.presets.character,
+              position: [0, 0, 0],
+              rotation: [0, 0, 0],
+              loadout: sandbox.presets.loadout,
+              visibleOnRadar: false,
+              activeAbility: null,
+              team: null,
+              score: 0,
+              kills: 0,
+              ready: false,
+              profilePicture: user.data.profilePicture
+            });
+            let connected = false;
+            gametime.onconnect = function() {
+              if (connected) return;
+              connected = true;
+              let previousPlayerAmount = 0;
+              function check() {
+                let players = Object.values(gametime.players);
+                if (players.length >= sandbox.presets.options.playersNeeded) {
+                  utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "0";
+                  utils.ui.elements.loadingScreenMain.style.opacity = "1";
+                  for (player in gametime.players) {
+                    utils.ui.elements.loadingScreenMain.querySelector(".loading-screen-player-list").innerHTML += `<div class="loading-screen-player-list-entry">${gametime.players[player].username}</div>`;
+                    gametime.players[player].data.loadout.forEach(weapon => {
+                      if (!utils.models.get("weapon." + weapon)) return;
+                      if (utils.models.get("weapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("weapon." + weapon).requiredMaps.push(sandbox.presets.map);
+                      if (utils.models.get("propweapon." + weapon).requiredMaps.indexOf(sandbox.presets.map) < 0) utils.models.get("propweapon." + weapon).requiredMaps.push(sandbox.presets.map);
+                    });
+                  }
+                  if (sandbox.presets.options.teamGame) {
+                    if (gametime.player.position > sandbox.presets.options.teamSize) {
+                      gametime.player.data.team = "blue";
+                    } else {
+                      gametime.player.data.team = "red";
+                    }
+                    utils.ui.addToLeaderboard(gametime.player.uuid, gametime.player.username, gametime.player.data.profilePicture, gametime.player.data.team, true);
+                  } else {
+                    utils.ui.addToLeaderboard(gametime.player.uuid, gametime.player.username, gametime.player.data.profilePicture, null, true);
+                  }
+                  sandbox.loadModels();
+                } else {
+                  requestAnimationFrame(check);
+                  if (players.length != previousPlayerAmount) {
+                    previousPlayerAmount = players.length;
+                    let playersNeededToStart = sandbox.presets.options.playersNeeded - players.length;
+                    utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
+                    utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button>`;
+                  }
+                }
+              }
+              check();
+              gametime.onupdate = function(player) {
+                if (player.uuid != gametime.player.uuid && typeof utils.players.objects[player.uuid] === "undefined" && player.data.ready) utils.players.add(player);
+              };
+            };
+            gametime.connect();
           }
         }
-        check();
-        gametime.onupdate = function(player) {
-          if (player.uuid != gametime.player.uuid && typeof utils.players.objects[player.uuid] === "undefined" && player.data.ready) utils.players.add(player);
-        };
-      };
-      gametime.connect();
+      });
     </script>
   </body>
 </html>
