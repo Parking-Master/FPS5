@@ -6100,16 +6100,10 @@
         if (player != gametime.player.uuid) utils.rockets.explode(utils.rockets.objects[rocketId], true, player);
       });
 
-      // Start order:
-      // - Players join
-      // - Models load
-      // - Sandbox initialized
-      // - Sounds loaded
-      // - Game starts
       user.getLobbies(function(lobbies) {
         let currentLobbyName = new URLSearchParams(location.search).get("lobby");
-        for (id in lobbies) {
-          let lobby = lobbies[id];
+        for (let i = 0; i < lobbies.length; i++) {
+          let lobby = lobbies[i];
           if (lobby.name == currentLobbyName) {
             sandbox.presets.character = user.data.character;
             gametime.set("username", user.data.username);
@@ -6123,6 +6117,7 @@
               sandbox.presets.grenades = loadout.presets.grenades;
             }
             sandbox.presets.options.teamGame = lobby.teamsEnabled;
+            sandbox.presets.options.teamSize = lobby.teamSize;
             sandbox.presets.options.playersNeeded = 2;
             sandbox.presets.options.radar = lobby.radarEnabled;
             sandbox.presets.options.vehicles = lobby.vehiclesEnabled;
@@ -6188,6 +6183,7 @@
               ready: false,
               profilePicture: user.data.profilePicture
             });
+            gametime.set("channel", lobby.name);
             let connected = false;
             gametime.onconnect = function() {
               if (connected) return;
@@ -6195,7 +6191,7 @@
               let previousPlayerAmount = 0;
               function check() {
                 let players = Object.values(gametime.players);
-                if (players.length >= sandbox.presets.options.playersNeeded) {
+                if (players.length == sandbox.presets.options.playersNeeded) {
                   utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "0";
                   utils.ui.elements.loadingScreenMain.style.opacity = "1";
                   for (player in gametime.players) {
@@ -6217,6 +6213,11 @@
                     utils.ui.addToLeaderboard(gametime.player.uuid, gametime.player.username, gametime.player.data.profilePicture, null, true);
                   }
                   sandbox.loadModels();
+                } else if (players.length > sandbox.presets.options.playersNeeded) {
+                  utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
+                  utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>THIS LOBBY IS FULL. JOIN A DIFFERENT LOBBY OR TRY AGAIN LATER.</p><button onclick="location.href = '/'">Main Menu</button>`;
+                  gametime.disconnect();
+                  return;
                 } else {
                   requestAnimationFrame(check);
                   if (players.length != previousPlayerAmount) {

@@ -271,11 +271,11 @@
       .notiflix-loading-icon {
         animation: flicker 1s step-end infinite;
       }
-      .lobby-menu {
+      .window {
         position: absolute;
         max-width: 600px;
-        width: 100%;
         max-height: 400px;
+        width: 100%;
         height: 100%;
         background: #fff;
         border: 8px solid #5aace1;
@@ -292,17 +292,34 @@
         box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
         display: none;
       }
+      @media only screen and (max-width:600px) {
+        .window {
+          left: 0;
+          margin-left: 0;
+        }
+      }
+      @media only screen and (max-height:400px) {
+        .window {
+          top: 0;
+          margin-top: 0;
+        }
+      }
       .lobby-list {
         position: relative;
         width: 100%;
       }
       .lobby {
         width: 100%;
+        height: 60px;
         margin-bottom: 10px;
         background: #eee;
         box-sizing: border-box;
         padding: 10px;
         cursor: pointer !important;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        white-space: nowrap;
+        scrollbar-width: thin;
       }
       .lobby:hover {
         background: #ddd;
@@ -314,10 +331,9 @@
         position: relative;
         width: 60px;
         height: 38px;
-        background-image: url(/images/maps/Cargo_Port.png);
+        background-color: #ccc;
         background-size: cover;
         float: left;
-        vertical-align: middle;
         margin-right: 20px;
       }
       .lobby-map-name {
@@ -354,7 +370,10 @@
       .lobby-status.lobby-status-inactive {
         background: #ff0000;
       }
-      .lobby-header {
+      .lobby-status.lobby-status-full {
+        background: #ffd500;
+      }
+      .window-header {
         font-size: 30px;
         font-family: "Aperture";
       }
@@ -370,16 +389,78 @@
         border: none;
         box-shadow: 1px 1px 0 #333;
         color: #000;
+        padding: 3px 10px;
       }
       .button.lobby-button:hover {
         background: #999;
       }
-      .lobby-menu-close {
+      .window-close {
         float: right;
         cursor: pointer !important;
       }
+      .lobby-status-player-count {
+        font-size: 10px;
+        left: -20px;
+        position: relative;
+        color: #999;
+        top: -5px;
+      }
       #NotiflixLoadingWrap {
-        background: rgba(0, 0, 0, .6);
+        background: rgba(0, 0, 0, .6) !important;
+      }
+      .lobby-options-left-section {
+        position: relative;
+        width: 50%;
+        height: 250px;
+        float: left;
+        overflow-y: scroll;
+        scrollbar-width: thin;
+        box-sizing: border-box;
+        padding: 10px;
+        padding-bottom: 100px;
+        background: #eee;
+        font-size: 14px;
+      }
+      .lobby-options-left-section input, .lobby-options-left-section button, .lobby-options-left-section select {
+        float: right;
+      }
+      .lobby-options-left-section .lobby-options-edit_presets {
+        float: none;
+      }
+      .lobby-options-left-section input[data-disabled], .lobby-options-left-section button[data-disabled], .lobby-options-left-section select[data-disabled] {
+        background: #e5e5e5 !important;
+        color: #999 !important;
+        box-shadow: 1px 1px 0 #999 !important;
+      }
+      .lobby-options-right-section {
+        position: relative;
+        width: 50%;
+        height: 250px;
+        float: right;
+        box-sizing: border-box;
+        padding: 0 10px;
+      }
+      .lobby-options-map-preview {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        max-height: 140px;
+        background-image: url(/images/maps/Cargo_Port.png);
+        background-size: cover;
+      }
+      .lobby-options-left-section select {
+        width: 150px;
+      }
+      .lobby-options-left-section .input {
+        width: 60px;
+      }
+      .lobby-options-left-section .input, .lobby-options-left-section button, .lobby-options-left-section select {
+        position: relative;
+        background: #ddd;
+        border: none;
+        box-shadow: 1px 1px 0 #333;
+        color: #000;
+        padding: 3px 10px;
       }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -389,14 +470,7 @@
     <script src="https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js"></script>
     <script src="https://parking-master.github.io/Parking-Master-2.0/notiflix/notiflix-3.2.8.min.js"></script>
     <script src="/js/user.js"></script>
-    <div class="lobby-menu">
-      <div class="lobby-header">Lobbies <span class="lobby-menu-close">&times;</span></div>
-      <button class="button lobby-button lobby-filter-button"><i class="fa fa-filter"></i> Filter</button>
-      <button class="button lobby-button lobby-create-button"><i class="fa fa-plus"></i> Create Lobby</button>
-      <hr>
-      <div class="lobbies-description">A lobby is a game with custom presets created by other people. Lobbies marked red currently have no players in them. Lobbies marked green already have at least one player. The game will start when the required amount of players join that lobby.</div>
-      <div class="lobby-list"></div>
-    </div>
+    <div class="window"></div>
     <div class="wrapper">
       <img src="/images/menu/heading.png" class="header">
       <p class="subheader">MULTIPLAYER SHOOTER</p>
@@ -432,43 +506,16 @@
     </div>
     <script>
       Notiflix.Loading.init({ svgColor: "#fff" });
-      function openWindow(src, closeCallback = () => {}) {
-        Notiflix.Loading.pulse();
-        let e = document.createElement("iframe");
-        let x = document.createElement("div");
-        x.style = `
-        position: fixed !important;
-        left: 20px !important;
-        top: 20px !important;
-        color: white !important;
-        z-index: 999999999999;
-        font-size: 25px;
+      function openWindow(title, content) {
+        document.querySelector(".window").innerHTML = `
+        <div class="window-header">${title} <span class="window-close">&times;</span></div>
+        ${content}
         `;
-        x.innerHTML = "&times;";
-        x.onclick = () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-        e.style = `
-        z-index: 999999999999;
-        opacity: 0;
-        position: fixed;
-        width: 75%;
-        height: 75%;
-        left: 50%;
-        margin-left: -37.5%;
-        border-radius: 6px;
-        border: 5px solid #38b6ff;
-        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.24);
-        transition: opacity 1s;
-        background: #fff;
-        top: 10%;
-        `;
-        e.src = src;
-        e.onload = () => (e.style.opacity = 1);
-        document.body.appendChild(e);
-        document.body.appendChild(x);
-        currentSLFrame = [e, x];
-        document.addEventListener("keydown", (e) => {
-          e.key == "Escape" && currentSLFrame && (Notiflix.Loading.remove(), currentSLFrame.forEach(x => x.remove()), currentSLFrame = null, closeCallback());
-        });
+        document.querySelector(".window").style.display = "block";
+      }
+      function closeWindow() {
+        document.querySelector(".window").style.display = "";
+        Notiflix.Loading.remove();
       }
       function formatNumber(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
@@ -509,6 +556,100 @@
       }
 
       function createLobby() {
+        openWindow("Create new Lobby", `
+        <div class="lobbies-description">Create a lobby by choosing a map, mode, and custom presets. You can disable score/time limits to make them unlimited.</div>
+        <div class="lobby-options-left-section">
+          <div class="lobby-option-container">
+            <label for="map">Map</label>
+            <select value="Cargo_Port" name="map">
+              <option value="Cargo_Port" checked>Cargo Port</option>
+              <option value="Lihid">Lihid</option>
+              <option value="Haven">Haven</option>
+              <option value="Standoff">Standoff</option>
+              <option value="Abandoned_City">Abandoned City</option>
+              <option value="Vertex">Vertex</option>
+              <option value="Apex">Apex</option>
+            </select>
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <label for="mode">Mode</label>
+            <select value="slayer" name="mode">
+              <option value="slayer" checked>Slayer</option>
+              <option value="slayer" checked>Team Slayer 2v2</option>
+              <option value="slayer" checked>Team Slayer 4v4</option>
+              <option value="fiesta">Fiesta</option>
+              <option value="snipers">Snipers</option>
+            </select>
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <label for="scoreToWin">Score Limit</label>
+            <input type="number" min="1" max="100" value="25" name="scoreToWin" class="input lobby-options-score_limit"> <input type="checkbox" name="scoreEnabled" class="lobby-options-score_enabled" checked>
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <label for="timeLimit">Time Limit (minutes)</label>
+            <input type="number" min="1" max="60" value="15" name="timeLimit" class="input lobby-options-time_limit"> <input type="checkbox" name="timeEnabled" class="lobby-options-time_enabled" checked>
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <label for="teamsEnabled">Team Game</label>
+            <button name="teamsEnabled"><i class="fa fa-retweet"></i> Disabled</button>
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <label for="teamSize">Team Size</label>
+            <input type="number" min="1" max="8" value="1" name="teamSize" class="input" data-disabled="1">
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <label for="playersNeeded">Players Needed to Start</label>
+            <input type="number" min="1" max="16" value="2" name="playersNeeded" class="input">
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <label for="customLoadoutsEnabled">Personal Loadouts</label>
+            <button name="customLoadoutsEnabled"><i class="fa fa-retweet"></i> Enabled</button>
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <button class="lobby-options-edit_presets" name="editPresets" data-disabled="1">Edit Custom Loadouts</button>
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <label for="radarEnabled">Radar</label>
+            <button name="radarEnabled"><i class="fa fa-retweet"></i> Enabled</button>
+          </div>
+          <br>
+          <div class="lobby-option-container">
+            <label for="vehiclesEnabled">Vehicles</label>
+            <button name="vehiclesEnabled"><i class="fa fa-retweet"></i> Enabled</button>
+          </div>
+        </div>
+        <div class="lobby-options-right-section">
+          <div class="lobby-options-map-preview"></div>
+          <input type="checkbox" name="code-required">
+          <label for="code-required">Require a code for users to join</label>
+        </div>
+        `);
+// user.createLobby("thematrix", {
+//   customLoadoutsEnabled: true,
+//   presets: {
+//     loadout: null,
+//     armorAbility: null,
+//     grenades: null
+//   },
+//   teamsEnabled: false,
+//   teamSize: 1,
+//   playersNeeded: 2,
+//   radarEnabled: true,
+//   vehiclesEnabled: true,
+//   scoreToWin: 25,
+//   timeLimit: 15,
+//   map: "Lihid",
+//   mode: "slayer"
+// })
         if (lobbyName.length >= 3 && lobbyName.length <= 20) {
           let loading = document.createElement("div");
           loading.className = "swal-spinner";
@@ -540,29 +681,44 @@
         Notiflix.Loading.circle();
         Notiflix.Loading.change("Fetching latest server data...");
         user.getLobbies(function(lobbies) {
-          document.querySelector(".lobby-list").innerHTML = "";
-          for (id in lobbies) {
-            let lobby = lobbies[id];
+          lobbies = lobbies.reverse();
+          openWindow("Lobbies", `
+          <button class="button lobby-button lobby-filter-button"><i class="fa fa-filter"></i> Filter</button>
+          <button class="button lobby-button lobby-create-button" onclick="createLobby()"><i class="fa fa-plus"></i> Create Lobby</button>
+          <hr>
+          <div class="lobbies-description">A lobby is a game with custom presets created by other people. Lobbies marked red currently have no players in them. Lobbies marked green already have at least one player. The game will start when the required amount of players join that lobby.</div>
+          <div class="lobby-list"></div>
+          `);
+          for (let i = 0; i < lobbies.length; i++) {
+            let lobby = lobbies[i];
             let lobbyCreationDate = new Date(lobby.creationDate);
             let lobbyCreatedAt = threeLetterMonthNames[lobbyCreationDate.toISOString().split("-")[1] - 1] + " " + lobbyCreationDate.toISOString().split("-")[2].split("T")[0] + " " + lobbyCreationDate.toISOString().split("-")[0] + " " + lobbyCreationDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
             document.querySelector(".lobby-list").innerHTML += `
             <div class="lobby" onclick="location.href = '/src.html?lobby=${lobby.name}'">
               <div class="lobby-map-preview" style="background-image: url(/images/maps/${lobby.map}.png)"><span class="lobby-map-name">${lobby.map.replace(/_/g, " ")}</span></div>
               <div class="lobby-name">${lobby.name.trim()}</div>
-              <div class="lobby-info">${lobbyCreatedAt} &bullet; Mode: <b>${lobby.mode}</b> &bullet; Score limit: <b>${lobby.scoreToWin}</b> &bullet; Time: <b>${lobby.timeLimit}</b> minutes</div>
-              <div class="lobby-status lobby-status-active"></div>
+              <div class="lobby-info">${lobbyCreatedAt} &bullet; Mode: <b>${lobby.mode.toUpperCase()}</b> &bullet; Score limit: <b>${lobby.scoreToWin}</b> &bullet; Time: <b>${lobby.timeLimit}</b> minutes</div>
+              <div class="lobby-status lobby-status-${lobby.playersActive < 1 ? "inactive" : lobby.playersActive >= lobby.playersNeeded ? "full" : "active"}"><span class="lobby-status-player-count">${Math.min(lobby.playersActive, lobby.playersNeeded)}/${lobby.playersNeeded}</span></div>
             </div>
             `;
           }
-          document.querySelector(".lobby-menu").style.display = "block";
         }, 1000);
       }
       document.addEventListener("click", function(event) {
         if (event.target.id == "lobby-button") {
           findLobby();
-        } else if (event.target.className == "lobby-menu-close") {
-          document.querySelector(".lobby-menu").style.display = "";
-          Notiflix.Loading.remove();
+        } else if (event.target.className == "window-close") {
+          closeWindow();
+        } else if (event.target.className == "lobby-options-score_enabled") {
+          if (event.target.checked) {
+            document.querySelector(".lobby-options-score_limit").removeAttribute("data-disabled");
+            document.querySelector(".lobby-options-score_limit").type = "number";
+            document.querySelector(".lobby-options-score_limit").value = 25;
+          } else {
+            document.querySelector(".lobby-options-score_limit").dataset.disabled = "1";
+            document.querySelector(".lobby-options-score_limit").type = "text";
+            document.querySelector(".lobby-options-score_limit").value = "Unlimited";
+          }
         }
       });
 
