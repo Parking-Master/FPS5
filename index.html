@@ -34,6 +34,7 @@
       html, body {
         margin: 0 !important;
         font-family: Arial, Helvetica, sans-serif;
+        overflow: hidden !important;
       }
       .wrapper {
         position: absolute;
@@ -421,16 +422,35 @@
         background: #eee;
         font-size: 14px;
       }
-      .lobby-options-left-section input, .lobby-options-left-section button, .lobby-options-left-section select {
+      .lobby-options-left-section .input, .lobby-options-left-section button, .lobby-options-left-section select {
+        float: right;
+        position: relative;
+        background: #ddd;
+        box-shadow: 1px 1px 0 #333;
+        border: none;
+        border-radius: 0 !important;
+        color: #000 !important;
+        padding: 3px 10px;
+        outline: none !important;
+        font-size: 12px;
+      }
+      .lobby-options-left-section input {
         float: right;
       }
       .lobby-options-left-section .lobby-options-edit_presets {
         float: none;
       }
       .lobby-options-left-section input[data-disabled], .lobby-options-left-section button[data-disabled], .lobby-options-left-section select[data-disabled] {
-        background: #e5e5e5 !important;
+        background: #e5e5e5;
         color: #999 !important;
-        box-shadow: 1px 1px 0 #999 !important;
+        box-shadow: 1px 1px 0 #999;
+        pointer-events: none;
+      }
+      .lobby-options-left-section button:hover, .lobby-options-left-section select:hover {
+        background: #bbb !important;
+      }
+      label[data-disabled] {
+        color: #999;
       }
       .lobby-options-right-section {
         position: relative;
@@ -444,23 +464,50 @@
         position: relative;
         width: 100%;
         height: 100%;
-        max-height: 140px;
+        max-height: 120px;
+        background-color: #ccc;
         background-image: url(/images/maps/Cargo_Port.png);
         background-size: cover;
       }
-      .lobby-options-left-section select {
-        width: 150px;
+      .lobby-options-right-section p {
+        margin: 0;
+        margin-top: 10px;
+        font-size: 14px;
       }
-      .lobby-options-left-section .input {
-        width: 60px;
-      }
-      .lobby-options-left-section .input, .lobby-options-left-section button, .lobby-options-left-section select {
+      .lobby-options-name {
         position: relative;
-        background: #ddd;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 4px 10px;
+        border: 1px solid #333;
+        font-size: 18px;
+        outline: none !important;
+      }
+      .lobby-options-right-section button {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        background: #5aace1;
         border: none;
-        box-shadow: 1px 1px 0 #333;
-        color: #000;
-        padding: 3px 10px;
+        margin: 5px 0;
+        color: #fff;
+      }
+      .lobby-options-code_required {
+        margin-top: 10px;
+      }
+      .lobby-options-left-section select {
+        width: 120px;
+      }
+      .lobby-options-left-section .input.number-input {
+        width: 30px;
+      }
+      .edit-presets-container {
+        background: #ccc;
+        padding: 10px;
+        display: none;
+      }
+      .edit-presets-container select {
+        width: 100px;
       }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -506,6 +553,89 @@
     </div>
     <script>
       Notiflix.Loading.init({ svgColor: "#fff" });
+      let modes = {
+        "slayer": {
+          mode: "slayer",
+          scoreLimit: 25,
+          timeLimit: 15,
+          teamsEnabled: false,
+          teamSize: null,
+          playersNeeded: 2,
+          personalLoadoutsEnabled: true,
+          presets: {
+            loadout: ["AK-74", "FN-502"],
+            armorAbility: null,
+            grenades: { "mk2": 2, "plasma": 0 }
+          },
+          radarEnabled: true,
+          vehiclesEnabled: true
+        },
+        "team_slayer_2v2": {
+          mode: "team_slayer_2v2",
+          scoreLimit: 50,
+          timeLimit: 15,
+          teamsEnabled: true,
+          teamSize: 2,
+          playersNeeded: 4,
+          personalLoadoutsEnabled: true,
+          presets: {
+            loadout: ["AK-74", "FN-502"],
+            armorAbility: null,
+            grenades: { "mk2": 2, "plasma": 0 }
+          },
+          radarEnabled: true,
+          vehiclesEnabled: true
+        },
+        "team_slayer_4v4": {
+          mode: "team_slayer_4v4",
+          scoreLimit: 50,
+          timeLimit: 15,
+          teamsEnabled: true,
+          teamSize: 4,
+          playersNeeded: 8,
+          personalLoadoutsEnabled: true,
+          presets: {
+            loadout: ["AK-74", "FN-502"],
+            armorAbility: null,
+            grenades: { "mk2": 2, "plasma": 0 }
+          },
+          radarEnabled: true,
+          vehiclesEnabled: true
+        },
+        "fiesta": {
+          mode: "fiesta",
+          scoreLimit: 25,
+          timeLimit: 12,
+          teamsEnabled: false,
+          teamSize: null,
+          playersNeeded: 2,
+          personalLoadoutsEnabled: false,
+          presets: {
+            loadout: ["random", "random"],
+            armorAbility: null,
+            grenades: { "mk2": 0, "plasma": 1 }
+          },
+          radarEnabled: true,
+          vehiclesEnabled: true
+        },
+        "snipers": {
+          mode: "snipers",
+          scoreLimit: 15,
+          timeLimit: 10,
+          teamsEnabled: false,
+          teamSize: null,
+          playersNeeded: 2,
+          personalLoadoutsEnabled: false,
+          presets: {
+            loadout: ["HK-G28"],
+            armorAbility: null,
+            grenades: { "mk2": 0, "plasma": 0 }
+          },
+          radarEnabled: false,
+          vehiclesEnabled: true
+        }
+      };
+      let currentModeConfig = null;
       function openWindow(title, content) {
         document.querySelector(".window").innerHTML = `
         <div class="window-header">${title} <span class="window-close">&times;</span></div>
@@ -557,12 +687,12 @@
 
       function createLobby() {
         openWindow("Create new Lobby", `
-        <div class="lobbies-description">Create a lobby by choosing a map, mode, and custom presets. You can disable score/time limits to make them unlimited.</div>
+        <div class="lobbies-description">Create a multiplayer lobby by choosing a map, mode, and custom presets. You can disable score/time limits to make them unlimited.</div>
         <div class="lobby-options-left-section">
-          <div class="lobby-option-container">
+          <div class="lobby-options-container">
             <label for="map">Map</label>
-            <select value="Cargo_Port" name="map">
-              <option value="Cargo_Port" checked>Cargo Port</option>
+            <select value="Cargo_Port" name="map" class="lobby-options-map" onchange="updateLobbyMapPreview(this.value)">
+              <option value="Cargo_Port" selected>Cargo Port</option>
               <option value="Lihid">Lihid</option>
               <option value="Haven">Haven</option>
               <option value="Standoff">Standoff</option>
@@ -572,84 +702,143 @@
             </select>
           </div>
           <br>
-          <div class="lobby-option-container">
+          <div class="lobby-options-container">
             <label for="mode">Mode</label>
-            <select value="slayer" name="mode">
-              <option value="slayer" checked>Slayer</option>
-              <option value="slayer" checked>Team Slayer 2v2</option>
-              <option value="slayer" checked>Team Slayer 4v4</option>
+            <select value="slayer" name="mode" class="lobby-options-mode" onchange="chooseMode(modes[this.value])">
+              <option value="slayer" selected>Slayer</option>
+              <option value="team_slayer_2v2">Team Slayer 2v2</option>
+              <option value="team_slayer_4v4">Team Slayer 4v4</option>
               <option value="fiesta">Fiesta</option>
               <option value="snipers">Snipers</option>
             </select>
           </div>
           <br>
-          <div class="lobby-option-container">
-            <label for="scoreToWin">Score Limit</label>
-            <input type="number" min="1" max="100" value="25" name="scoreToWin" class="input lobby-options-score_limit"> <input type="checkbox" name="scoreEnabled" class="lobby-options-score_enabled" checked>
+          <div class="lobby-options-container">
+            <label for="scoreLimit">Score Limit</label>
+            <input type="text" data-min="1" data-max="100" value="25" name="scoreLimit" class="input number-input lobby-options-scoreLimit" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)"> <input type="checkbox" name="scoreEnabled" class="lobby-options-score_enabled" checked>
           </div>
           <br>
-          <div class="lobby-option-container">
+          <div class="lobby-options-container">
             <label for="timeLimit">Time Limit (minutes)</label>
-            <input type="number" min="1" max="60" value="15" name="timeLimit" class="input lobby-options-time_limit"> <input type="checkbox" name="timeEnabled" class="lobby-options-time_enabled" checked>
+            <input type="text" data-min="1" data-max="60" value="15" name="timeLimit" class="input number-input lobby-options-timeLimit" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)"> <input type="checkbox" name="timeEnabled" class="lobby-options-time_enabled" checked>
           </div>
           <br>
-          <div class="lobby-option-container">
+          <div class="lobby-options-container">
             <label for="teamsEnabled">Team Game</label>
-            <button name="teamsEnabled"><i class="fa fa-retweet"></i> Disabled</button>
+            <button name="teamsEnabled" data-enabled="0" class="lobby-options-teamsEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Disabled</button>
           </div>
           <br>
-          <div class="lobby-option-container">
+          <div class="lobby-options-container">
             <label for="teamSize">Team Size</label>
-            <input type="number" min="1" max="8" value="1" name="teamSize" class="input" data-disabled="1">
+            <input type="text" data-min="1" data-max="8" value="1" name="teamSize" class="input number-input lobby-options-teamSize" data-disabled="1" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
           </div>
           <br>
-          <div class="lobby-option-container">
+          <div class="lobby-options-container">
             <label for="playersNeeded">Players Needed to Start</label>
-            <input type="number" min="1" max="16" value="2" name="playersNeeded" class="input">
+            <input type="text" data-min="1" data-max="16" value="2" name="playersNeeded" class="input number-input lobby-options-playersNeeded" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
           </div>
           <br>
-          <div class="lobby-option-container">
-            <label for="customLoadoutsEnabled">Personal Loadouts</label>
-            <button name="customLoadoutsEnabled"><i class="fa fa-retweet"></i> Enabled</button>
+          <div class="lobby-options-container">
+            <label for="personalLoadoutsEnabled">Personal Loadouts</label>
+            <button name="personalLoadoutsEnabled" data-enabled="1" class="lobby-options-personalLoadoutsEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
           </div>
           <br>
-          <div class="lobby-option-container">
-            <button class="lobby-options-edit_presets" name="editPresets" data-disabled="1">Edit Custom Loadouts</button>
+          <div class="lobby-options-container">
+            <button class="lobby-options-edit_presets" name="editPresets" data-disabled="1">Edit Custom Loadouts <i class="fa fa-chevron-right"></i></button>
+            <br>
+            <div class="edit-presets-container">
+              <div class="lobby-options-container">
+                <label for="primary-weapon">Primary Weapon</label>
+                <select value="AK-74" name="primary-weapon" class="lobby-options-presets-primary_weapon" onchange="updateLobbyConfig()">
+                  <option value="random">Random</option>
+                  <option value="AK-74" selected>AK-74 Assault Rifle</option>
+                  <option value="Ace-35r">Ace-35r Battle Rifle</option>
+                  <option value="AR-15">AR-15 Precision Rifle</option>
+                  <option value="SCAR-H">SCAR-H SMG</option>
+                  <option value="30-SST">30-SST SMG</option>
+                  <option value="Machine-Gun">Machine Gun</option>
+                  <option value="FN-502">FN-502 Pistol</option>
+                  <option value="XD-Mod-2">XD Mod.2 Compact Pistol</option>
+                  <option value="Desert-Eagle">Desert Eagle .50AE Pistol</option>
+                  <option value="Phone-Gun">Cell Phone Gun</option>
+                  <option value="HK-G28">HK-G28 Sniper Rifle</option>
+                  <option value="Ruger-RPR">Ruger-RPR Sniper Rifle</option>
+                  <option value="Remington-870">Remington 870 Shotgun</option>
+                  <option value="M319-Grenade-Launcher">M319 Grenade Launcher</option>
+                  <option value="Grenade-Launcher">Revolving Grenade Launcher</option>
+                  <option value="Rocket-Launcher">SPNKR Rocket Launcher</option>
+                  <option value="MLRS">MLRS Rocket Cannon</option>
+                </select>
+              </div>
+              <br>
+              <div class="lobby-options-container">
+                <label for="secondary-weapon">Secondary Weapon</label>
+                <select value="FN-502" name="secondary-weapon" class="lobby-options-presets-secondary_weapon" onchange="updateLobbyConfig()">
+                  <option value="none">None</option>
+                  <option value="random">Random</option>
+                  <option value="AK-74">AK-74 Assault Rifle</option>
+                  <option value="Ace-35r">Ace-35r Battle Rifle</option>
+                  <option value="AR-15">AR-15 Precision Rifle</option>
+                  <option value="SCAR-H">SCAR-H SMG</option>
+                  <option value="30-SST">30-SST SMG</option>
+                  <option value="Machine-Gun">Machine Gun</option>
+                  <option value="FN-502" selected>FN-502 Pistol</option>
+                  <option value="XD-Mod-2">XD Mod.2 Compact Pistol</option>
+                  <option value="Desert-Eagle">Desert Eagle .50AE Pistol</option>
+                  <option value="Phone-Gun">Cell Phone Gun</option>
+                  <option value="HK-G28">HK-G28 Sniper Rifle</option>
+                  <option value="Ruger-RPR">Ruger-RPR Sniper Rifle</option>
+                  <option value="Remington-870">Remington 870 Shotgun</option>
+                  <option value="M319-Grenade-Launcher">M319 Grenade Launcher</option>
+                  <option value="Grenade-Launcher">Revolving Grenade Launcher</option>
+                  <option value="Rocket-Launcher">SPNKR Rocket Launcher</option>
+                  <option value="MLRS">MLRS Rocket Cannon</option>
+                </select>
+              </div>
+              <br>
+              <div class="lobby-options-container">
+                <label for="secondary-weapon">Armor Ability</label>
+                <select value="none" name="armor-ability" class="lobby-options-presets-armor_ability" onchange="updateLobbyConfig()">
+                  <option value="none" selected>None</option>
+                  <option value="jet-pack">Jet pack</option>
+                  <option value="thruster-pack">Thruster pack</option>
+                  <option value="active-camo">Active Camo</option>
+                </select>
+              </div>
+              <br>
+              <div class="lobby-options-container">
+                <label for="grenades-mk2">Grenades (Frag)</label>
+                <input type="text" data-min="0" data-max="4" value="2" name="grenades-mk2" class="input number-input lobby-options-presets-grenades_mk2" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
+              </div>
+              <br>
+              <div class="lobby-options-container">
+                <label for="grenades-plasma">Grenades (Plasma)</label>
+                <input type="text" data-min="0" data-max="4" value="0" name="grenades-plasma" class="input number-input lobby-options-presets-grenades_plasma" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
+              </div>
+            </div>
           </div>
           <br>
-          <div class="lobby-option-container">
+          <div class="lobby-options-container">
             <label for="radarEnabled">Radar</label>
-            <button name="radarEnabled"><i class="fa fa-retweet"></i> Enabled</button>
+            <button name="radarEnabled" data-enabled="1" class="lobby-options-radarEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
           </div>
           <br>
-          <div class="lobby-option-container">
+          <div class="lobby-options-container">
             <label for="vehiclesEnabled">Vehicles</label>
-            <button name="vehiclesEnabled"><i class="fa fa-retweet"></i> Enabled</button>
+            <button name="vehiclesEnabled" data-enabled="1" class="lobby-options-vehiclesEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
           </div>
         </div>
         <div class="lobby-options-right-section">
           <div class="lobby-options-map-preview"></div>
-          <input type="checkbox" name="code-required">
-          <label for="code-required">Require a code for users to join</label>
+          <p>Lobby name (3-30 characters)</p>
+          <input type="text" class="lobby-options-name">
+          <br>
+          <input type="checkbox" name="code-required" class="lobby-options-code_required">
+          <label for="code-required">Players need a code to join</label>
+          <button>Create Lobby</button>
         </div>
         `);
-// user.createLobby("thematrix", {
-//   customLoadoutsEnabled: true,
-//   presets: {
-//     loadout: null,
-//     armorAbility: null,
-//     grenades: null
-//   },
-//   teamsEnabled: false,
-//   teamSize: 1,
-//   playersNeeded: 2,
-//   radarEnabled: true,
-//   vehiclesEnabled: true,
-//   scoreToWin: 25,
-//   timeLimit: 15,
-//   map: "Lihid",
-//   mode: "slayer"
-// })
+        chooseMode(modes["slayer"]);
         if (lobbyName.length >= 3 && lobbyName.length <= 20) {
           let loading = document.createElement("div");
           loading.className = "swal-spinner";
@@ -676,6 +865,54 @@
           }).then(() => createLobby());
         }
       }
+      function chooseMode(modeConfig) {
+        for (option in modeConfig) {
+          if (option == "presets") {
+            if (!modeConfig.personalLoadoutsEnabled) {
+              for (presetOption in modeConfig.presets) {
+                let value = modeConfig.presets[presetOption];
+                if (presetOption == "loadout") {
+                  document.querySelector(".lobby-options-presets-primary_weapon").value = value[0];
+                  document.querySelector(".lobby-options-presets-secondary_weapon").value = (typeof value[1] === "undefined" || value[1] == null) ? "none" : value[1];
+                } else if (presetOption == "armorAbility") {
+                  if (value == null) value = "none";
+                  document.querySelector(".lobby-options-presets-armor_ability").value = value;
+                } else if (presetOption == "grenades") {
+                  document.querySelector(".lobby-options-presets-grenades_mk2").value = value["mk2"];
+                  document.querySelector(".lobby-options-presets-grenades_plasma").value = value["plasma"];
+                }
+              }
+            }
+            continue;
+          }
+          if (option == "personalLoadoutsEnabled") {
+            if (modeConfig[option]) {
+              document.querySelector(".lobby-options-edit_presets").dataset.disabled = "1";
+              if (document.querySelector(".edit-presets-container").style.display == "block") document.querySelector(".edit-presets-container").style.display = "";
+            } else {
+              document.querySelector(".lobby-options-edit_presets").removeAttribute("data-disabled");
+            }
+          }
+          let element = document.querySelector(".lobby-options-" + option);
+          if (typeof element.dataset.enabled === "undefined") {
+            if (modeConfig[option] == null) {
+              disableLobbyOption(option, false);
+            } else {
+              enableLobbyOption(option, false);
+              element.value = modeConfig[option];
+            }
+          } else {
+            let enabled = modeConfig[option] ? "1" : "0";
+            element.dataset.enabled = enabled;
+            if (enabled == "1") {
+              element.innerHTML = '<i class="fa fa-retweet"></i> Enabled';
+            } else {
+              element.innerHTML = '<i class="fa fa-retweet"></i> Disabled';
+            }
+          }
+        }
+        currentModeConfig = modeConfig;
+      }
       let threeLetterMonthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
       function findLobby() {
         Notiflix.Loading.circle();
@@ -683,8 +920,8 @@
         user.getLobbies(function(lobbies) {
           lobbies = lobbies.reverse();
           openWindow("Lobbies", `
-          <button class="button lobby-button lobby-filter-button"><i class="fa fa-filter"></i> Filter</button>
           <button class="button lobby-button lobby-create-button" onclick="createLobby()"><i class="fa fa-plus"></i> Create Lobby</button>
+          <button class="button lobby-button lobby-enter-code-button"><i class="fa fa-unlock"></i> Enter Code</button>
           <hr>
           <div class="lobbies-description">A lobby is a game with custom presets created by other people. Lobbies marked red currently have no players in them. Lobbies marked green already have at least one player. The game will start when the required amount of players join that lobby.</div>
           <div class="lobby-list"></div>
@@ -697,13 +934,79 @@
             <div class="lobby" onclick="location.href = '/src.html?lobby=${lobby.name}'">
               <div class="lobby-map-preview" style="background-image: url(/images/maps/${lobby.map}.png)"><span class="lobby-map-name">${lobby.map.replace(/_/g, " ")}</span></div>
               <div class="lobby-name">${lobby.name.trim()}</div>
-              <div class="lobby-info">${lobbyCreatedAt} &bullet; Mode: <b>${lobby.mode.toUpperCase()}</b> &bullet; Score limit: <b>${lobby.scoreToWin}</b> &bullet; Time: <b>${lobby.timeLimit}</b> minutes</div>
+              <div class="lobby-info">${lobbyCreatedAt} &bullet; Mode: <b>${lobby.mode.toUpperCase()}</b> &bullet; Score limit: <b>${lobby.scoreLimit}</b> &bullet; Time: <b>${lobby.timeLimit}</b> minutes</div>
               <div class="lobby-status lobby-status-${lobby.playersActive < 1 ? "inactive" : lobby.playersActive >= lobby.playersNeeded ? "full" : "active"}"><span class="lobby-status-player-count">${Math.min(lobby.playersActive, lobby.playersNeeded)}/${lobby.playersNeeded}</span></div>
             </div>
             `;
           }
         }, 1000);
       }
+      function enableLobbyOption(option, updateConfig = true) {
+        let element = document.querySelector(".lobby-options-" + option);
+        element.removeAttribute("data-disabled");
+        element.parentElement.querySelector("label").removeAttribute("data-disabled");
+        if (element.parentElement.querySelector("input[type='checkbox']")) element.parentElement.querySelector("input[type='checkbox']").checked = true;
+        element.value = element.dataset.defaultValue;
+        if (updateConfig) updateLobbyConfig();
+      }
+      function disableLobbyOption(option, updateConfig = true) {
+        let element = document.querySelector(".lobby-options-" + option);
+        element.dataset.disabled = "1";
+        element.parentElement.querySelector("label").dataset.disabled = "1";
+        if (element.parentElement.querySelector("input[type='checkbox']")) element.parentElement.querySelector("input[type='checkbox']").checked = false;
+        if (!isNaN(element.value)) element.dataset.defaultValue = element.value;
+        element.value = "None";
+        if (updateConfig) updateLobbyConfig();
+      }
+      function toggleLobbyOption(element) {
+        let enabled = element.dataset.enabled == "0" ? "1" : "0";
+        element.dataset.enabled = enabled;
+        if (enabled == "1") {
+          element.innerHTML = '<i class="fa fa-retweet"></i> Enabled';
+          if (element.className == "lobby-options-teamsEnabled") enableLobbyOption("teamSize", false), updateLobbyInputs();
+        } else {
+          element.innerHTML = '<i class="fa fa-retweet"></i> Disabled';
+          if (element.className == "lobby-options-teamsEnabled") disableLobbyOption("teamSize", false);
+        }
+        updateLobbyConfig();
+      }
+      function updateLobbyConfig() {
+        let modeConfig = {
+          mode: "slayer",
+          scoreLimit: document.querySelector(".lobby-options-scoreLimit").dataset.disabled == "1" ? null : document.querySelector(".lobby-options-scoreLimit").value - 0,
+          timeLimit: document.querySelector(".lobby-options-timeLimit").dataset.disabled == "1" ? null : document.querySelector(".lobby-options-timeLimit").value - 0,
+          teamsEnabled: document.querySelector(".lobby-options-teamsEnabled").dataset.enabled == "1",
+          teamSize: document.querySelector(".lobby-options-teamsEnabled").dataset.enabled == "1" ? document.querySelector(".lobby-options-teamSize").value - 0 : null,
+          playersNeeded: document.querySelector(".lobby-options-playersNeeded").value - 0,
+          personalLoadoutsEnabled: document.querySelector(".lobby-options-personalLoadoutsEnabled").dataset.enabled == "1",
+          presets: {
+            loadout: [document.querySelector(".lobby-options-presets-primary_weapon").value],
+            armorAbility: document.querySelector(".lobby-options-presets-armor_ability").value == "none" ? null : document.querySelector(".lobby-options-presets-armor_ability").value,
+            grenades: { "mk2": document.querySelector(".lobby-options-presets-grenades_mk2").value - 0, "plasma": document.querySelector(".lobby-options-presets-grenades_plasma").value - 0 }
+          },
+          radarEnabled: document.querySelector(".lobby-options-radarEnabled").dataset.enabled == "1",
+          vehiclesEnabled: document.querySelector(".lobby-options-vehiclesEnabled").dataset.enabled == "1"
+        };
+        if (document.querySelector(".lobby-options-presets-secondary_weapon").value != "none") modeConfig.presets.loadout[1] = document.querySelector(".lobby-options-presets-secondary_weapon").value;
+        chooseMode(modeConfig);
+      }
+      function updateLobbyMapPreview(map) {
+        document.querySelector(".lobby-options-map-preview").style.backgroundImage = "url(/images/maps/" + map + ".png)";
+      }
+      function updateLobbyInputs(element = null) {
+        document.querySelectorAll(".number-input").forEach(input => {
+          if (!input.value) {
+            setTimeout(function() {
+              if (!input.value) input.value = input.dataset.min;
+            }, 2000);
+          } else {
+            if (input.value != "None") input.value = Math.max(Math.min(input.value.replace(/[^0-9\s!?]/g, "") - 0, input.dataset.max - 0), input.dataset.min - 0);
+          }
+        });
+        if ((!element ? true : !element.className.includes("lobby-options-playersNeeded")) && document.querySelector(".lobby-options-teamsEnabled").dataset.enabled == "1") document.querySelector(".lobby-options-playersNeeded").value = (document.querySelector(".lobby-options-teamSize").value - 0) * 2;
+        updateLobbyConfig();
+      }
+
       document.addEventListener("click", function(event) {
         if (event.target.id == "lobby-button") {
           findLobby();
@@ -711,13 +1014,21 @@
           closeWindow();
         } else if (event.target.className == "lobby-options-score_enabled") {
           if (event.target.checked) {
-            document.querySelector(".lobby-options-score_limit").removeAttribute("data-disabled");
-            document.querySelector(".lobby-options-score_limit").type = "number";
-            document.querySelector(".lobby-options-score_limit").value = 25;
+            enableLobbyOption("scoreLimit");
           } else {
-            document.querySelector(".lobby-options-score_limit").dataset.disabled = "1";
-            document.querySelector(".lobby-options-score_limit").type = "text";
-            document.querySelector(".lobby-options-score_limit").value = "Unlimited";
+            disableLobbyOption("scoreLimit");
+          }
+        } else if (event.target.className == "lobby-options-time_enabled") {
+          if (event.target.checked) {
+            enableLobbyOption("timeLimit");
+          } else {
+            disableLobbyOption("timeLimit");
+          }
+        } else if (event.target.className == "lobby-options-edit_presets") {
+          if (document.querySelector(".edit-presets-container").style.display == "block") {
+            document.querySelector(".edit-presets-container").style.display = "";
+          } else {
+            document.querySelector(".edit-presets-container").style.display = "block";
           }
         }
       });

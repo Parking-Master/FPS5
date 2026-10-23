@@ -1055,7 +1055,7 @@
           },
           armorAbility: "jet-pack",
           options: {
-            scoreToWin: 25, // Kills, `null` for unlimited
+            scoreLimit: 25, // Kills, `null` for unlimited
             timeLimit: 720, // Seconds, `null` for unlimited
             teamGame: false, // Whether teams are enabled
             teamSize: 2, // Maximum players per team
@@ -3275,7 +3275,7 @@
               }
               utils.ui.updateScores(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore);
               utils.ui.updateLeaderboardEntry(player);
-              if (sandbox.presets.options.scoreToWin != null && leftTeamScore >= sandbox.presets.options.scoreToWin || rightTeamScore >= sandbox.presets.options.scoreToWin) utils.game.end();
+              if (sandbox.presets.options.scoreLimit != null && leftTeamScore >= sandbox.presets.options.scoreLimit || rightTeamScore >= sandbox.presets.options.scoreLimit) utils.game.end();
               const playerObject = utils.players.objects[player];
               if (player != gametime.player.uuid && typeof playerObject !== "undefined" && playerObject != null) {
                 if (gametimePlayer && gametimePlayer.data.gameStartTime != null && gametimePlayer.data.gameStartTime < utils.options.get("GameStartTime")) utils.options.set("GameStartTime", gametimePlayer.data.gameStartTime);
@@ -6107,21 +6107,21 @@
           if (lobby.name == currentLobbyName) {
             sandbox.presets.character = user.data.character;
             gametime.set("username", user.data.username);
-            if (lobby.customLoadoutsEnabled) {
+            if (lobby.personalLoadoutsEnabled) {
               sandbox.presets.loadout = user.data.loadout;
               sandbox.presets.armorAbility = user.data.armorAbility;
               sandbox.presets.grenades = user.data.grenades;
             } else {
               sandbox.presets.loadout = lobby.presets.loadout;
-              sandbox.presets.armorAbility = loadout.presets.armorAbility;
-              sandbox.presets.grenades = loadout.presets.grenades;
+              sandbox.presets.armorAbility = lobby.presets.armorAbility;
+              sandbox.presets.grenades = lobby.presets.grenades;
             }
             sandbox.presets.options.teamGame = lobby.teamsEnabled;
             sandbox.presets.options.teamSize = lobby.teamSize;
             sandbox.presets.options.playersNeeded = 2;
             sandbox.presets.options.radar = lobby.radarEnabled;
             sandbox.presets.options.vehicles = lobby.vehiclesEnabled;
-            sandbox.presets.options.scoreToWin = lobby.scoreToWin;
+            sandbox.presets.options.scoreLimit = lobby.scoreLimit;
             sandbox.presets.options.timeLimit = lobby.timeLimit * 60;
             sandbox.presets.map = lobby.map;
             // if (sandbox.presets.mode == "slayer") {
@@ -6131,7 +6131,7 @@
             //   sandbox.presets.options.teamGame = false;
             //   sandbox.presets.options.playersNeeded = 2;
             //   sandbox.presets.options.radar = true;
-            //   sandbox.presets.options.scoreToWin = 25;
+            //   sandbox.presets.options.scoreLimit = 25;
             //   sandbox.presets.options.timeLimit = 900;
             // } else if (sandbox.presets.mode == "team-slayer") {
             //   sandbox.presets.loadout = user.data.loadout;
@@ -6141,7 +6141,7 @@
             //   sandbox.presets.options.teamSize = 2;
             //   sandbox.presets.options.playersNeeded = 4;
             //   sandbox.presets.options.radar = true;
-            //   sandbox.presets.options.scoreToWin = 50;
+            //   sandbox.presets.options.scoreLimit = 50;
             //   sandbox.presets.options.timeLimit = 720;
             // } else if (sandbox.presets.mode == "snipers") {
             //   sandbox.presets.loadout = ["HK-G28"];
@@ -6150,7 +6150,7 @@
             //   sandbox.presets.options.teamGame = false;
             //   sandbox.presets.options.playersNeeded = 2;
             //   sandbox.presets.options.radar = false;
-            //   sandbox.presets.options.scoreToWin = 15;
+            //   sandbox.presets.options.scoreLimit = 15;
             //   sandbox.presets.options.timeLimit = 600;
             // } else if (sandbox.presets.mode == "fiesta") {
             //   sandbox.models.forEach(model => { if (model.id.startsWith("weapon.") || model.id.startsWith("propweapon.")) model.requiredMaps.push(sandbox.presets.map) });
@@ -6160,13 +6160,13 @@
             //   sandbox.presets.options.teamGame = false;
             //   sandbox.presets.options.playersNeeded = 2;
             //   sandbox.presets.options.radar = true;
-            //   sandbox.presets.options.scoreToWin = 25;
+            //   sandbox.presets.options.scoreLimit = 25;
             //   sandbox.presets.options.timeLimit = 720;
             // }
             utils.ui.elements.loadingScreenMain.style.backgroundImage = "url(/images/maps/" + sandbox.presets.map + ".png)";
             utils.ui.elements.loadingScreenMain.querySelector(".mode-value").textContent = sandbox.presets.mode;
             utils.ui.elements.loadingScreenMain.querySelector(".map-value").textContent = sandbox.presets.map.replace(/_/g, " ");
-            utils.ui.elements.loadingScreenMain.querySelector(".kill-limit-value").textContent = sandbox.presets.options.scoreToWin;
+            utils.ui.elements.loadingScreenMain.querySelector(".kill-limit-value").textContent = sandbox.presets.options.scoreLimit;
             utils.ui.elements.loadingScreenMain.querySelector(".time-limit-value").textContent = sandbox.presets.options.timeLimit == null ? "unlimited" : Math.round(sandbox.presets.options.timeLimit / 60);
             if (!sandbox.presets.options.radar) utils.ui.elements.radar.style.display = "none";
             if (!sandbox.presets.armorAbility) utils.ui.elements.armorAbility.style.display = "none";
