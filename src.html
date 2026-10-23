@@ -1245,7 +1245,7 @@
                 directionalLight.shadow.radius = 1;
                 directionalLight.shadow.bias = -0.00001;
                 directionalLight.shadow.normalBias = .3;
-                ambientLight.intensity = .2;
+                ambientLight.intensity = .3;
                 map.traverse(child => {
                   child.frustumCulled = false;
                   if (child.isMesh) {
@@ -5882,7 +5882,7 @@
             }
           },
           copyLink: function() {
-            let link = location.protocol + "//" + location.host + "/src.html?lobby=" + gametime.channel;
+            let link = location.href;
             navigator.clipboard.writeText(link);
           },
           addBot: function(button) {
@@ -6115,9 +6115,18 @@
 
       user.getLobbies(function(lobbies) {
         let currentLobbyName = new URLSearchParams(location.search).get("lobby");
+        let currentLobbyCode = new URLSearchParams(location.search).get("code");
+        let lobbyFound = false;
         for (let i = 0; i < lobbies.length; i++) {
           let lobby = lobbies[i];
-          if (lobby.name == currentLobbyName) {
+          let lobbyMatch = false;
+          if (currentLobbyCode) {
+            lobbyMatch = lobby.code == currentLobbyCode;
+          } else {
+            if (typeof lobby.code === "undefined") lobbyMatch = lobby.name == currentLobbyName;
+          }
+          if (lobbyMatch) {
+            lobbyFound = true;
             sandbox.presets.character = user.data.character;
             gametime.set("username", user.data.username);
             if (lobby.personalLoadoutsEnabled) {
@@ -6137,45 +6146,6 @@
             sandbox.presets.options.scoreLimit = lobby.scoreLimit;
             sandbox.presets.options.timeLimit = lobby.timeLimit * 60;
             sandbox.presets.map = lobby.map;
-            // if (sandbox.presets.mode == "slayer") {
-            //   sandbox.presets.loadout = user.data.loadout;
-            //   sandbox.presets.grenades = user.data.grenades;
-            //   sandbox.presets.armorAbility = user.data.armorAbility;
-            //   sandbox.presets.options.teamGame = false;
-            //   sandbox.presets.options.playersNeeded = 2;
-            //   sandbox.presets.options.radar = true;
-            //   sandbox.presets.options.scoreLimit = 25;
-            //   sandbox.presets.options.timeLimit = 900;
-            // } else if (sandbox.presets.mode == "team-slayer") {
-            //   sandbox.presets.loadout = user.data.loadout;
-            //   sandbox.presets.grenades = user.data.grenades;
-            //   sandbox.presets.armorAbility = user.data.armorAbility;
-            //   sandbox.presets.options.teamGame = true;
-            //   sandbox.presets.options.teamSize = 2;
-            //   sandbox.presets.options.playersNeeded = 4;
-            //   sandbox.presets.options.radar = true;
-            //   sandbox.presets.options.scoreLimit = 50;
-            //   sandbox.presets.options.timeLimit = 720;
-            // } else if (sandbox.presets.mode == "snipers") {
-            //   sandbox.presets.loadout = ["HK-G28"];
-            //   sandbox.presets.grenades = { "mk2": 0, "plasma": 0 };
-            //   sandbox.presets.armorAbility = null;
-            //   sandbox.presets.options.teamGame = false;
-            //   sandbox.presets.options.playersNeeded = 2;
-            //   sandbox.presets.options.radar = false;
-            //   sandbox.presets.options.scoreLimit = 15;
-            //   sandbox.presets.options.timeLimit = 600;
-            // } else if (sandbox.presets.mode == "fiesta") {
-            //   sandbox.models.forEach(model => { if (model.id.startsWith("weapon.") || model.id.startsWith("propweapon.")) model.requiredMaps.push(sandbox.presets.map) });
-            //   sandbox.presets.loadout = ["random", "random"];
-            //   sandbox.presets.grenades = { "mk2": 0, "plasma": 1 };
-            //   sandbox.presets.armorAbility = null;
-            //   sandbox.presets.options.teamGame = false;
-            //   sandbox.presets.options.playersNeeded = 2;
-            //   sandbox.presets.options.radar = true;
-            //   sandbox.presets.options.scoreLimit = 25;
-            //   sandbox.presets.options.timeLimit = 720;
-            // }
             utils.ui.elements.loadingScreenMain.style.backgroundImage = "url(/images/maps/" + sandbox.presets.map + ".png)";
             utils.ui.elements.loadingScreenMain.querySelector(".mode-value").textContent = sandbox.presets.mode;
             utils.ui.elements.loadingScreenMain.querySelector(".map-value").textContent = sandbox.presets.map.replace(/_/g, " ");
@@ -6237,7 +6207,11 @@
                     previousPlayerAmount = players.length;
                     let playersNeededToStart = sandbox.presets.options.playersNeeded - players.length;
                     utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
-                    utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button><button onclick="utils.game.addBot(this)" class="add-bot-button">Add Bot</button>`;
+                    if (lobby.code) {
+                      utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><p>CODE: ${lobby.code}</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button><button onclick="utils.game.addBot(this)" class="add-bot-button">Add Bot</button>`;
+                    } else {
+                      utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button><button onclick="utils.game.addBot(this)" class="add-bot-button">Add Bot</button>`;
+                    }
                   }
                 }
               }
@@ -6248,6 +6222,10 @@
             };
             gametime.connect();
           }
+        }
+        if (!lobbyFound) {
+          utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
+          utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>LOBBY NOT FOUND.</p><button onclick="location.href = '/'">Main Menu</button>`;
         }
       });
     </script>

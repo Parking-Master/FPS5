@@ -477,7 +477,7 @@
         font-size: 18px;
         outline: none !important;
       }
-      .create-lobby-button {
+      .create-lobby-submit {
         width: 100%;
         padding: 10px;
         font-size: 16px;
@@ -486,10 +486,10 @@
         margin: 5px 0;
         color: #fff;
       }
-      .create-lobby-button:hover {
+      .create-lobby-submit:hover {
         background: #4e8cb6;
       }
-      .create-lobby-button:active {
+      .create-lobby-submit:active {
         background: #3d6e8f;
       }
       .lobby-options-code_required {
@@ -523,6 +523,13 @@
       }
       .notiflix-report-button, .notiflix-confirm-buttons a {
         color: #fff !important;
+      }
+      .notiflix-report-icon {
+        width: 70px !important;
+        height: 70px !important;
+      }
+      i.fa {
+        pointer-events: none !important;
       }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -567,12 +574,6 @@
       <div class="copyright"><span id="copyright-text">Copyright </span>&copy; 2026 <a href="https://github.com/Parking-Master">Parking-Master</a></div>
     </div>
     <script>
-// Notiflix.Confirm.prompt("Find Lobby", "Enter the 6-digit code for the lobby you want to join:", "", "Join", "Cancel",()=>{},()=>{},{
-//   borderRadius: 0,
-//   okButtonBackground: "#5aace1",
-//   titleColor: "#5aace1",
-//   zindex: 10000
-// });
       Notiflix.Loading.init({ svgColor: "#fff" });
       let modes = {
         "slayer": {
@@ -657,6 +658,7 @@
         }
       };
       let currentModeConfig = null;
+      let currentLobbies = [];
       function openWindow(title, content) {
         document.querySelector(".window").innerHTML = `
         <div class="window-header">${title} <span class="window-close">&times;</span></div>
@@ -664,9 +666,9 @@
         `;
         document.querySelector(".window").style.display = "block";
       }
-      function closeWindow() {
+      function closeWindow(removeLoading = true) {
         document.querySelector(".window").style.display = "";
-        Notiflix.Loading.remove();
+        if (removeLoading) Notiflix.Loading.remove();
       }
       function formatNumber(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
@@ -857,7 +859,7 @@
             <br>
             <input type="checkbox" name="code-required" class="lobby-options-code_required">
             <label for="code-required" class="lobby-options-code_required_text">Players need a code to join</label>
-            <button class="create-lobby-button">Create Lobby</button>
+            <button class="create-lobby-submit">Create Lobby</button>
           </div>
           `);
           chooseMode(modes["slayer"]);
@@ -866,17 +868,46 @@
           if (lobbyName.length >= 2 && lobbyName.length <= 20) {
             Notiflix.Block.circle(".window");
             user.createLobby(lobbyName, lobbyOptions, function() {
-              findLobby(lobbyName);
-              Notiflix.Report.success("Your lobby has been created!", "Anybody can see your lobby and join it. It is recommended to wait in your lobby so that others are more interested in joining.", "Got it", { borderRadius: 0 });
+              if (lobbyOptions.code) {
+                Notiflix.Report.success("Your lobby has been created!", "Your lobby is hidden from other players. In order to join, players need to click 'Enter Code' in the lobby dropdown and enter this code: " + lobbyOptions.code, "Got it", function() {
+                  location.href = "/src.html?code=" + lobbyOptions.code;
+                }, { borderRadius: 0 });
+              } else {
+                findLobby(lobbyName);
+                Notiflix.Report.success("Your lobby has been created!", "Anybody can see your lobby and join it. It is recommended to wait in your lobby so that others are more interested in joining.", "Got it", { borderRadius: 0 });
+              }
             }, function() {
               Notiflix.Block.remove(".window");
-              Notiflix.Report.failure("Error creating lobby", "A lobby with that name already exists. Please choose another name.", "Close");
+              Notiflix.Report.failure("Error creating lobby", "A lobby with that name already exists. Please choose another name.", "Close", { borderRadius: 0 });
             });
           } else {
             document.querySelector(".lobby-options-right-section p").style.color = "#ff0000";
           }
         }
       }
+      function enterCode() {
+        Notiflix.Confirm.prompt("Enter Code", "Enter the 6-digit code for the lobby you want to join:", "", "Join", "Cancel", function(code) {
+          let foundLobby = false;
+          for (let i = 0; i < currentLobbies.length; i++) {
+            let lobby = currentLobbies[i];
+            if (lobby.code == code) {
+              foundLobby = true;
+              closeWindow(false);
+              Notiflix.Loading.change("Joining lobby...");
+              location.href = "/src.html?code=" + lobby.code;
+              return;
+            }
+          }
+          if (!foundLobby) Notiflix.Report.failure("Error finding lobby", "We couldn't find a lobby with that code. Check if you typed it right and try again.", "Close", { borderRadius: 0 });
+        }, () => {}, {
+          borderRadius: 0,
+          okButtonBackground: "#5aace1",
+          titleColor: "#5aace1",
+          zindex: 10000
+        });
+        document.querySelector("#NXConfirmValidationInput").placeholder = "000000";
+      }
+
       function chooseMode(modeConfig) {
         for (option in modeConfig) {
           if (option == "presets") {
@@ -930,9 +961,10 @@
         Notiflix.Loading.circle();
         Notiflix.Loading.change("Fetching latest server data...");
         user.getLobbies(function(lobbies) {
+          currentLobbies = lobbies;
           lobbies = lobbies.reverse();
           openWindow("Lobbies", `
-          <button class="button lobby-button lobby-create-button" onclick="createLobby()"><i class="fa fa-plus"></i> Create Lobby</button>
+          <button class="button lobby-button lobby-create-button"><i class="fa fa-plus"></i> Create Lobby</button>
           <button class="button lobby-button lobby-enter-code-button"><i class="fa fa-unlock"></i> Enter Code</button>
           <hr>
           <div class="lobbies-description">A lobby is a game with custom presets created by other people. Lobbies marked red currently have no players in them. Lobbies marked green already have at least one player. The game will start when the required amount of players join that lobby.</div>
@@ -940,11 +972,12 @@
           `);
           for (let i = 0; i < lobbies.length; i++) {
             let lobby = lobbies[i];
+            if (lobby.code) continue;
             let lobbyCreationDate = new Date(lobby.creationDate);
             let lobbyCreatedAt = threeLetterMonthNames[lobbyCreationDate.toISOString().split("-")[1] - 1] + " " + lobbyCreationDate.toISOString().split("-")[2].split("T")[0] + " " + lobbyCreationDate.toISOString().split("-")[0] + " " + lobbyCreationDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
             document.querySelector(".lobby-list").innerHTML += `
             <div class="lobby" onclick="location.href = '/src.html?lobby=${lobby.name}'" ${(lobbyName && lobbyName == lobby.name) ? 'style="outline: 3px solid #5aace1"' : ""}>
-              <div class="lobby-map-preview" style="background-image: url(/images/maps/${lobby.map}.png)"><span class="lobby-map-name">${lobby.map.replace(/_/g, " ")}</span></div>
+              <div class="lobby-map-preview" style="background-image: url(/images/map-previews/${lobby.map}.png)"><span class="lobby-map-name">${lobby.map.replace(/_/g, " ")}</span></div>
               <div class="lobby-name">${lobby.name.trim()}</div>
               <div class="lobby-info">${lobbyCreatedAt} &bullet; Mode: <b>${lobby.mode.toUpperCase()}</b> &bullet; Score limit: <b>${lobby.scoreLimit}</b> &bullet; Time: <b>${lobby.timeLimit}</b> minutes</div>
               <div class="lobby-status lobby-status-${lobby.playersActive < 1 ? "inactive" : lobby.playersActive >= lobby.playersNeeded ? "full" : "active"}"><span class="lobby-status-player-count">${Math.min(lobby.playersActive, lobby.playersNeeded)}/${lobby.playersNeeded}</span></div>
@@ -1022,6 +1055,10 @@
       document.addEventListener("click", function(event) {
         if (event.target.id == "lobby-button") {
           findLobby();
+        } else if (event.target.className.includes("lobby-create-button")) {
+          createLobby();
+        } else if (event.target.className.includes("lobby-enter-code-button")) {
+          enterCode();
         } else if (event.target.className == "window-close") {
           closeWindow();
         } else if (event.target.className == "lobby-options-score_enabled") {
@@ -1042,8 +1079,12 @@
           } else {
             document.querySelector(".edit-presets-container").style.display = "block";
           }
-        } else if (event.target.className == "create-lobby-button") {
+        } else if (event.target.className == "create-lobby-submit") {
           currentModeConfig.map = document.querySelector(".lobby-options-map").value;
+          if (document.querySelector(".lobby-options-code_required").checked) {
+            let code = Math.floor(100000 + Math.random() * 900000);
+            currentModeConfig.code = code;
+          }
           createLobby(false, document.querySelector(".lobby-options-name").value, currentModeConfig);
         }
       });
