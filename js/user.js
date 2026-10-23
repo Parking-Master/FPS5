@@ -227,7 +227,7 @@ user = {
       callback(lobbies);
     });
   },
-  createLobby: function(lobbyName, lobbyOptions, callback = () => {}) {
+  createLobby: function(lobbyName, lobbyOptions, callback = () => {}, error = () => {}) {
     fetch(user.serverURL + "/lobbies/create", {
       method: "POST",
       headers: {
@@ -240,6 +240,8 @@ user = {
     }).then(function(response) {
       if (response.status == 200) {
         callback();
+      } else {
+        error();
       }
     });
   },

@@ -269,9 +269,6 @@
         box-shadow: 3px 2px 0 #2b78aa;
         border: 2px solid #999;
       }
-      .notiflix-loading-icon {
-        animation: flicker 1s step-end infinite;
-      }
       .window {
         position: absolute;
         max-width: 600px;
@@ -406,9 +403,6 @@
         color: #999;
         top: -5px;
       }
-      #NotiflixLoadingWrap {
-        background: rgba(0, 0, 0, .6) !important;
-      }
       .lobby-options-left-section {
         position: relative;
         width: 50%;
@@ -483,7 +477,7 @@
         font-size: 18px;
         outline: none !important;
       }
-      .lobby-options-right-section button {
+      .create-lobby-button {
         width: 100%;
         padding: 10px;
         font-size: 16px;
@@ -492,8 +486,17 @@
         margin: 5px 0;
         color: #fff;
       }
+      .create-lobby-button:hover {
+        background: #4e8cb6;
+      }
+      .create-lobby-button:active {
+        background: #3d6e8f;
+      }
       .lobby-options-code_required {
         margin-top: 10px;
+      }
+      .lobby-options-code_required_text {
+        font-size: 14px;
       }
       .lobby-options-left-section select {
         width: 120px;
@@ -508,6 +511,18 @@
       }
       .edit-presets-container select {
         width: 100px;
+      }
+      .notiflix-loading {
+        background: rgba(0, 0, 0, .6) !important;
+      }
+      .notiflix-loading-icon {
+        animation: flicker 1s step-end infinite;
+      }
+      .notiflix-report, notiflix-confirm {
+        z-index: 10000 !important;
+      }
+      .notiflix-report-button, .notiflix-confirm-buttons a {
+        color: #fff !important;
       }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -552,6 +567,12 @@
       <div class="copyright"><span id="copyright-text">Copyright </span>&copy; 2026 <a href="https://github.com/Parking-Master">Parking-Master</a></div>
     </div>
     <script>
+// Notiflix.Confirm.prompt("Find Lobby", "Enter the 6-digit code for the lobby you want to join:", "", "Join", "Cancel",()=>{},()=>{},{
+//   borderRadius: 0,
+//   okButtonBackground: "#5aace1",
+//   titleColor: "#5aace1",
+//   zindex: 10000
+// });
       Notiflix.Loading.init({ svgColor: "#fff" });
       let modes = {
         "slayer": {
@@ -685,184 +706,175 @@
         document.querySelector(".loadout-header").innerHTML = `<p style="margin:0!important" title="${user.data.username}"><img src="${user.data.profilePicture}" class="profile-picture"> ${displayUsername}</p><span style="font-size:14px">YOUR LOADOUT &bullet; <a href="#">EDIT</a></span>`;
       }
 
-      function createLobby() {
-        openWindow("Create new Lobby", `
-        <div class="lobbies-description">Create a multiplayer lobby by choosing a map, mode, and custom presets. You can disable score/time limits to make them unlimited.</div>
-        <div class="lobby-options-left-section">
-          <div class="lobby-options-container">
-            <label for="map">Map</label>
-            <select value="Cargo_Port" name="map" class="lobby-options-map" onchange="updateLobbyMapPreview(this.value)">
-              <option value="Cargo_Port" selected>Cargo Port</option>
-              <option value="Lihid">Lihid</option>
-              <option value="Haven">Haven</option>
-              <option value="Standoff">Standoff</option>
-              <option value="Abandoned_City">Abandoned City</option>
-              <option value="Vertex">Vertex</option>
-              <option value="Apex">Apex</option>
-            </select>
-          </div>
-          <br>
-          <div class="lobby-options-container">
-            <label for="mode">Mode</label>
-            <select value="slayer" name="mode" class="lobby-options-mode" onchange="chooseMode(modes[this.value])">
-              <option value="slayer" selected>Slayer</option>
-              <option value="team_slayer_2v2">Team Slayer 2v2</option>
-              <option value="team_slayer_4v4">Team Slayer 4v4</option>
-              <option value="fiesta">Fiesta</option>
-              <option value="snipers">Snipers</option>
-            </select>
-          </div>
-          <br>
-          <div class="lobby-options-container">
-            <label for="scoreLimit">Score Limit</label>
-            <input type="text" data-min="1" data-max="100" value="25" name="scoreLimit" class="input number-input lobby-options-scoreLimit" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)"> <input type="checkbox" name="scoreEnabled" class="lobby-options-score_enabled" checked>
-          </div>
-          <br>
-          <div class="lobby-options-container">
-            <label for="timeLimit">Time Limit (minutes)</label>
-            <input type="text" data-min="1" data-max="60" value="15" name="timeLimit" class="input number-input lobby-options-timeLimit" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)"> <input type="checkbox" name="timeEnabled" class="lobby-options-time_enabled" checked>
-          </div>
-          <br>
-          <div class="lobby-options-container">
-            <label for="teamsEnabled">Team Game</label>
-            <button name="teamsEnabled" data-enabled="0" class="lobby-options-teamsEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Disabled</button>
-          </div>
-          <br>
-          <div class="lobby-options-container">
-            <label for="teamSize">Team Size</label>
-            <input type="text" data-min="1" data-max="8" value="1" name="teamSize" class="input number-input lobby-options-teamSize" data-disabled="1" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
-          </div>
-          <br>
-          <div class="lobby-options-container">
-            <label for="playersNeeded">Players Needed to Start</label>
-            <input type="text" data-min="1" data-max="16" value="2" name="playersNeeded" class="input number-input lobby-options-playersNeeded" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
-          </div>
-          <br>
-          <div class="lobby-options-container">
-            <label for="personalLoadoutsEnabled">Personal Loadouts</label>
-            <button name="personalLoadoutsEnabled" data-enabled="1" class="lobby-options-personalLoadoutsEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
-          </div>
-          <br>
-          <div class="lobby-options-container">
-            <button class="lobby-options-edit_presets" name="editPresets" data-disabled="1">Edit Custom Loadouts <i class="fa fa-chevron-right"></i></button>
+      function createLobby(dialog = true, lobbyName, lobbyOptions) {
+        if (dialog) {
+          openWindow("Create new Lobby", `
+          <div class="lobbies-description">Create a multiplayer lobby by choosing a map, mode, and custom presets. You can disable score/time limits to make them unlimited. <a href="">Need help?</a></div>
+          <div class="lobby-options-left-section">
+            <div class="lobby-options-container">
+              <label for="map">Map</label>
+              <select value="Cargo_Port" name="map" class="lobby-options-map" onchange="updateLobbyMapPreview(this.value)">
+                <option value="Cargo_Port" selected>Cargo Port</option>
+                <option value="Lihid">Lihid</option>
+                <option value="Haven">Haven</option>
+                <option value="Standoff">Standoff</option>
+                <option value="Abandoned_City">Abandoned City</option>
+                <option value="Vertex">Vertex</option>
+                <option value="Apex">Apex</option>
+              </select>
+            </div>
             <br>
-            <div class="edit-presets-container">
-              <div class="lobby-options-container">
-                <label for="primary-weapon">Primary Weapon</label>
-                <select value="AK-74" name="primary-weapon" class="lobby-options-presets-primary_weapon" onchange="updateLobbyConfig()">
-                  <option value="random">Random</option>
-                  <option value="AK-74" selected>AK-74 Assault Rifle</option>
-                  <option value="Ace-35r">Ace-35r Battle Rifle</option>
-                  <option value="AR-15">AR-15 Precision Rifle</option>
-                  <option value="SCAR-H">SCAR-H SMG</option>
-                  <option value="30-SST">30-SST SMG</option>
-                  <option value="Machine-Gun">Machine Gun</option>
-                  <option value="FN-502">FN-502 Pistol</option>
-                  <option value="XD-Mod-2">XD Mod.2 Compact Pistol</option>
-                  <option value="Desert-Eagle">Desert Eagle .50AE Pistol</option>
-                  <option value="Phone-Gun">Cell Phone Gun</option>
-                  <option value="HK-G28">HK-G28 Sniper Rifle</option>
-                  <option value="Ruger-RPR">Ruger-RPR Sniper Rifle</option>
-                  <option value="Remington-870">Remington 870 Shotgun</option>
-                  <option value="M319-Grenade-Launcher">M319 Grenade Launcher</option>
-                  <option value="Grenade-Launcher">Revolving Grenade Launcher</option>
-                  <option value="Rocket-Launcher">SPNKR Rocket Launcher</option>
-                  <option value="MLRS">MLRS Rocket Cannon</option>
-                </select>
-              </div>
+            <div class="lobby-options-container">
+              <label for="mode">Mode</label>
+              <select value="slayer" name="mode" class="lobby-options-mode" onchange="chooseMode(modes[this.value])">
+                <option value="slayer" selected>Slayer</option>
+                <option value="team_slayer_2v2">Team Slayer 2v2</option>
+                <option value="team_slayer_4v4">Team Slayer 4v4</option>
+                <option value="fiesta">Fiesta</option>
+                <option value="snipers">Snipers</option>
+              </select>
+            </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="scoreLimit">Score Limit</label>
+              <input type="text" data-min="1" data-max="100" value="25" name="scoreLimit" class="input number-input lobby-options-scoreLimit" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)"> <input type="checkbox" name="scoreEnabled" class="lobby-options-score_enabled" checked>
+            </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="timeLimit">Time Limit (minutes)</label>
+              <input type="text" data-min="1" data-max="60" value="15" name="timeLimit" class="input number-input lobby-options-timeLimit" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)"> <input type="checkbox" name="timeEnabled" class="lobby-options-time_enabled" checked>
+            </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="teamsEnabled">Team Game</label>
+              <button name="teamsEnabled" data-enabled="0" class="lobby-options-teamsEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Disabled</button>
+            </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="teamSize">Team Size</label>
+              <input type="text" data-min="1" data-max="8" value="1" name="teamSize" class="input number-input lobby-options-teamSize" data-disabled="1" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
+            </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="playersNeeded">Players Needed to Start</label>
+              <input type="text" data-min="1" data-max="16" value="2" name="playersNeeded" class="input number-input lobby-options-playersNeeded" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
+            </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="personalLoadoutsEnabled">Personal Loadouts</label>
+              <button name="personalLoadoutsEnabled" data-enabled="1" class="lobby-options-personalLoadoutsEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
+            </div>
+            <br>
+            <div class="lobby-options-container">
+              <button class="lobby-options-edit_presets" name="editPresets" data-disabled="1">Edit Custom Loadouts <i class="fa fa-chevron-right"></i></button>
               <br>
-              <div class="lobby-options-container">
-                <label for="secondary-weapon">Secondary Weapon</label>
-                <select value="FN-502" name="secondary-weapon" class="lobby-options-presets-secondary_weapon" onchange="updateLobbyConfig()">
-                  <option value="none">None</option>
-                  <option value="random">Random</option>
-                  <option value="AK-74">AK-74 Assault Rifle</option>
-                  <option value="Ace-35r">Ace-35r Battle Rifle</option>
-                  <option value="AR-15">AR-15 Precision Rifle</option>
-                  <option value="SCAR-H">SCAR-H SMG</option>
-                  <option value="30-SST">30-SST SMG</option>
-                  <option value="Machine-Gun">Machine Gun</option>
-                  <option value="FN-502" selected>FN-502 Pistol</option>
-                  <option value="XD-Mod-2">XD Mod.2 Compact Pistol</option>
-                  <option value="Desert-Eagle">Desert Eagle .50AE Pistol</option>
-                  <option value="Phone-Gun">Cell Phone Gun</option>
-                  <option value="HK-G28">HK-G28 Sniper Rifle</option>
-                  <option value="Ruger-RPR">Ruger-RPR Sniper Rifle</option>
-                  <option value="Remington-870">Remington 870 Shotgun</option>
-                  <option value="M319-Grenade-Launcher">M319 Grenade Launcher</option>
-                  <option value="Grenade-Launcher">Revolving Grenade Launcher</option>
-                  <option value="Rocket-Launcher">SPNKR Rocket Launcher</option>
-                  <option value="MLRS">MLRS Rocket Cannon</option>
-                </select>
-              </div>
-              <br>
-              <div class="lobby-options-container">
-                <label for="secondary-weapon">Armor Ability</label>
-                <select value="none" name="armor-ability" class="lobby-options-presets-armor_ability" onchange="updateLobbyConfig()">
-                  <option value="none" selected>None</option>
-                  <option value="jet-pack">Jet pack</option>
-                  <option value="thruster-pack">Thruster pack</option>
-                  <option value="active-camo">Active Camo</option>
-                </select>
-              </div>
-              <br>
-              <div class="lobby-options-container">
-                <label for="grenades-mk2">Grenades (Frag)</label>
-                <input type="text" data-min="0" data-max="4" value="2" name="grenades-mk2" class="input number-input lobby-options-presets-grenades_mk2" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
-              </div>
-              <br>
-              <div class="lobby-options-container">
-                <label for="grenades-plasma">Grenades (Plasma)</label>
-                <input type="text" data-min="0" data-max="4" value="0" name="grenades-plasma" class="input number-input lobby-options-presets-grenades_plasma" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
+              <div class="edit-presets-container">
+                <div class="lobby-options-container">
+                  <label for="primary-weapon">Primary Weapon</label>
+                  <select value="AK-74" name="primary-weapon" class="lobby-options-presets-primary_weapon" onchange="updateLobbyConfig()">
+                    <option value="random">Random</option>
+                    <option value="AK-74" selected>AK-74 Assault Rifle</option>
+                    <option value="Ace-35r">Ace-35r Battle Rifle</option>
+                    <option value="AR-15">AR-15 Precision Rifle</option>
+                    <option value="SCAR-H">SCAR-H SMG</option>
+                    <option value="30-SST">30-SST SMG</option>
+                    <option value="Machine-Gun">Machine Gun</option>
+                    <option value="FN-502">FN-502 Pistol</option>
+                    <option value="XD-Mod-2">XD Mod.2 Compact Pistol</option>
+                    <option value="Desert-Eagle">Desert Eagle .50AE Pistol</option>
+                    <option value="Phone-Gun">Cell Phone Gun</option>
+                    <option value="HK-G28">HK-G28 Sniper Rifle</option>
+                    <option value="Ruger-RPR">Ruger-RPR Sniper Rifle</option>
+                    <option value="Remington-870">Remington 870 Shotgun</option>
+                    <option value="M319-Grenade-Launcher">M319 Grenade Launcher</option>
+                    <option value="Grenade-Launcher">Revolving Grenade Launcher</option>
+                    <option value="Rocket-Launcher">SPNKR Rocket Launcher</option>
+                    <option value="MLRS">MLRS Rocket Cannon</option>
+                  </select>
+                </div>
+                <br>
+                <div class="lobby-options-container">
+                  <label for="secondary-weapon">Secondary Weapon</label>
+                  <select value="FN-502" name="secondary-weapon" class="lobby-options-presets-secondary_weapon" onchange="updateLobbyConfig()">
+                    <option value="none">None</option>
+                    <option value="random">Random</option>
+                    <option value="AK-74">AK-74 Assault Rifle</option>
+                    <option value="Ace-35r">Ace-35r Battle Rifle</option>
+                    <option value="AR-15">AR-15 Precision Rifle</option>
+                    <option value="SCAR-H">SCAR-H SMG</option>
+                    <option value="30-SST">30-SST SMG</option>
+                    <option value="Machine-Gun">Machine Gun</option>
+                    <option value="FN-502" selected>FN-502 Pistol</option>
+                    <option value="XD-Mod-2">XD Mod.2 Compact Pistol</option>
+                    <option value="Desert-Eagle">Desert Eagle .50AE Pistol</option>
+                    <option value="Phone-Gun">Cell Phone Gun</option>
+                    <option value="HK-G28">HK-G28 Sniper Rifle</option>
+                    <option value="Ruger-RPR">Ruger-RPR Sniper Rifle</option>
+                    <option value="Remington-870">Remington 870 Shotgun</option>
+                    <option value="M319-Grenade-Launcher">M319 Grenade Launcher</option>
+                    <option value="Grenade-Launcher">Revolving Grenade Launcher</option>
+                    <option value="Rocket-Launcher">SPNKR Rocket Launcher</option>
+                    <option value="MLRS">MLRS Rocket Cannon</option>
+                  </select>
+                </div>
+                <br>
+                <div class="lobby-options-container">
+                  <label for="secondary-weapon">Armor Ability</label>
+                  <select value="none" name="armor-ability" class="lobby-options-presets-armor_ability" onchange="updateLobbyConfig()">
+                    <option value="none" selected>None</option>
+                    <option value="jet-pack">Jet pack</option>
+                    <option value="thruster-pack">Thruster pack</option>
+                    <option value="active-camo">Active Camo</option>
+                  </select>
+                </div>
+                <br>
+                <div class="lobby-options-container">
+                  <label for="grenades-mk2">Grenades (Frag)</label>
+                  <input type="text" data-min="0" data-max="4" value="2" name="grenades-mk2" class="input number-input lobby-options-presets-grenades_mk2" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
+                </div>
+                <br>
+                <div class="lobby-options-container">
+                  <label for="grenades-plasma">Grenades (Plasma)</label>
+                  <input type="text" data-min="0" data-max="4" value="0" name="grenades-plasma" class="input number-input lobby-options-presets-grenades_plasma" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
+                </div>
               </div>
             </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="radarEnabled">Radar</label>
+              <button name="radarEnabled" data-enabled="1" class="lobby-options-radarEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
+            </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="vehiclesEnabled">Vehicles</label>
+              <button name="vehiclesEnabled" data-enabled="1" class="lobby-options-vehiclesEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
+            </div>
           </div>
-          <br>
-          <div class="lobby-options-container">
-            <label for="radarEnabled">Radar</label>
-            <button name="radarEnabled" data-enabled="1" class="lobby-options-radarEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
+          <div class="lobby-options-right-section">
+            <div class="lobby-options-map-preview"></div>
+            <p>Lobby name (2-20 characters)</p>
+            <input type="text" class="lobby-options-name">
+            <br>
+            <input type="checkbox" name="code-required" class="lobby-options-code_required">
+            <label for="code-required" class="lobby-options-code_required_text">Players need a code to join</label>
+            <button class="create-lobby-button">Create Lobby</button>
           </div>
-          <br>
-          <div class="lobby-options-container">
-            <label for="vehiclesEnabled">Vehicles</label>
-            <button name="vehiclesEnabled" data-enabled="1" class="lobby-options-vehiclesEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
-          </div>
-        </div>
-        <div class="lobby-options-right-section">
-          <div class="lobby-options-map-preview"></div>
-          <p>Lobby name (3-30 characters)</p>
-          <input type="text" class="lobby-options-name">
-          <br>
-          <input type="checkbox" name="code-required" class="lobby-options-code_required">
-          <label for="code-required">Players need a code to join</label>
-          <button>Create Lobby</button>
-        </div>
-        `);
-        chooseMode(modes["slayer"]);
-        if (lobbyName.length >= 3 && lobbyName.length <= 20) {
-          let loading = document.createElement("div");
-          loading.className = "swal-spinner";
-          swal({
-            content: loading,
-            button: false
-          });
-          users.createLobby(lobbyName, function() {
-            swal({
-              icon: "success",
-              text: "Your Lobby was created! Wait for other players to join it.",
-              button: "Close"
-            }).then(function() {
-              document.querySelector(".lobbies .lobby-wrapper").innerHTML = `
-              <a href="/multiplayer.html?lobby=${lobbyName}" class="lobby" style="outline:4px solid #47b3ff"><span class="lobby-name">${lobbyName}</span><span class="lobby-date">${new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></a>
-              ` + document.querySelector(".lobbies .lobby-wrapper").innerHTML;
-            });
-          });
+          `);
+          chooseMode(modes["slayer"]);
         } else {
-          swal({
-            icon: "error",
-            text: "Lobby Name must be between 3-20 characters.",
-            button: "Try Again"
-          }).then(() => createLobby());
+          lobbyName = lobbyName.trim();
+          if (lobbyName.length >= 2 && lobbyName.length <= 20) {
+            Notiflix.Block.circle(".window");
+            user.createLobby(lobbyName, lobbyOptions, function() {
+              findLobby(lobbyName);
+              Notiflix.Report.success("Your lobby has been created!", "Anybody can see your lobby and join it. It is recommended to wait in your lobby so that others are more interested in joining.", "Got it", { borderRadius: 0 });
+            }, function() {
+              Notiflix.Block.remove(".window");
+              Notiflix.Report.failure("Error creating lobby", "A lobby with that name already exists. Please choose another name.", "Close");
+            });
+          } else {
+            document.querySelector(".lobby-options-right-section p").style.color = "#ff0000";
+          }
         }
       }
       function chooseMode(modeConfig) {
@@ -914,7 +926,7 @@
         currentModeConfig = modeConfig;
       }
       let threeLetterMonthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-      function findLobby() {
+      function findLobby(lobbyName = null) {
         Notiflix.Loading.circle();
         Notiflix.Loading.change("Fetching latest server data...");
         user.getLobbies(function(lobbies) {
@@ -931,7 +943,7 @@
             let lobbyCreationDate = new Date(lobby.creationDate);
             let lobbyCreatedAt = threeLetterMonthNames[lobbyCreationDate.toISOString().split("-")[1] - 1] + " " + lobbyCreationDate.toISOString().split("-")[2].split("T")[0] + " " + lobbyCreationDate.toISOString().split("-")[0] + " " + lobbyCreationDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
             document.querySelector(".lobby-list").innerHTML += `
-            <div class="lobby" onclick="location.href = '/src.html?lobby=${lobby.name}'">
+            <div class="lobby" onclick="location.href = '/src.html?lobby=${lobby.name}'" ${(lobbyName && lobbyName == lobby.name) ? 'style="outline: 3px solid #5aace1"' : ""}>
               <div class="lobby-map-preview" style="background-image: url(/images/maps/${lobby.map}.png)"><span class="lobby-map-name">${lobby.map.replace(/_/g, " ")}</span></div>
               <div class="lobby-name">${lobby.name.trim()}</div>
               <div class="lobby-info">${lobbyCreatedAt} &bullet; Mode: <b>${lobby.mode.toUpperCase()}</b> &bullet; Score limit: <b>${lobby.scoreLimit}</b> &bullet; Time: <b>${lobby.timeLimit}</b> minutes</div>
@@ -972,7 +984,7 @@
       }
       function updateLobbyConfig() {
         let modeConfig = {
-          mode: "slayer",
+          mode: currentModeConfig.mode,
           scoreLimit: document.querySelector(".lobby-options-scoreLimit").dataset.disabled == "1" ? null : document.querySelector(".lobby-options-scoreLimit").value - 0,
           timeLimit: document.querySelector(".lobby-options-timeLimit").dataset.disabled == "1" ? null : document.querySelector(".lobby-options-timeLimit").value - 0,
           teamsEnabled: document.querySelector(".lobby-options-teamsEnabled").dataset.enabled == "1",
@@ -1030,6 +1042,9 @@
           } else {
             document.querySelector(".edit-presets-container").style.display = "block";
           }
+        } else if (event.target.className == "create-lobby-button") {
+          currentModeConfig.map = document.querySelector(".lobby-options-map").value;
+          createLobby(false, document.querySelector(".lobby-options-name").value, currentModeConfig);
         }
       });
 

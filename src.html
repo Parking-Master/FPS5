@@ -620,6 +620,7 @@
         font-size: 18px;
         color: #000;
         cursor: pointer;
+        margin: 5px;
       }
       .loading-screen-dialog button:active {
         background: #777;
@@ -693,6 +694,9 @@
         text-align: center;
         width: 100%;
       }
+      .notiflix-loading, #NotiflixNotifyWrap, .notiflix-confirm {
+        z-index: 10000 !important;
+      }
     </style>
   </head>
   <body>
@@ -711,6 +715,7 @@
     <script src="/js/TouchScreenControls.js"></script>
     <script src="/js/GamepadControls.js"></script>
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
+    <script src="https://parking-master.github.io/Parking-Master-2.0/notiflix/notiflix-3.2.8.min.js"></script>
     <script src="/js/user.js"></script>
     <div class="pause-menu">
       <div class="pause-menu-wrapper">
@@ -1240,6 +1245,7 @@
                 directionalLight.shadow.radius = 1;
                 directionalLight.shadow.bias = -0.00001;
                 directionalLight.shadow.normalBias = .3;
+                ambientLight.intensity = .2;
                 map.traverse(child => {
                   child.frustumCulled = false;
                   if (child.isMesh) {
@@ -2881,7 +2887,7 @@
               } else {
                 if (utils.ui.cache.previousOutOfAmmo != 2) {
                   utils.ui.cache.previousOutOfAmmo = 2;
-                  utils.ui.elements.ammoInfo.innerHTML = "NO AMMO LEFT IN WEAPON. PRESS " + utils.game.getBindingDisplay("switch") + " TO SWITCH WEAPON.";
+                  utils.ui.elements.ammoInfo.innerHTML = "NO AMMO LEFT IN WEAPON" + (sandbox.secondaryWeapon == null ? "" : ". PRESS " + utils.game.getBindingDisplay("switch") + " TO SWITCH WEAPON.");
                   utils.ui.elements.ammoInfo.style.opacity = 1;
                 }
               }
@@ -3275,7 +3281,7 @@
               }
               utils.ui.updateScores(leftTeamUsername, leftTeamScore, rightTeamUsername, rightTeamScore);
               utils.ui.updateLeaderboardEntry(player);
-              if (sandbox.presets.options.scoreLimit != null && leftTeamScore >= sandbox.presets.options.scoreLimit || rightTeamScore >= sandbox.presets.options.scoreLimit) utils.game.end();
+              if (sandbox.presets.options.scoreLimit != null && (leftTeamScore >= sandbox.presets.options.scoreLimit || rightTeamScore >= sandbox.presets.options.scoreLimit)) utils.game.end();
               const playerObject = utils.players.objects[player];
               if (player != gametime.player.uuid && typeof playerObject !== "undefined" && playerObject != null) {
                 if (gametimePlayer && gametimePlayer.data.gameStartTime != null && gametimePlayer.data.gameStartTime < utils.options.get("GameStartTime")) utils.options.set("GameStartTime", gametimePlayer.data.gameStartTime);
@@ -5085,10 +5091,10 @@
         armorAbilities: {
           charge: 100,
           active: false,
-          reset: function() {
+          reset: function(recharge = true) {
             if (utils.armorAbilities.active) utils.armorAbilities.deactivate();
             utils.armorAbilities.active = false;
-            utils.armorAbilities.charge = 100;
+            if (recharge) utils.armorAbilities.charge = 100;
           },
           activate: function() {
             if (utils.vehicles.check(true) || !sandbox.presets.armorAbility) return;
@@ -5486,7 +5492,7 @@
                   utils.weapons.stopMelee();
                   utils.weapons.stopCrouch();
                   utils.weapons.stopWalking();
-                  utils.armorAbilities.deactivate();
+                  utils.armorAbilities.reset(false);
                   vehicle.currentSeat = seat;
                   utils.options.set("CurrentVehicle", vehicle);
                   camera.position.set(0, 0, 0);
@@ -5878,6 +5884,13 @@
           copyLink: function() {
             let link = location.protocol + "//" + location.host + "/src.html?lobby=" + gametime.channel;
             navigator.clipboard.writeText(link);
+          },
+          addBot: function(button) {
+            Notiflix.Loading.circle();
+            user.addBot(function() {
+              Notiflix.Loading.remove();
+              Notiflix.Notify.success("1 bot has been added to this lobby.");
+            });
           }
         }
       };
@@ -6118,7 +6131,7 @@
             }
             sandbox.presets.options.teamGame = lobby.teamsEnabled;
             sandbox.presets.options.teamSize = lobby.teamSize;
-            sandbox.presets.options.playersNeeded = 2;
+            sandbox.presets.options.playersNeeded = lobby.playersNeeded;
             sandbox.presets.options.radar = lobby.radarEnabled;
             sandbox.presets.options.vehicles = lobby.vehiclesEnabled;
             sandbox.presets.options.scoreLimit = lobby.scoreLimit;
@@ -6166,7 +6179,7 @@
             utils.ui.elements.loadingScreenMain.style.backgroundImage = "url(/images/maps/" + sandbox.presets.map + ".png)";
             utils.ui.elements.loadingScreenMain.querySelector(".mode-value").textContent = sandbox.presets.mode;
             utils.ui.elements.loadingScreenMain.querySelector(".map-value").textContent = sandbox.presets.map.replace(/_/g, " ");
-            utils.ui.elements.loadingScreenMain.querySelector(".kill-limit-value").textContent = sandbox.presets.options.scoreLimit;
+            utils.ui.elements.loadingScreenMain.querySelector(".kill-limit-value").textContent = sandbox.presets.options.scoreLimit == null ? "unlimited" : sandbox.presets.options.scoreLimit;
             utils.ui.elements.loadingScreenMain.querySelector(".time-limit-value").textContent = sandbox.presets.options.timeLimit == null ? "unlimited" : Math.round(sandbox.presets.options.timeLimit / 60);
             if (!sandbox.presets.options.radar) utils.ui.elements.radar.style.display = "none";
             if (!sandbox.presets.armorAbility) utils.ui.elements.armorAbility.style.display = "none";
@@ -6224,7 +6237,7 @@
                     previousPlayerAmount = players.length;
                     let playersNeededToStart = sandbox.presets.options.playersNeeded - players.length;
                     utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
-                    utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button>`;
+                    utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button><button onclick="utils.game.addBot(this)" class="add-bot-button">Add Bot</button>`;
                   }
                 }
               }
