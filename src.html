@@ -896,12 +896,12 @@
           if (sandbox.models[i].loaded && sandbox.models[i].model.animationMixer) sandbox.models[i].model.animationMixer.update(clockDelta);
         }
 
-        let playersIterated = false;
+        let playersIterated = 0;
         for (player in utils.players.objects) {
-          playersIterated = true;
           const playerObject = utils.players.objects[player];
           if (playerObject) {
-            if (frameCount % 4 == 0) utils.ui.radar.update(playerObject);
+            playersIterated++;
+            if (frameCount % 4 == 0) utils.ui.radar.update(playerObject, playersIterated - 1);
             if (playerObject.animationMixer) {
               playerObject.animationMixer.update(clockDelta);
               if (!playerObject.isRunning && (playerObject.vehicle ? playerObject.vehicle.seat != "driver" : true)) {
@@ -926,7 +926,7 @@
             }
           }
         }
-        if (!playersIterated) utils.ui.radar.update(null);
+        if (playersIterated == 0) utils.ui.radar.update(null);
         if (frameCount % 3 == 0) utils.weapons.updateAim(weapon);
 
         const tmpObjects = utils.options.get("tmpObjects");
@@ -2990,10 +2990,10 @@
                 const screenY = radarRadiusPx - yOffset;
                 return { x: screenX, y: screenY };
               }
-              utils.ui.radar.update = function(enemy = null) {
+              utils.ui.radar.update = function(enemy = null, iteration = null) {
                 const radarCanvas = utils.ui.elements.radarCanvas;
                 updatePlayerBasis();
-                ctx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
+                if (!iteration || iteration == 0) ctx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
                 ctx.beginPath();
                 ctx.fillStyle = "rgba(160, 150, 150, 0.25)";
                 ctx.moveTo(radarRadiusPx, radarRadiusPx);
@@ -5885,9 +5885,10 @@
             let link = location.href;
             navigator.clipboard.writeText(link);
           },
-          addBot: function(button) {
+          addBot: function(lobby) {
+            Notiflix.Loading.init({ svgColor: "#fff" });
             Notiflix.Loading.circle();
-            user.addBot(function() {
+            user.addBot(lobby, function() {
               Notiflix.Loading.remove();
               Notiflix.Notify.success("1 bot has been added to this lobby.");
             });
@@ -6208,9 +6209,9 @@
                     let playersNeededToStart = sandbox.presets.options.playersNeeded - players.length;
                     utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
                     if (lobby.code) {
-                      utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><p>CODE: ${lobby.code}</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button><button onclick="utils.game.addBot(this)" class="add-bot-button">Add Bot</button>`;
+                      utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><p>CODE: ${lobby.code}</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button><button onclick="utils.game.addBot('${lobby.name}')" class="add-bot-button">Add Bot</button>`;
                     } else {
-                      utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button><button onclick="utils.game.addBot(this)" class="add-bot-button">Add Bot</button>`;
+                      utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>WAITING FOR ${playersNeededToStart} PLAYER${playersNeededToStart == 1 ? "" : "S"} TO START</p><button onclick="utils.game.copyLink()"><img src="/images/menu/link.png"> Copy Link</button><button onclick="utils.game.addBot('${lobby.name}')" class="add-bot-button">Add Bot</button>`;
                     }
                   }
                 }
@@ -6227,6 +6228,9 @@
           utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
           utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>LOBBY NOT FOUND.</p><button onclick="location.href = '/'">Main Menu</button>`;
         }
+      }, function() {
+        utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";
+        utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").innerHTML = `<p>ERROR CONNECTING TO SERVER. PLEASE TRY AGAIN LATER.</p><button onclick="location.href = '/'">Main Menu</button>`;
       });
     </script>
   </body>

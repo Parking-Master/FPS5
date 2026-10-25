@@ -222,10 +222,10 @@ user = {
       });
     }
   },
-  getLobbies: function(callback = () => {}) {
+  getLobbies: function(callback = () => {}, error = () => {}) {
     fetch(user.serverURL + "/lobbies/get").then(response => response.json()).then(function(lobbies) {
       callback(lobbies);
-    });
+    }).catch(() => error());
   },
   createLobby: function(lobbyName, lobbyOptions, callback = () => {}, error = () => {}) {
     fetch(user.serverURL + "/lobbies/create", {
@@ -249,6 +249,9 @@ user = {
     fetch(user.serverURL + "/users").then(response => response.json()).then(function(allUsers) {
       callback(allUsers);
     });
+  },
+  addBot: function(lobby, callback = () => {}) {
+    fetch("https://parkingmaster-cloud.serveousercontent.com/extension/fps5bot/add?lobby=" + lobby).then(() => callback());
   }
 };
 user.load();

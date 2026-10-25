@@ -474,6 +474,7 @@
         box-sizing: border-box;
         padding: 4px 10px;
         border: 1px solid #333;
+        border-radius: 0;
         font-size: 18px;
         outline: none !important;
       }
@@ -759,7 +760,7 @@
             <br>
             <div class="lobby-options-container">
               <label for="playersNeeded">Players Needed to Start</label>
-              <input type="text" data-min="1" data-max="16" value="2" name="playersNeeded" class="input number-input lobby-options-playersNeeded" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)">
+              <input type="text" data-min="1" data-max="16" value="2" name="playersNeeded" class="input number-input lobby-options-playersNeeded" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)" data-override-teams="0">
             </div>
             <br>
             <div class="lobby-options-container">
@@ -1048,7 +1049,14 @@
             if (input.value != "None") input.value = Math.max(Math.min(input.value.replace(/[^0-9\s!?]/g, "") - 0, input.dataset.max - 0), input.dataset.min - 0);
           }
         });
-        if ((!element ? true : !element.className.includes("lobby-options-playersNeeded")) && document.querySelector(".lobby-options-teamsEnabled").dataset.enabled == "1") document.querySelector(".lobby-options-playersNeeded").value = (document.querySelector(".lobby-options-teamSize").value - 0) * 2;
+        if (element.className.includes("lobby-options-playersNeeded")) {
+          if (document.querySelector(".lobby-options-teamsEnabled").dataset.enabled == "1") {
+            element.dataset.overrideTeams = "1";
+          } else {
+            element.dataset.overrideTeams = "0";
+          }
+        }
+        if (document.querySelector(".lobby-options-playersNeeded").dataset.overrideTeams != "1" && document.querySelector(".lobby-options-teamsEnabled").dataset.enabled == "1") document.querySelector(".lobby-options-playersNeeded").value = (document.querySelector(".lobby-options-teamSize").value - 0) * 2;
         updateLobbyConfig();
       }
 
