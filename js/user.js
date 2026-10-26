@@ -250,8 +250,14 @@ user = {
       callback(allUsers);
     });
   },
-  addBot: function(lobby, callback = () => {}) {
-    fetch("https://parkingmaster-cloud.serveousercontent.com/extension/fps5bot/add?lobby=" + lobby).then(() => callback());
+  addBot: function(lobby, callback = () => {}, error = () => {}) {
+    fetch("https://parkingmaster-cloud.serveousercontent.com/extension/fps5bot/add?lobby=" + lobby).then(response => {
+      if (response.status == 429) {
+        error();
+      } else {
+        callback();
+      }
+    });
   }
 };
 user.load();

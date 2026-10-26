@@ -810,7 +810,6 @@
       </div>
     </div>
     <script>
-      if (!location.hostname.includes("5.fps")) gametime.serverURL = "ws://192.168.70.58:7201";
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(50, 1440 / 900, 0.01, 1000);
@@ -1130,7 +1129,8 @@
           for (let i = 0; i < sandbox.models.length; i++) {
             const idSplit = sandbox.models[i].id.split(".");
             const isWeapon = idSplit[0] == "weapon";
-            if (sandbox.models[i].requiredMaps.includes(sandbox.presets.map) || sandbox.models[i].requiredMaps == "all") {
+            const isVehicle = idSplit[0] == "vehicle";
+            if ((sandbox.models[i].requiredMaps.includes(sandbox.presets.map) || sandbox.models[i].requiredMaps == "all") && (isVehicle ? sandbox.presets.options.vehicles : true)) {
               if (sandbox.models[i].id == "pose") sandbox.models[i].path = `/models/characters/poses/${sandbox.presets.character}.glb`;
               new THREE.GLTFLoader(sandbox.loadingManager).load(sandbox.models[i].path, async function(model) {
                 sandbox.models[i].model = model;
@@ -5891,6 +5891,9 @@
             user.addBot(lobby, function() {
               Notiflix.Loading.remove();
               Notiflix.Notify.success("1 bot has been added to this lobby.");
+            }, function() {
+              Notiflix.Loading.remove();
+              Notiflix.Notify.error("No bots are available to play right now.");
             });
           }
         }
@@ -6221,6 +6224,7 @@
                 if (player.uuid != gametime.player.uuid && typeof utils.players.objects[player.uuid] === "undefined" && player.data.ready) utils.players.add(player);
               };
             };
+            gametime.useFasterServer = true;
             gametime.connect();
           }
         }
