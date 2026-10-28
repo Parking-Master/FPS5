@@ -33,35 +33,34 @@ text = {
     weaponIcon.onload = function() {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      canvas.width = 600;
-      canvas.height = 192;
-      ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = "#ffffff";
-      if (sandbox.weapons[weapon].displayName.length < 15) {
-        ctx.font = "15px Arial";
-      } else {
-        ctx.font = "18px Arial";
+      canvas.width = 1000;
+      canvas.height = 500;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+      ctx.shadowColor = "#000";
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+      ctx.shadowBlur = 0;
+      let imageWidth = sandbox.weapons[weapon].holdType == "rifle" ? 200 : 150;
+      let imageHeight = sandbox.weapons[weapon].holdType == "rifle" ? 100 : 150;
+      ctx.drawImage(weaponIcon, (canvas.width / 2) - (imageWidth / 2), 0, imageWidth, imageHeight);
+      let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < imgData.data.length; i += 4) {
+        if (imgData.data[i + 3] != 0) {
+          imgData.data[i] = 255;
+          imgData.data[i + 1] = 255;
+          imgData.data[i + 2] = 255;
+          imgData.data[i + 3] = 255 * .7;
+        }
       }
-      ctx.fontWeight = "600";
-      ctx.textAlign = "left";
-      ctx.shadowColor = "#baebff";
-      ctx.shadowBlur = 1;
-      let imagePosition = [(canvas.width / 2) - 50, 0];
-      let imageSize = [100, 50];
-      if (sandbox.weapons[weapon].type == "pistol") {
-        imagePosition = [(canvas.width / 2) - 38, 0];
-        imageSize = [75, 75];
-      }
-      ctx.drawImage(weaponIcon, imagePosition[0], imagePosition[1], imageSize[0], imageSize[1]);
-      ctx.fillText(sandbox.weapons[weapon].displayName.toUpperCase(), (canvas.width / 2) + 60, 25);
-      ctx.moveTo(canvas.width / 2, 40);
+      ctx.putImageData(imgData, 0, 0);
+      ctx.lineWidth = 5;
+      ctx.moveTo(canvas.width / 2, imageHeight);
       ctx.lineTo(canvas.width / 2, canvas.height / 2);
       ctx.stroke();
       const texture = new THREE.Texture(canvas);
       texture.needsUpdate = true;
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, sizeAttenuation: false, depthTest: false, depthWrite: false }));
-      sprite.scale.set(10, 3.8, 1);
-      sprite.position.y = 1.25;
+      sprite.scale.set(6, 3, 1);
       sprite.name = "WeaponPointer";
       callback(sprite);
     }
