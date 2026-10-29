@@ -1067,7 +1067,8 @@
             respawnTime: 4, // Seconds until you respawn
             gravity: 100, // Percentage of gravity
             radar: false, // Whether the radar is enabled
-            vehicles: true // Whether vehicles are enabled
+            vehicles: true, // Whether vehicles are enabled,
+            mapWeapons: true // Whether map weapons are enabled
           }
         },
         settings: {
@@ -1924,7 +1925,21 @@
               [-21,2.8,1.9,0,-2.7,0],
               [21,2.8,1.9,0,2.7,0]
             ],
-            vehicles: []
+            vehicles: [],
+            weapons: [
+              {
+                type: "Remington-870",
+                position: [0, 4, -2.5, 0]
+              },
+              {
+                type: "Grenade-Launcher",
+                position: [-19.5, 4, .3, Math.PI]
+              },
+              {
+                type: "HK-G28",
+                position: [0, 1, -25.4, 0]
+              }
+            ]
           },
           "Standoff": {
             ambienceSound: 0,
@@ -1940,7 +1955,21 @@
               [8.1, 0, 7.6, 0, 0, 0],
               [16.1, 2.5, 15.4, 0, 0, 0]
             ],
-            vehicles: []
+            vehicles: [],
+            weapons: [
+              {
+                type: "Ruger-RPR",
+                position: [-7.5, 1.1, 3.1, .6]
+              },
+              {
+                type: "MLRS",
+                position: [36.6, .3, 20.2, -Math.PI / 2]
+              },
+              {
+                type: "Machine-Gun",
+                position: [-17.3, 2.7, 25.4, Math.PI / 2]
+              }
+            ]
           },
           "Apex": {
             ambienceSound: 0,
@@ -4577,6 +4606,7 @@
             }
             utils.options.set("globalMeleeTween", new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: -0.8, y: 0.1, z: -0.2 }, 100).easing(TWEEN.Easing.Quadratic.InOut).start().onComplete(function() {
               if (utils.options.get("CancelMelee")) return reset();
+              utils.effects.shock(.05);
               if (playerAgainstWall) {
                 let impact = utils.effects.bulletHole(0, 0, 20, camera, null, true);
                 audio.punch(impact);
@@ -5483,6 +5513,8 @@
             if (vehicle) {
               utils.weapons.stopFire();
               utils.vehicles.switchView(0);
+              camera.fov = sandbox.settings.cameraFov;
+              camera.updateProjectionMatrix();
               const worldPosition = camera.getWorldPosition(vectors[31]);
               camera.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
               camera.rotation.set(0, vehicle.mesh.rotation.y, 0);
@@ -5531,6 +5563,8 @@
                   utils.weapons.stopCrouch();
                   utils.weapons.stopWalking();
                   utils.armorAbilities.reset(false);
+                  camera.fov = 60;
+                  camera.updateProjectionMatrix();
                   vehicle.currentSeat = seat;
                   utils.options.set("CurrentVehicle", vehicle);
                   camera.position.set(0, 0, 0);
@@ -5784,9 +5818,11 @@
         game: {
           medals: {},
           start: function() {
-            sandbox.maps[sandbox.presets.map].weapons.forEach(weapon => {
-              utils.weapons.spawn("case", weapon.type, new THREE.Vector3(weapon.position[0], weapon.position[1], weapon.position[2]), weapon.position[3]);
-            });
+            if (sandbox.presets.options.mapWeapons) {
+              sandbox.maps[sandbox.presets.map].weapons.forEach(weapon => {
+                utils.weapons.spawn("case", weapon.type, new THREE.Vector3(weapon.position[0], weapon.position[1], weapon.position[2]), weapon.position[3]);
+              });
+            }
             utils.health.respawn();
             utils.options.set("GameStartTime", Date.now());
             animate();
@@ -6189,6 +6225,7 @@
             sandbox.presets.options.playersNeeded = lobby.playersNeeded;
             sandbox.presets.options.radar = lobby.radarEnabled;
             sandbox.presets.options.vehicles = lobby.vehiclesEnabled;
+            sandbox.presets.options.mapWeapons = lobby.mapWeaponsEnabled;
             sandbox.presets.options.scoreLimit = lobby.scoreLimit;
             sandbox.presets.options.timeLimit = lobby.timeLimit == null ? null : lobby.timeLimit * 60;
             sandbox.presets.map = lobby.map;
@@ -6241,10 +6278,12 @@
                   } else {
                     utils.ui.addToLeaderboard(gametime.player.uuid, gametime.player.username, gametime.player.data.profilePicture, null, true);
                   }
-                  sandbox.maps[sandbox.presets.map].weapons.forEach(weapon => {
-                    utils.models.get("weapon." + weapon.type).requiredMaps.push(sandbox.presets.map);
-                    utils.models.get("propweapon." + weapon.type).requiredMaps.push(sandbox.presets.map);
-                  });
+                  if (sandbox.presets.options.mapWeapons) {
+                    sandbox.maps[sandbox.presets.map].weapons.forEach(weapon => {
+                      utils.models.get("weapon." + weapon.type).requiredMaps.push(sandbox.presets.map);
+                      utils.models.get("propweapon." + weapon.type).requiredMaps.push(sandbox.presets.map);
+                    });
+                  }
                   sandbox.loadModels();
                 } else if (players.length > sandbox.presets.options.playersNeeded) {
                   utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";

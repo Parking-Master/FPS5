@@ -591,7 +591,8 @@
             grenades: { "mk2": 2, "plasma": 0 }
           },
           radarEnabled: true,
-          vehiclesEnabled: true
+          vehiclesEnabled: true,
+          mapWeaponsEnabled: true
         },
         "team_slayer_2v2": {
           mode: "team_slayer_2v2",
@@ -607,7 +608,8 @@
             grenades: { "mk2": 2, "plasma": 0 }
           },
           radarEnabled: true,
-          vehiclesEnabled: true
+          vehiclesEnabled: true,
+          mapWeaponsEnabled: true
         },
         "team_slayer_4v4": {
           mode: "team_slayer_4v4",
@@ -623,7 +625,8 @@
             grenades: { "mk2": 2, "plasma": 0 }
           },
           radarEnabled: true,
-          vehiclesEnabled: true
+          vehiclesEnabled: true,
+          mapWeaponsEnabled: true
         },
         "fiesta": {
           mode: "fiesta",
@@ -639,7 +642,8 @@
             grenades: { "mk2": 0, "plasma": 1 }
           },
           radarEnabled: true,
-          vehiclesEnabled: true
+          vehiclesEnabled: true,
+          mapWeaponsEnabled: false
         },
         "snipers": {
           mode: "snipers",
@@ -655,7 +659,8 @@
             grenades: { "mk2": 0, "plasma": 0 }
           },
           radarEnabled: false,
-          vehiclesEnabled: true
+          vehiclesEnabled: true,
+          mapWeaponsEnabled: false
         }
       };
       let currentModeConfig = null;
@@ -852,6 +857,11 @@
               <label for="vehiclesEnabled">Vehicles</label>
               <button name="vehiclesEnabled" data-enabled="1" class="lobby-options-vehiclesEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
             </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="mapWeaponsEnabled">Map Weapons</label>
+              <button name="mapWeaponsEnabled" data-enabled="1" class="lobby-options-mapWeaponsEnabled" onclick="toggleLobbyOption(this)"><i class="fa fa-retweet"></i> Enabled</button>
+            </div>
           </div>
           <div class="lobby-options-right-section">
             <div class="lobby-options-map-preview"></div>
@@ -1031,7 +1041,8 @@
             grenades: { "mk2": document.querySelector(".lobby-options-presets-grenades_mk2").value - 0, "plasma": document.querySelector(".lobby-options-presets-grenades_plasma").value - 0 }
           },
           radarEnabled: document.querySelector(".lobby-options-radarEnabled").dataset.enabled == "1",
-          vehiclesEnabled: document.querySelector(".lobby-options-vehiclesEnabled").dataset.enabled == "1"
+          vehiclesEnabled: document.querySelector(".lobby-options-vehiclesEnabled").dataset.enabled == "1",
+          mapWeaponsEnabled: document.querySelector(".lobby-options-mapWeaponsEnabled").dataset.enabled == "1"
         };
         if (document.querySelector(".lobby-options-presets-secondary_weapon").value != "none") modeConfig.presets.loadout[1] = document.querySelector(".lobby-options-presets-secondary_weapon").value;
         chooseMode(modeConfig);
