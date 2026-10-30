@@ -33,8 +33,8 @@ text = {
     weaponIcon.onload = function() {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      canvas.width = 1000;
-      canvas.height = 500;
+      canvas.width = 200;
+      canvas.height = 400;
       ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
       ctx.shadowColor = "#000";
       ctx.shadowOffsetX = 1;
@@ -60,7 +60,7 @@ text = {
       const texture = new THREE.Texture(canvas);
       texture.needsUpdate = true;
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, sizeAttenuation: false, depthTest: false, depthWrite: false }));
-      sprite.scale.set(6, 3, 1);
+      sprite.scale.set(1.5, 3, 1);
       sprite.name = "WeaponPointer";
       callback(sprite);
     }

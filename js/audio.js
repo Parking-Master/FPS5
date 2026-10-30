@@ -1,4 +1,4 @@
-const AudioWrapper = function(src, alias = false) {
+const AudioWrapper = function(src, alias = false, callback = () => {}) {
   const ctx = audio.ctx;
   const gain = ctx.createGain();
   gain.gain.value = 1;
@@ -17,16 +17,19 @@ const AudioWrapper = function(src, alias = false) {
       offset: 0,
       playing: false,
       loaded: false,
-      loadPromise: fetch(src).then(res => res.arrayBuffer()).then(buf => ctx.decodeAudioData(buf)).then(decoded => {
-        wrapper.buffer = decoded;
-        wrapper.loaded = true;
-        audio.checkIfLoaded();
-      }),
-      play: function() {
-        if (!wrapper.buffer) {
-          wrapper.loadPromise.then(() => wrapper.play());
-          return;
+      loadPromise: function() {
+        if (i == 0) {
+          fetch(src).then(res => res.arrayBuffer()).then(buffer => ctx.decodeAudioData(buffer)).then(decoded => {
+            if (alias) mainWrapper.alias.buffer = decoded, mainWrapper.alias.loaded = true;
+            wrapper.buffer = decoded;
+            wrapper.loaded = true;
+            callback(decoded);
+            audio.checkIfLoaded();
+          });
         }
+      },
+      play: function() {
+        if (!wrapper.buffer) return wrapper.loadPromise.then(() => wrapper.play());
         if (wrapper.playing) return;
         const source = ctx.createBufferSource();
         source.buffer = wrapper.buffer;
@@ -64,6 +67,7 @@ const AudioWrapper = function(src, alias = false) {
       },
       gain: gain
     };
+    wrapper.loadPromise();
     if (i == 0) {
       mainWrapper = wrapper;
     } else {
@@ -73,15 +77,16 @@ const AudioWrapper = function(src, alias = false) {
   return mainWrapper;
 };
 
-const AudioWrapper3d = function(src, alias = false) {
+let audioLoader = new THREE.AudioLoader();
+const AudioWrapper3d = function(src, alias = false, customBuffer = null) {
   let mainWrapper = {
     loaded: false
   };
-  new THREE.AudioLoader().load(src, buffer => {
+  function next(buffer) {
     let steps = 1;
     if (alias) steps = 2;
     for (let i = 0; i < steps; i++) {
-      const sound = new THREE.PositionalAudio(camera.audioListener);
+      let sound = new THREE.PositionalAudio(camera.audioListener);
       sound.setBuffer(buffer);
       scene.add(sound);
       if (i == 0) {
@@ -92,7 +97,12 @@ const AudioWrapper3d = function(src, alias = false) {
         mainWrapper.sound.alias = sound;
       }
     }
-  });
+  }
+  if (customBuffer) {
+    next(customBuffer);
+  } else {
+    audioLoader.load(src, buffer => next(buffer));
+  }
   return mainWrapper;
 }
 
@@ -156,8 +166,9 @@ audio = {
       if (sandbox.weapons[weapons[i]].loaded) {
         audio.sounds["reload." + weapons[i] + ".normal"] = AudioWrapper("/sounds/weapons/reloading/" + weapons[i] + ".mp3");
         audio.sounds["reload." + weapons[i] + ".full"] = AudioWrapper("/sounds/weapons/reloading/" + weapons[i] + ".full.mp3");
-        audio.sounds["fire." + weapons[i]] = AudioWrapper("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true);
-        audio.sounds["3d.fire." + weapons[i]] = AudioWrapper3d("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true);
+        audio.sounds["fire." + weapons[i]] = AudioWrapper("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true, function(buffer) {
+          audio.sounds["3d.fire." + weapons[i]] = AudioWrapper3d("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true, buffer);
+        });
       }
     }
     let vehicles = [...new Set(sandbox.maps[sandbox.presets.map].vehicles.map(vehicle => vehicle.type))];

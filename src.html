@@ -697,6 +697,51 @@
       .notiflix-loading, #NotiflixNotifyWrap, .notiflix-confirm {
         z-index: 10000 !important;
       }
+      .notiflix-confirm-content {
+        scrollbar-width: thin !important;
+      }
+      .settings-wrapper {
+        text-align: left !important;
+      }
+      .settings-header {
+        font-size: 20px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 10px;
+      }
+      .settings-option {
+        float: right !important;
+      }
+      .settings-wrapper select {
+        float: right;
+        width: 70px;
+        background: #ddd;
+        border: none;
+        padding: 4px 10px;
+      }
+      .settings-wrapper input[type="checkbox"] {
+        width: 20px !important;
+        height: 20px !important;
+        position: relative !important;
+        margin-left: 10px !important;
+        vertical-align: middle !important;
+      }
+      .settings-wrapper input[type="range"] {
+        width: 100px !important;
+        margin-top: -9px !important;
+      }
+      .settings-option-description {
+        font-size: 12px;
+        color: #999;
+        padding-left: 10px;
+        border-left: 1px solid #999;
+      }
+      .settings-range-number {
+        float: right;
+        color: #000;
+        font-size: 12px;
+        margin: 2px;
+        margin-left: 6px;
+      }
     </style>
   </head>
   <body>
@@ -1997,6 +2042,24 @@
                 type: "Warthog",
                 position: [-19, 1, 0, 0, Math.PI / 2, 0]
               }
+            ],
+            weapons: [
+              {
+                type: "Rocket-Launcher",
+                position: [-3.8, .5, -4.4, 0]
+              },
+              {
+                type: "M319-Grenade-Launcher",
+                position: [-16.5, 1.3, 7.6, Math.PI / 2]
+              },
+              {
+                type: "M319-Grenade-Launcher",
+                position: [8.4, 1.3, -9.6, -Math.PI / 2]
+              },
+              {
+                type: "HK-G28",
+                position: [-4, .5, -16.9, Math.PI]
+              }
             ]
           },
           "Abandoned_City": {
@@ -2010,7 +2073,21 @@
               [-27.5,0,2,0,-Math.PI/2,0],
               [8,0,-4.7,0,Math.PI,0]
             ],
-            vehicles: []
+            vehicles: [],
+            weapons: [
+              {
+                type: "HK-G28",
+                position: [20.7, 1, 6.6, Math.PI]
+              },
+              {
+                type: "30-SST",
+                position: [12.9, 1, -44.5, 0]
+              },
+              {
+                type: "Remington-870",
+                position: [-19.6, 1.1, -7, Math.PI / 2]
+              }
+            ]
           },
           "Vertex": {
             ambienceSound: 1,
@@ -2031,7 +2108,21 @@
               [35.42,1.37,10.74,0,3.141592653589793,0],
               [35.57,-5.96,14.48,0,0,0]
             ],
-            vehicles: []
+            vehicles: [],
+            weapons: [
+              {
+                type: "MLRS",
+                position: [35.6, 0, .3, -Math.PI / 2]
+              },
+              {
+                type: "AR-15",
+                position: [73.7, .5, -.2, -Math.PI / 2]
+              },
+              {
+                type: "AR-15",
+                position: [-3.1, .5, 0, Math.PI / 2]
+              }
+            ]
           },
         },
         weapons: {
@@ -2309,7 +2400,7 @@
             zoomFov: 35,
             zoomDuration: 600,
             fireMode: "auto",
-            fireRate: 100,
+            fireRate: 80,
             range: 100,
             recoil: .5,
             reticle: 7,
@@ -4809,6 +4900,13 @@
             }
           },
           spawn: function(type, weapon, position, rotation, options, offset = false, customUUID = null) {
+            let spawnedWeapons = utils.options.get("SpawnedWeapons");
+            let tooClose = false;
+            if (type == "case") {
+              for (uuid in spawnedWeapons) {
+                if (spawnedWeapons[uuid].gunCase && position.distanceTo(spawnedWeapons[uuid].position) < .1) return;
+              }
+            }
             let weaponMesh = utils.models.get("propweapon." + weapon).model.scene.clone();
             if (weaponMesh.getObjectByName("muzzleFlash")) weaponMesh.getObjectByName("muzzleFlash").visible = false;
             if (customUUID) {
@@ -4931,7 +5029,11 @@
               if (camera.position.distanceTo(spawnedWeapons[uuid].position) < 3.5) {
                 if (spawnedWeapons[uuid].gunCase) {
                   let cover = spawnedWeapons[uuid].gunCase.getObjectByName("Cover");
-                  if (cover.rotation.x > -Math.PI / 6) cover.rotation.x += -deltaTime * 10;
+                  if (cover.rotation.x > -Math.PI / 6) {
+                    cover.rotation.x += -deltaTime * 10;
+                  } else {
+                    cover.rotation.x = -Math.PI / 6;
+                  }
                 }
                 if (camera.position.distanceTo(spawnedWeapons[uuid].position) < 1.5) {
                   if (sandbox.loadout.indexOf(spawnedWeapons[uuid].weapon) > -1) {
@@ -4949,7 +5051,11 @@
               } else {
                 if (spawnedWeapons[uuid].gunCase) {
                   let cover = spawnedWeapons[uuid].gunCase.getObjectByName("Cover");
-                  if (cover.rotation.x < 0) cover.rotation.x += deltaTime * 10;
+                  if (cover.rotation.x < 0) {
+                    cover.rotation.x += deltaTime * 10;
+                  } else {
+                    cover.rotation.x = 0;
+                  }
                 }
               }
             }
@@ -5226,6 +5332,7 @@
             const intersects = raycaster.intersectObjects(map.children.concat(utils.players.shields, utils.vehicles.shields));
             if (intersects.length > 0) {
               const intersect = intersects[0];
+              if (intersect.object.name.startsWith("MapBarrier")) return;
               if (intersect.object.isShield && weapon != null) {
                 const shield = intersect.object;
                 if (shield.shieldType == "vehicle") {
@@ -5563,14 +5670,14 @@
                   utils.weapons.stopCrouch();
                   utils.weapons.stopWalking();
                   utils.armorAbilities.reset(false);
-                  camera.fov = 60;
-                  camera.updateProjectionMatrix();
                   vehicle.currentSeat = seat;
                   utils.options.set("CurrentVehicle", vehicle);
                   camera.position.set(0, 0, 0);
                   camera.rotation.set(0, 0, 0);
                   seat.seat.add(camera);
                   if (seat.type == "driver") {
+                    camera.fov = 60;
+                    camera.updateProjectionMatrix();
                     scene.remove(sandbox.currentWeapon);
                     utils.ui.hideCrosshair();
                     utils.ui.hideBottomRightSection();
@@ -5897,17 +6004,92 @@
               utils.game.togglePause();
             } else if (action == "leave-game") {
               audio.pause();
-              if (confirm("This will return you to the main menu. You do not earn rewards when you leave a game. Are you sure?")) {
+              Notiflix.Confirm.show("Leave Game", "Are you sure you want to leave the current game and return to the Main Menu?", "Continue", "Cancel", function() {
                 location.replace("/");
-              }
+              }, () => {}, {
+                borderRadius: 0,
+                okButtonBackground: "#5aace1",
+                titleColor: "#5aace1",
+                zindex: 10000
+              });
             } else if (action == "settings") {
               audio.pause();
+              Notiflix.Confirm.show("", "", "Save", "Close", () => {}, () => {}, {
+                borderRadius: 0,
+                okButtonBackground: "#5aace1",
+                titleColor: "#5aace1",
+                zindex: 10000
+              });
+              document.querySelector(".notiflix-confirm-head").innerHTML = `
+              <div class="settings-wrapper">
+                <div class="settings-header">Settings</div>
+                <div class="settings-container">
+                  <label for="cameraFov">Camera FOV</label>
+                  <select value="47" name="cameraFov" class="settings-option settings-option-cameraFov" onchange="">
+                    <option value="38">38°</option>
+                    <option value="39">39°</option>
+                    <option value="40">40°</option>
+                    <option value="41">41°</option>
+                    <option value="42">42°</option>
+                    <option value="43">43°</option>
+                    <option value="44">44°</option>
+                    <option value="45">45°</option>
+                    <option value="46">46°</option>
+                    <option value="47" selected>47°</option>
+                    <option value="48">48°</option>
+                    <option value="49">49°</option>
+                    <option value="50">50°</option>
+                    <option value="51">51°</option>
+                    <option value="52">52°</option>
+                    <option value="53">53°</option>
+                    <option value="54">54°</option>
+                    <option value="55">55°</option>
+                    <option value="56">56°</option>
+                    <option value="57">57°</option>
+                    <option value="58">58°</option>
+                    <option value="59">59°</option>
+                    <option value="60">60°</option>
+                  </select>
+                  <div class="settings-option-description">The vertical FOV of the player camera.</div>
+                </div>
+                <div class="settings-container">
+                  <label for="shrinkScreen">Shrink Screen</label>
+                  <input type="checkbox" name="shrinkScreen" class="settings-option settings-option-shrinkScreen">
+                  <div class="settings-option-description">Whether to shrink the screen to improve performance without lowering quality.</div>
+                </div>
+                <div class="settings-container">
+                  <label for="rendererQuality">Renderer Quality</label>
+                  <label for="rendererQuality" class="settings-range-number">50%</label>
+                  <input type="range" name="rendererQuality" class="settings-option settings-option-rendererQuality">
+                  <div class="settings-option-description">The percentage of screen resolution the game should follow. Set lower for better performance.</div>
+                </div>
+                <div class="settings-container">
+                  <label for="mouseLookSpeed">Mouse Look Speed</label>
+                  <label for="mouseLookSpeed" class="settings-range-number">5</label>
+                  <input type="range" name="mouseLookSpeed" class="settings-option settings-option-mouseLookSpeed">
+                </div>
+                <div class="settings-container">
+                  <label for="gamepadLookSpeed">Gamepad Look Speed</label>
+                  <label for="gamepadLookSpeed" class="settings-range-number">5</label>
+                  <input type="range" name="gamepadLookSpeed" class="settings-option settings-option-gamepadLookSpeed">
+                </div>
+                <div class="settings-container">
+                  <label for="touchLookSpeed">Touch Look Speed</label>
+                  <label for="touchLookSpeed" class="settings-range-number">5</label>
+                  <input type="range" name="touchLookSpeed" class="settings-option settings-option-touchLookSpeed">
+                </div>
+              </div>
+              `;
             } else if (action == "report-bug") {
               audio.pause();
-              let report = prompt("Write your bug report here, and we'll try our best to fix it.");
-              if (report) {
-                alert("Report sent! Thanks for your contribution.");
-              }
+              Notiflix.Confirm.prompt("Report Bug", "What problem are you having with FPS5? Write it below, and we'll try our best to fix it:", "", "Send", "Cancel", function() {
+                Notiflix.Report.success("Report Bug", "Your report was sent successfully! Thanks for your contribution.", "Got it", () => {}, { borderRadius: 0, zindex: 10000 });
+              }, () => {}, {
+                borderRadius: 0,
+                okButtonBackground: "#5aace1",
+                titleColor: "#5aace1",
+                zindex: 10000
+              });
             }
           },
           keyDownFunction: function(event) {
@@ -6050,11 +6232,11 @@
       document.addEventListener("keydown", utils.game.keyDownFunction);
       document.addEventListener("keyup", utils.game.keyUpFunction);
       document.addEventListener("mousedown", function(event) {
-        if (document.pointerLockElement != null || !sandbox.initialized || utils.options.get("GamePaused")) return;
+        if (document.pointerLockElement != null || utils.options.get("GameStartTime") == null || utils.options.get("GamePaused")) return;
         if (document.hasFocus()) document.body.requestPointerLock(), PointerControls.lock();
       });
       document.addEventListener("mouseup", (event) => {
-        if (!PointerControls.isLocked || !sandbox.initialized || utils.options.get("GamePaused")) return;
+        if (!PointerControls.isLocked || utils.options.get("GameStartTime") == null || utils.options.get("GamePaused")) return;
         if (document.hasFocus()) PointerControls.lock();
       });
 
