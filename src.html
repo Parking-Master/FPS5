@@ -1229,7 +1229,7 @@
               for (player in gametime.players) {
                 if (gametime.players[player].data.ready) playersReady++;
               }
-              if (playersReady == Object.keys(gametime.players).length) {
+              if (Object.keys(gametime.players).length == 1 || playersReady == Object.keys(gametime.players).length) {
                 utils.game.start();
                 utils.ui.elements.loadingScreen.querySelector(".loading-screen-indicator").style.opacity = "0";
                 setTimeout(() => {
@@ -2272,7 +2272,7 @@
           },
           "HK-G28": {
             name: "HK-G28",
-            displayName: "Sniper Rifle HK-G28",
+            displayName: "HK-G28 Sniper Rifle",
             ammo: 8,
             defaultAmmo: 8,
             currentAmmo: 4,
@@ -2386,7 +2386,7 @@
           },
           "Machine-Gun": {
             name: "Machine-Gun",
-            displayName: ".50 Cal Machine Gun Turret",
+            displayName: "Machine Gun Turret",
             ammo: 200,
             defaultAmmo: 200,
             currentAmmo: 100,
@@ -2422,7 +2422,7 @@
           },
           "Ruger-RPR": {
             name: "Ruger-RPR",
-            displayName: "Ruger .50 Cal Sniper Rifle",
+            displayName: "Ruger-RPR Sniper Rifle",
             ammo: 12,
             defaultAmmo: 12,
             currentAmmo: 6,
@@ -2461,7 +2461,7 @@
           },
           "Desert-Eagle": {
             name: "Desert-Eagle",
-            displayName: "Desert Eagle",
+            displayName: "Desert Eagle .50AE",
             ammo: 16,
             defaultAmmo: 16,
             currentAmmo: 8,
@@ -2498,7 +2498,7 @@
           },
           "AR-15": {
             name: "AR-15",
-            displayName: "AR-15 Long Range Rifle",
+            displayName: "AR-15 Precision Rifle",
             ammo: 28,
             defaultAmmo: 28,
             currentAmmo: 14,
@@ -2537,7 +2537,7 @@
           },
           "Rocket-Launcher": {
             name: "Rocket-Launcher",
-            displayName: "SPNKr Rocket Launcher",
+            displayName: "SPNKR Rocket Launcher",
             ammo: 2,
             defaultAmmo: 2,
             currentAmmo: 2,
@@ -2611,7 +2611,7 @@
           },
           "MLRS": {
             name: "MLRS",
-            displayName: "MLRS Rocket Launcher",
+            displayName: "MLRS Rocket Cannon",
             ammo: 18,
             defaultAmmo: 18,
             currentAmmo: 6,
@@ -3403,6 +3403,7 @@
             gametime.player.data.kills++;
           },
           update: function(i) {
+            if (!gametime.connected) return;
             gametime.player.data.position = [camera.position.x, camera.position.y - 1, camera.position.z];
             gametime.player.data.rotation = [camera.rotation.x, camera.rotation.y, camera.rotation.z];
             gametime.player.data.gameStartTime = utils.options.get("GameStartTime");
