@@ -703,6 +703,9 @@
       .settings-wrapper {
         text-align: left !important;
       }
+      .settings-wrapper label {
+        font-size: 13px;
+      }
       .settings-header {
         font-size: 20px;
         border-bottom: 1px solid #ddd;
@@ -717,6 +720,7 @@
         background: #ddd;
         border: none;
         padding: 4px 10px;
+        color: #000 !important;
       }
       .settings-wrapper input[type="checkbox"] {
         width: 20px !important;
@@ -726,7 +730,7 @@
         vertical-align: middle !important;
       }
       .settings-wrapper input[type="range"] {
-        width: 100px !important;
+        width: 90px !important;
         margin-top: -9px !important;
       }
       .settings-option-description {
@@ -741,6 +745,7 @@
         font-size: 12px;
         margin: 2px;
         margin-left: 6px;
+        width: 25px;
       }
     </style>
   </head>
@@ -1153,7 +1158,12 @@
               "leaderboard": ["back"],
               "pause": ["start"]
             }
-          }
+          },
+          shrinkScreen: false,
+          rendererQuality: .5,
+          mouseLookSpeed: 5,
+          gamepadLookSpeed: 5,
+          touchLookSpeed: 5
         },
         loadout: [],
         grenades: {},
@@ -3609,10 +3619,10 @@
                 }
               }
             },
-            fire: function(player, point, spreadX, spreadY, bulletHole) {
+            fire: function(player, point, spreadX, spreadY, bulletHole, playerHit) {
               if (!player.isWalking && !player.isCrouching && (!player.vehicle || player.vehicle.seat == "gunner")) utils.players.animations.start(player, player.weapon.type + "_shoot", { loop: THREE.LoopOnce, reset: true, weight: 10 });
               if (sandbox.weapons[player.weapon.name].muzzleFlash) utils.effects.muzzleFlash(player.weapon);
-              if (sandbox.weapons[player.weapon.name].type != "rocket-launcher") utils.players.effects.bulletHole(point, spreadX, spreadY, bulletHole);
+              if (!playerHit && sandbox.weapons[player.weapon.name].type != "rocket-launcher") utils.players.effects.bulletHole(point, spreadX, spreadY, bulletHole);
               audio.fire3D(player.weapon.name, player.scene.position);
             },
             reload: function(player) {
@@ -4430,6 +4440,7 @@
 
                   const spreadX = spreads[roundsFired];
                   const spreadY = spreads[roundsFired + 1];
+                  let playerHit = false;
                   if (weapon.type == "rocket-launcher") {
                     utils.rockets.launch(weapon.name);
                   } else if (weapon.type == "grenade-launcher") {
@@ -4438,7 +4449,7 @@
                     let spreads = Array(6 * 2).fill(0).map(x => { const spread = Math.random() / 60 * weapon.spread; return Math.floor(Math.random() * 2) == 0 ? -spread : spread });
                     for (let i = 0; i < 6; i++) utils.effects.bulletHole(spreads[i], spreads[i + 1], weapon.bulletHole, camera, weapon);
                   } else {
-                    utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
+                    playerHit = utils.effects.bulletHole(spreadX, spreadY, weapon.bulletHole, camera, weapon);
                   }
                   if (weapon.muzzleFlash) {
                     if (!weapon.scope || !zoomed) {
@@ -4460,7 +4471,7 @@
                     camera.getWorldQuaternion(vectors[10]);
                     cameraRotation.setFromQuaternion(vectors[10]);
                   }
-                  gametime.run("fireWeapon", [gametime.player.uuid, [cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotation.x, cameraRotation.y, cameraRotation.z], spreadX, spreadY, weapon.bulletHole]);
+                  gametime.run("fireWeapon", [gametime.player.uuid, [cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotation.x, cameraRotation.y, cameraRotation.z], spreadX, spreadY, weapon.bulletHole, playerHit]);
                 }
                 requestAnimationFrame(animation);
               } else {
@@ -4700,7 +4711,7 @@
               if (utils.options.get("CancelMelee")) return reset();
               utils.effects.shock(.05);
               if (playerAgainstWall) {
-                let impact = utils.effects.bulletHole(0, 0, 20, camera, null, true);
+                let impact = utils.effects.bulletHole(0, 0, 2, camera, null, true);
                 audio.punch(impact);
               } else {
                 audio.punch();
@@ -4735,6 +4746,12 @@
             utils.ui.hideCrosshair();
             utils.weapons.animations.stop("idle");
             utils.weapons.animations.restart("run");
+            if (utils.options.get("globalSprintTween")) {
+              if (utils.options.get("globalSprintTween").out) {
+                utils.options.get("globalSprintTween").out.position.stop();
+                utils.options.get("globalSprintTween").out.rotation.stop();
+              }
+            }
             utils.options.set("globalSprintTween", {
               in: {
                 position: new TWEEN.Tween(utils.weapons.getChild().position).to({ x: -0.01, y: 0, z: -0.01 }, 400).easing(TWEEN.Easing.Quadratic.Out).start(),
@@ -4902,12 +4919,6 @@
           },
           spawn: function(type, weapon, position, rotation, options, offset = false, customUUID = null) {
             let spawnedWeapons = utils.options.get("SpawnedWeapons");
-            let tooClose = false;
-            if (type == "case") {
-              for (uuid in spawnedWeapons) {
-                if (spawnedWeapons[uuid].gunCase && position.distanceTo(spawnedWeapons[uuid].position) < .1) return;
-              }
-            }
             let weaponMesh = utils.models.get("propweapon." + weapon).model.scene.clone();
             if (weaponMesh.getObjectByName("muzzleFlash")) weaponMesh.getObjectByName("muzzleFlash").visible = false;
             if (customUUID) {
@@ -5333,7 +5344,7 @@
             const intersects = raycaster.intersectObjects(map.children.concat(utils.players.shields, utils.vehicles.shields));
             if (intersects.length > 0) {
               const intersect = intersects[0];
-              if (intersect.object.name.startsWith("MapBarrier")) return;
+              if (intersect.object.name.startsWith("MapBarrier")) return true;
               if (intersect.object.isShield && weapon != null) {
                 const shield = intersect.object;
                 if (shield.shieldType == "vehicle") {
@@ -5346,6 +5357,7 @@
                   utils.players.hit(utils.players.objects[shield.playerUUID], shield, weapon);
                   particles.blood(intersect.point);
                 }
+                return true;
               } else {
                 if (checkDistance && camera.position.distanceTo(intersect.point) > 1) return false;
                 const bulletHole = utils.options.get("bulletHoles")[type];
@@ -5370,6 +5382,7 @@
                 if (Math.floor(Math.random() * 5) == 0) audio.ricochet(intersect.point);
               }
             }
+            return false;
           },
           muzzleFlash: function(model = null) {
             const flash = (model || sandbox.currentWeapon).getObjectByName("muzzleFlash");
@@ -5926,13 +5939,14 @@
         game: {
           medals: {},
           start: function() {
-            if (sandbox.presets.options.mapWeapons) {
+            if (sandbox.presets.options.mapWeapons && gametime.player.position == 1) {
               sandbox.maps[sandbox.presets.map].weapons.forEach(weapon => {
                 utils.weapons.spawn("case", weapon.type, new THREE.Vector3(weapon.position[0], weapon.position[1], weapon.position[2]), weapon.position[3]);
               });
             }
             utils.health.respawn();
             utils.options.set("GameStartTime", Date.now());
+            utils.game.applySettings();
             animate();
             audio.ambience();
             renderer.shadowMap.needsUpdate = true;
@@ -6006,8 +6020,9 @@
             } else if (action == "leave-game") {
               audio.pause();
               Notiflix.Confirm.show("Leave Game", "Are you sure you want to leave the current game and return to the Main Menu?", "Continue", "Cancel", function() {
+                audio.pause();
                 location.replace("/");
-              }, () => {}, {
+              }, () => audio.pause(), {
                 borderRadius: 0,
                 okButtonBackground: "#5aace1",
                 titleColor: "#5aace1",
@@ -6015,10 +6030,13 @@
               });
             } else if (action == "settings") {
               audio.pause();
-              Notiflix.Confirm.show("", "", "Save", "Close", () => {}, () => {}, {
+              Notiflix.Confirm.show("", "", "Save", "Close", function() {
+                audio.pause();
+                utils.game.updateSettingsFromDialog();
+                utils.game.applySettings();
+              }, () => audio.pause(), {
                 borderRadius: 0,
                 okButtonBackground: "#5aace1",
-                titleColor: "#5aace1",
                 zindex: 10000
               });
               document.querySelector(".notiflix-confirm-head").innerHTML = `
@@ -6026,7 +6044,7 @@
                 <div class="settings-header">Settings</div>
                 <div class="settings-container">
                   <label for="cameraFov">Camera FOV</label>
-                  <select value="47" name="cameraFov" class="settings-option settings-option-cameraFov" onchange="">
+                  <select value="${sandbox.settings.cameraFov}" name="cameraFov" class="settings-option settings-option-cameraFov">
                     <option value="38">38°</option>
                     <option value="39">39°</option>
                     <option value="40">40°</option>
@@ -6036,7 +6054,7 @@
                     <option value="44">44°</option>
                     <option value="45">45°</option>
                     <option value="46">46°</option>
-                    <option value="47" selected>47°</option>
+                    <option value="47">47°</option>
                     <option value="48">48°</option>
                     <option value="49">49°</option>
                     <option value="50">50°</option>
@@ -6055,42 +6073,115 @@
                 </div>
                 <div class="settings-container">
                   <label for="shrinkScreen">Shrink Screen</label>
-                  <input type="checkbox" name="shrinkScreen" class="settings-option settings-option-shrinkScreen">
+                  <input type="checkbox" name="shrinkScreen" class="settings-option settings-option-shrinkScreen" ${sandbox.settings.shrinkScreen ? "checked" : ""}>
                   <div class="settings-option-description">Whether to shrink the screen to improve performance without lowering quality.</div>
                 </div>
                 <div class="settings-container">
                   <label for="rendererQuality">Renderer Quality</label>
-                  <label for="rendererQuality" class="settings-range-number">50%</label>
-                  <input type="range" name="rendererQuality" class="settings-option settings-option-rendererQuality">
+                  <label for="rendererQuality" class="settings-range-number">${Math.round(sandbox.settings.rendererQuality * 100)}%</label>
+                  <input type="range" min="10" max="100" step="1" value="${sandbox.settings.rendererQuality * 100}" name="rendererQuality" class="settings-option settings-option-rendererQuality" oninput="utils.game.updateSettingsInput(this)">
                   <div class="settings-option-description">The percentage of screen resolution the game should follow. Set lower for better performance.</div>
                 </div>
                 <div class="settings-container">
                   <label for="mouseLookSpeed">Mouse Look Speed</label>
-                  <label for="mouseLookSpeed" class="settings-range-number">5</label>
-                  <input type="range" name="mouseLookSpeed" class="settings-option settings-option-mouseLookSpeed">
+                  <label for="mouseLookSpeed" class="settings-range-number">${sandbox.settings.mouseLookSpeed}</label>
+                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.mouseLookSpeed}" name="mouseLookSpeed" class="settings-option settings-option-mouseLookSpeed" oninput="utils.game.updateSettingsInput(this)">
                 </div>
                 <div class="settings-container">
                   <label for="gamepadLookSpeed">Gamepad Look Speed</label>
-                  <label for="gamepadLookSpeed" class="settings-range-number">5</label>
-                  <input type="range" name="gamepadLookSpeed" class="settings-option settings-option-gamepadLookSpeed">
+                  <label for="gamepadLookSpeed" class="settings-range-number">${sandbox.settings.touchLookSpeed}</label>
+                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.touchLookSpeed}" name="gamepadLookSpeed" class="settings-option settings-option-gamepadLookSpeed" oninput="utils.game.updateSettingsInput(this)">
                 </div>
                 <div class="settings-container">
                   <label for="touchLookSpeed">Touch Look Speed</label>
-                  <label for="touchLookSpeed" class="settings-range-number">5</label>
-                  <input type="range" name="touchLookSpeed" class="settings-option settings-option-touchLookSpeed">
+                  <label for="touchLookSpeed" class="settings-range-number">${sandbox.settings.gamepadLookSpeed}</label>
+                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.gamepadLookSpeed}" name="touchLookSpeed" class="settings-option settings-option-touchLookSpeed" oninput="utils.game.updateSettingsInput(this)">
                 </div>
               </div>
               `;
+              document.querySelector(`.settings-option-cameraFov option[value="${sandbox.settings.cameraFov}"]`).selected = "selected";
             } else if (action == "report-bug") {
               audio.pause();
               Notiflix.Confirm.prompt("Report Bug", "What problem are you having with FPS5? Write it below, and we'll try our best to fix it:", "", "Send", "Cancel", function() {
+                audio.pause();
                 Notiflix.Report.success("Report Bug", "Your report was sent successfully! Thanks for your contribution.", "Got it", () => {}, { borderRadius: 0, zindex: 10000 });
-              }, () => {}, {
+              }, () => audio.pause(), {
                 borderRadius: 0,
                 okButtonBackground: "#5aace1",
                 titleColor: "#5aace1",
                 zindex: 10000
               });
+            }
+          },
+          updateSettingsInput: function(element) {
+            if (element.name == "rendererQuality") {
+              element.previousElementSibling.textContent = element.value + "%";
+            } else {
+              element.previousElementSibling.textContent = element.value;
+            }
+          },
+          updateSettingsFromDialog: function() {
+            user.set("settings", {
+              cameraFov: parseFloat(document.querySelector(".settings-option-cameraFov").value),
+              bindings: {
+                keyboard: {
+                  "jump": ["Space"],
+                  "fire": ["KeyF", "BracketRight"],
+                  "zoom": ["KeyI"],
+                  "reload": ["KeyR"],
+                  "switch": ["KeyY", "Tab"],
+                  "grenade": ["KeyG"],
+                  "melee": ["KeyB"],
+                  "armorAbility": ["KeyM"],
+                  "sprint": ["ShiftLeft"],
+                  "crouch": ["KeyC"],
+                  "enterVehicle": ["KeyE", "KeyT"],
+                  "vehicleView": ["KeyV"],
+                  "interact": ["KeyT"],
+                  "leaderboard": ["KeyL"],
+                  "pause": ["KeyP"]
+                },
+                gamepad: {
+                  "jump": ["a"],
+                  "fire": ["rt"],
+                  "zoom": ["r"],
+                  "reload": ["rb"],
+                  "switch": ["y"],
+                  "grenade": ["lt"],
+                  "melee": ["b"],
+                  "armorAbility": ["lb"],
+                  "sprint": ["x"],
+                  "crouch": ["l"],
+                  "enterVehicle": ["rb"],
+                  "vehicleView": ["x"],
+                  "interact": ["rb"],
+                  "leaderboard": ["back"],
+                  "pause": ["start"]
+                }
+              },
+              shrinkScreen: document.querySelector(".settings-option-shrinkScreen").checked,
+              rendererQuality: parseFloat(document.querySelector(".settings-option-rendererQuality").value) / 100,
+              mouseLookSpeed: parseFloat(document.querySelector(".settings-option-mouseLookSpeed").value),
+              gamepadLookSpeed: parseFloat(document.querySelector(".settings-option-gamepadLookSpeed").value),
+              touchLookSpeed: parseFloat(document.querySelector(".settings-option-touchLookSpeed").value)
+            });
+            sandbox.settings = user.data.settings;
+          },
+          applySettings: function() {
+            if (!deathScreen && !utils.vehicles.check()) {
+              camera.fov = sandbox.settings.cameraFov;
+              camera.updateProjectionMatrix();
+            }
+            if (sandbox.settings.shrinkScreen) {
+              utils.ui.elements.container.style.scale = ".7";
+            } else {
+              utils.ui.elements.container.style.scale = "";
+            }
+            onWindowResize();
+            if (!utils.options.get("Zoomed")) {
+              PointerControls.pointerSpeed = sandbox.settings.mouseLookSpeed * .12;
+              TouchControls.speed = sandbox.settings.touchLookSpeed * .12;
+              GamepadControls.lookSpeed = sandbox.settings.gamepadLookSpeed;
             }
           },
           keyDownFunction: function(event) {
@@ -6199,7 +6290,7 @@
       };
 
       function onWindowResize() {
-        renderer.setPixelRatio(1.3);
+        renderer.setPixelRatio(sandbox.settings.rendererQuality * 2.6 * (sandbox.settings.shrinkScreen ? .7 : 1));
         let width = window.innerWidth * .5;
         let height = window.innerHeight * .5;
         if (utils.options.get("MobileGame")) {
@@ -6270,9 +6361,9 @@
           size: new THREE.Vector3(.02, .02, .02),
           material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/1.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
         },
-        20: {
+        2: {
           size: vectors[23],
-          material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/20.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
+          material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/2.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
         }
       });
       utils.options.set("materials", {
@@ -6335,8 +6426,8 @@
       gametime.on("stopRunning", function(player) {
         if (player != gametime.player.uuid) utils.players.stopRunning(utils.players.objects[player]);
       });
-      gametime.on("fireWeapon", function(player, point, spreadX, spreadY, bulletHole) {
-        if (player != gametime.player.uuid) utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY, bulletHole);
+      gametime.on("fireWeapon", function(player, point, spreadX, spreadY, bulletHole, playerHit) {
+        if (player != gametime.player.uuid) utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY, bulletHole, playerHit);
       });
       gametime.on("reloadWeapon", function(player) {
         if (player != gametime.player.uuid) utils.players.weapons.reload(utils.players.objects[player]);
@@ -6392,6 +6483,7 @@
           }
           if (lobbyMatch) {
             lobbyFound = true;
+            sandbox.settings = user.data.settings;
             sandbox.presets.character = user.data.character;
             gametime.set("username", user.data.username);
             if (lobby.personalLoadoutsEnabled) {

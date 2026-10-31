@@ -191,7 +191,51 @@ user = {
           },
           "armorAbility": null,
           "character": "Raven",
-          "profilePicture": "https://cdn.jsdelivr.net/gh/Parking-Master/Parking-Master@latest/img/profile-picture.png"
+          "profilePicture": "https://cdn.jsdelivr.net/gh/Parking-Master/Parking-Master@latest/img/profile-picture.png",
+          "settings": {
+            "cameraFov": 47,
+            "bindings": {
+              "keyboard": {
+                "jump": ["Space"],
+                "fire": ["KeyF", "BracketRight"],
+                "zoom": ["KeyI"],
+                "reload": ["KeyR"],
+                "switch": ["KeyY", "Tab"],
+                "grenade": ["KeyG"],
+                "melee": ["KeyB"],
+                "armorAbility": ["KeyM"],
+                "sprint": ["ShiftLeft"],
+                "crouch": ["KeyC"],
+                "enterVehicle": ["KeyE", "KeyT"],
+                "vehicleView": ["KeyV"],
+                "interact": ["KeyT"],
+                "leaderboard": ["KeyL"],
+                "pause": ["KeyP"]
+              },
+              "gamepad": {
+                "jump": ["a"],
+                "fire": ["rt"],
+                "zoom": ["r"],
+                "reload": ["rb"],
+                "switch": ["y"],
+                "grenade": ["lt"],
+                "melee": ["b"],
+                "armorAbility": ["lb"],
+                "sprint": ["x"],
+                "crouch": ["l"],
+                "enterVehicle": ["rb"],
+                "vehicleView": ["x"],
+                "interact": ["rb"],
+                "leaderboard": ["back"],
+                "pause": ["start"]
+              }
+            },
+            "shrinkScreen": false,
+            "rendererQuality": .5,
+            "mouseLookSpeed": 5,
+            "gamepadLookSpeed": 5,
+            "touchLookSpeed": 5
+          }
         }));
       }
       user.data = JSON.parse(localStorage["local-user-data"]);
