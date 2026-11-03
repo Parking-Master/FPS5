@@ -747,6 +747,13 @@
         margin-left: 6px;
         width: 25px;
       }
+      .gamepad-start-icon-button img, .gamepad-b-icon-button img {
+        width: 30px;
+        height: 30px;
+        filter: brightness(10);
+        position: absolute;
+        margin-top: -4px;
+      }
     </style>
   </head>
   <body>
@@ -770,10 +777,10 @@
     <div class="pause-menu">
       <div class="pause-menu-wrapper">
         <div class="pause-menu-header">PAUSE MENU</div>
-        <div class="pause-menu-option pause-menu-option-resume" onclick="utils.game.pauseMenuAction('resume')"><div class="pause-menu-tooltip">RESUME</div></div>
-        <div class="pause-menu-option pause-menu-option-leave-game" onclick="utils.game.pauseMenuAction('leave-game')"><div class="pause-menu-tooltip">LEAVE GAME</div></div>
-        <div class="pause-menu-option pause-menu-option-settings" onclick="utils.game.pauseMenuAction('settings')"><div class="pause-menu-tooltip">SETTINGS</div></div>
-        <div class="pause-menu-option pause-menu-option-report-bug" onclick="utils.game.pauseMenuAction('report-bug')"><div class="pause-menu-tooltip">REPORT BUG</div></div>
+        <div class="pause-menu-option pause-menu-option-resume" onclick="utils.game.pauseMenuAction('resume')" data-gamepad-index="0"><div class="pause-menu-tooltip">RESUME</div></div>
+        <div class="pause-menu-option pause-menu-option-leave-game" onclick="utils.game.pauseMenuAction('leave-game')" data-gamepad-index="1"><div class="pause-menu-tooltip">LEAVE GAME</div></div>
+        <div class="pause-menu-option pause-menu-option-settings" onclick="utils.game.pauseMenuAction('settings')" data-gamepad-index="2"><div class="pause-menu-tooltip">SETTINGS</div></div>
+        <div class="pause-menu-option pause-menu-option-report-bug" onclick="utils.game.pauseMenuAction('report-bug')" data-gamepad-index="3"><div class="pause-menu-tooltip">REPORT BUG</div></div>
       </div>
     </div>
     <div class="loading-screen">
@@ -859,7 +866,9 @@
         </div>
       </div>
     </div>
+    <script src="/js/GamepadMenuControls.js"></script>
     <script>
+      gamepadMenuControls = new GamepadMenuControls("game");
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(50, 1440 / 900, 0.01, 1000);
@@ -3861,7 +3870,12 @@
             let leftOrRightKey = keyStates["KeyA"] || keyStates["KeyD"] || keyStates["ArrowLeft"] || keyStates["ArrowRight"];
             let sprinting = utils.options.get("Sprinting");
             let walkSpeed = deltaTime * (playerOnFloor ? 48 : 3) * (sprinting ? 2 : utils.options.get("Crouching") ? 0.5 : 1) * (upOrDownKey && leftOrRightKey ? .7 : 1);
-            let gamepadActive = GamepadControls.update(deltaTime, clockDelta, time, walkSpeed);
+            let gamepadActive = null;
+            if (utils.options.get("GamePaused")) {
+              gamepadActive = gamepadMenuControls.update();
+            } else {
+              gamepadActive = GamepadControls.update(deltaTime, clockDelta, time, walkSpeed);
+            }
             if (utils.options.get("MobileGame")) {
               if (gamepadActive) {
                 TouchControls.hideUI();
@@ -6019,10 +6033,15 @@
               utils.game.togglePause();
             } else if (action == "leave-game") {
               audio.pause();
+              gamepadMenuControls.showCursor();
               Notiflix.Confirm.show("Leave Game", "Are you sure you want to leave the current game and return to the Main Menu?", "Continue", "Cancel", function() {
                 audio.pause();
                 location.replace("/");
-              }, () => audio.pause(), {
+                gamepadMenuControls.hideCursor();
+              }, function() {
+                audio.pause();
+                gamepadMenuControls.hideCursor();
+              }, {
                 borderRadius: 0,
                 okButtonBackground: "#5aace1",
                 titleColor: "#5aace1",
@@ -6030,11 +6049,16 @@
               });
             } else if (action == "settings") {
               audio.pause();
+              gamepadMenuControls.showCursor();
               Notiflix.Confirm.show("", "", "Save", "Close", function() {
                 audio.pause();
                 utils.game.updateSettingsFromDialog();
                 utils.game.applySettings();
-              }, () => audio.pause(), {
+                gamepadMenuControls.hideCursor();
+              }, function() {
+                audio.pause();
+                gamepadMenuControls.hideCursor();
+              }, {
                 borderRadius: 0,
                 okButtonBackground: "#5aace1",
                 zindex: 10000
@@ -6089,23 +6113,28 @@
                 </div>
                 <div class="settings-container">
                   <label for="gamepadLookSpeed">Gamepad Look Speed</label>
-                  <label for="gamepadLookSpeed" class="settings-range-number">${sandbox.settings.touchLookSpeed}</label>
-                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.touchLookSpeed}" name="gamepadLookSpeed" class="settings-option settings-option-gamepadLookSpeed" oninput="utils.game.updateSettingsInput(this)">
+                  <label for="gamepadLookSpeed" class="settings-range-number">${sandbox.settings.gamepadLookSpeed}</label>
+                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.gamepadLookSpeed}" name="gamepadLookSpeed" class="settings-option settings-option-gamepadLookSpeed" oninput="utils.game.updateSettingsInput(this)">
                 </div>
                 <div class="settings-container">
                   <label for="touchLookSpeed">Touch Look Speed</label>
-                  <label for="touchLookSpeed" class="settings-range-number">${sandbox.settings.gamepadLookSpeed}</label>
-                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.gamepadLookSpeed}" name="touchLookSpeed" class="settings-option settings-option-touchLookSpeed" oninput="utils.game.updateSettingsInput(this)">
+                  <label for="touchLookSpeed" class="settings-range-number">${sandbox.settings.touchLookSpeed}</label>
+                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.touchLookSpeed}" name="touchLookSpeed" class="settings-option settings-option-touchLookSpeed" oninput="utils.game.updateSettingsInput(this)">
                 </div>
               </div>
               `;
               document.querySelector(`.settings-option-cameraFov option[value="${sandbox.settings.cameraFov}"]`).selected = "selected";
             } else if (action == "report-bug") {
               audio.pause();
+              gamepadMenuControls.showCursor();
               Notiflix.Confirm.prompt("Report Bug", "What problem are you having with FPS5? Write it below, and we'll try our best to fix it:", "", "Send", "Cancel", function() {
                 audio.pause();
                 Notiflix.Report.success("Report Bug", "Your report was sent successfully! Thanks for your contribution.", "Got it", () => {}, { borderRadius: 0, zindex: 10000 });
-              }, () => audio.pause(), {
+                gamepadMenuControls.hideCursor();
+              }, function() {
+                audio.pause();
+                gamepadMenuControls.hideCursor();
+              }, {
                 borderRadius: 0,
                 okButtonBackground: "#5aace1",
                 titleColor: "#5aace1",

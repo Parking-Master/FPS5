@@ -11,7 +11,7 @@ GamepadApiControls = function() {
   };
   this.buttonRepeats = {};
   this.buttonsDown = {};
-  this.buttonMappings = ["a", "b", "x", "y", "lb", "rb", "lt", "rt", "back", "start", "l", "r", "up", "down", "left", "right"],
+  this.buttonMappings = ["a", "b", "x", "y", "lb", "rb", "lt", "rt", "back", "start", "l", "r", "up", "down", "left", "right"];
   this.buttonKeyMappings = [];
   this.update = function(deltaTime, clockDelta, time, walkSpeed) {
     let gamepads = navigator.getGamepads();
@@ -67,7 +67,7 @@ GamepadApiControls = function() {
     if (sandbox.settings.bindings.gamepad.interact.includes(event.button)) _this.data.interactButtonTime = null;
   };
   this.updateLooking = function(clockDelta, gamepad, vehicle) {
-    if (deathScreen || !PointerControls.isLocked) return;
+    if (deathScreen || !PointerControls.isLocked || utils.options.get("GamePaused")) return;
     let weapon = utils.weapons.getCurrentEntry();
     let lookX = gamepad.axes[2];
     let lookY = gamepad.axes[3];
@@ -111,7 +111,7 @@ GamepadApiControls = function() {
     }
   };
   this.updateWalking = function(deltaTime, gamepad, vehicle, walkSpeed) {
-    if (deathScreen) return;
+    if (deathScreen || utils.options.get("GamePaused")) return;
     let walkX = gamepad.axes[1];
     let walkY = gamepad.axes[0];
     let threshold = .4;

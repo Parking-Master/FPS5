@@ -532,23 +532,29 @@
       i.fa {
         pointer-events: none !important;
       }
+      .gamepad-start-icon-button img, .gamepad-b-icon-button img {
+        width: 30px;
+        height: 30px;
+        filter: brightness(10);
+        position: absolute;
+        margin-top: -4px;
+      }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" type="text/css" href="/css/responsive.css" id="responsive-stylesheet">
   </head>
   <body>
-    <script src="https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js"></script>
     <script src="https://parking-master.github.io/Parking-Master-2.0/notiflix/notiflix-3.2.8.min.js"></script>
     <script src="/js/user.js"></script>
-    <div class="window"></div>
+    <div class="window" data-gamepad-scrollable></div>
     <div class="wrapper">
       <img src="/images/menu/heading.png" class="header">
       <p class="subheader">MULTIPLAYER SHOOTER</p>
       <img class="sniper" src="/images/menu/sniper.png">
       <div class="login-buttons">
-        <button class="button menu-button options-button"></button>
-        <button class="button menu-button login-button" onclick="location.href = '/login.html'">LOG IN</button>
-        <button class="button menu-button signup-button" onclick="location.href = '/signup.html'">SIGN UP</button>
+        <button class="button menu-button options-button" data-gamepad-index="2"></button>
+        <button class="button menu-button login-button" onclick="location.href = '/login.html'" data-gamepad-index="0">LOG IN</button>
+        <button class="button menu-button signup-button" onclick="location.href = '/signup.html'" data-gamepad-index="1">SIGN UP</button>
       </div>
       <div class="loadout-wrapper">
         <div class="loadout-header">YOUR LOADOUT</div>
@@ -566,15 +572,17 @@
         <div class="points">0 PTS</div>
       </div>
       <div class="buttons-wrapper">
-        <button class="button" id="lobby-button">FIND LOBBY</button>
-        <button class="button" id="preferences-button">PREFERENCES</button>
-        <button class="button" id="chat-button">WORLD CHAT</button>
-        <button class="button" id="forge-button">FORGE</button>
-        <button class="button" id="help-button">HELP</button>
+        <button class="button" id="lobby-button" data-gamepad-index="3">FIND LOBBY</button>
+        <button class="button" id="preferences-button" data-gamepad-index="4">PREFERENCES</button>
+        <button class="button" id="chat-button" data-gamepad-index="5">WORLD CHAT</button>
+        <button class="button" id="forge-button" data-gamepad-index="6">FORGE</button>
+        <button class="button" id="help-button" data-gamepad-index="7">HELP</button>
       </div>
       <div class="copyright"><span id="copyright-text">Copyright </span>&copy; 2026 <a href="https://github.com/Parking-Master">Parking-Master</a></div>
     </div>
+    <script src="/js/GamepadMenuControls.js"></script>
     <script>
+      gamepadMenuControls = new GamepadMenuControls("main");
       Notiflix.Loading.init({ svgColor: "#fff" });
       let modes = {
         "slayer": {
@@ -671,10 +679,12 @@
         ${content}
         `;
         document.querySelector(".window").style.display = "block";
+        gamepadMenuControls.showCursor();
       }
       function closeWindow(removeLoading = true) {
         document.querySelector(".window").style.display = "";
         if (removeLoading) Notiflix.Loading.remove();
+        gamepadMenuControls.hideCursor();
       }
       function formatNumber(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
@@ -718,7 +728,7 @@
         if (dialog) {
           openWindow("Create new Lobby", `
           <div class="lobbies-description">Create a multiplayer lobby by choosing a map, mode, and custom presets. You can disable score/time limits to make them unlimited. <a href="">Need help?</a></div>
-          <div class="lobby-options-left-section">
+          <div class="lobby-options-left-section" data-gamepad-scrollable>
             <div class="lobby-options-container">
               <label for="map">Map</label>
               <select value="Cargo_Port" name="map" class="lobby-options-map" onchange="updateLobbyMapPreview(this.value)">
@@ -995,7 +1005,7 @@
             </div>
             `;
           }
-        }, 1000);
+        });
       }
       function enableLobbyOption(option, updateConfig = true) {
         let element = document.querySelector(".lobby-options-" + option);
