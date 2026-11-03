@@ -34,6 +34,7 @@
         }
       }
       html, body {
+        font-family: Arial, Helvetica, sans-serif;
         margin: 0;
         overflow: hidden !important;
         touch-action: none !important;
@@ -45,7 +46,6 @@
         -webkit-user-select: none !important;
       }
       body {
-        margin: 0;
         position: fixed;
         inset: 0;
         display: flex;
@@ -1172,6 +1172,7 @@
           rendererQuality: .5,
           mouseLookSpeed: 5,
           gamepadLookSpeed: 5,
+          gamepadLookAcceleration: 5,
           touchLookSpeed: 5
         },
         loadout: [],
@@ -2189,9 +2190,9 @@
             currentAmmo: 12,
             maxAmmo: 12,
             maxTotalAmmo: 48,
-            damage: 10,
-            headshotDamage: 16,
-            spread: 0.4,
+            damage: 12,
+            headshotDamage: 18,
+            spread: 0.3,
             muzzleFlash: true,
             zoomPosition: [0.0325, 0.013, -0.016, 0.04991641660703782, -0.0778416846389471, 0.09494591130849153],
             zoomFov: 30,
@@ -6016,7 +6017,8 @@
               utils.ui.elements.pauseMenu.style.display = "";
               utils.game.clearKeyStates();
               audio.sounds["map.ambience"].gain.gain.value = 1;
-              if (document.hasFocus()) document.body.requestPointerLock(), PointerControls.lock();
+              if (document.hasFocus() && document.body.requestPointerLock) document.body.requestPointerLock(), PointerControls.lock();
+              PointerControls.isLocked = true;
             } else {
               utils.options.set("GamePaused", true);
               utils.ui.elements.pauseMenu.style.display = "block";
@@ -6033,14 +6035,14 @@
               utils.game.togglePause();
             } else if (action == "leave-game") {
               audio.pause();
-              gamepadMenuControls.showCursor();
+              gamepadMenuControls.enableCursor();
               Notiflix.Confirm.show("Leave Game", "Are you sure you want to leave the current game and return to the Main Menu?", "Continue", "Cancel", function() {
                 audio.pause();
                 location.replace("/");
-                gamepadMenuControls.hideCursor();
+                gamepadMenuControls.disableCursor();
               }, function() {
                 audio.pause();
-                gamepadMenuControls.hideCursor();
+                gamepadMenuControls.disableCursor();
               }, {
                 borderRadius: 0,
                 okButtonBackground: "#5aace1",
@@ -6049,20 +6051,21 @@
               });
             } else if (action == "settings") {
               audio.pause();
-              gamepadMenuControls.showCursor();
+              gamepadMenuControls.enableCursor();
               Notiflix.Confirm.show("", "", "Save", "Close", function() {
                 audio.pause();
                 utils.game.updateSettingsFromDialog();
                 utils.game.applySettings();
-                gamepadMenuControls.hideCursor();
+                gamepadMenuControls.disableCursor();
               }, function() {
                 audio.pause();
-                gamepadMenuControls.hideCursor();
+                gamepadMenuControls.disableCursor();
               }, {
                 borderRadius: 0,
                 okButtonBackground: "#5aace1",
                 zindex: 10000
               });
+              document.querySelector(".notiflix-confirm-content").dataset.gamepadScrollable = "";
               document.querySelector(".notiflix-confirm-head").innerHTML = `
               <div class="settings-wrapper">
                 <div class="settings-header">Settings</div>
@@ -6117,6 +6120,11 @@
                   <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.gamepadLookSpeed}" name="gamepadLookSpeed" class="settings-option settings-option-gamepadLookSpeed" oninput="utils.game.updateSettingsInput(this)">
                 </div>
                 <div class="settings-container">
+                  <label for="gamepadLookAcceleration">(Acceleration)</label>
+                  <label for="gamepadLookAcceleration" class="settings-range-number">${sandbox.settings.gamepadLookAcceleration}</label>
+                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.gamepadLookAcceleration}" name="gamepadLookAcceleration" class="settings-option settings-option-gamepadLookAcceleration" oninput="utils.game.updateSettingsInput(this)">
+                </div>
+                <div class="settings-container">
                   <label for="touchLookSpeed">Touch Look Speed</label>
                   <label for="touchLookSpeed" class="settings-range-number">${sandbox.settings.touchLookSpeed}</label>
                   <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.touchLookSpeed}" name="touchLookSpeed" class="settings-option settings-option-touchLookSpeed" oninput="utils.game.updateSettingsInput(this)">
@@ -6126,14 +6134,14 @@
               document.querySelector(`.settings-option-cameraFov option[value="${sandbox.settings.cameraFov}"]`).selected = "selected";
             } else if (action == "report-bug") {
               audio.pause();
-              gamepadMenuControls.showCursor();
+              gamepadMenuControls.enableCursor();
               Notiflix.Confirm.prompt("Report Bug", "What problem are you having with FPS5? Write it below, and we'll try our best to fix it:", "", "Send", "Cancel", function() {
                 audio.pause();
                 Notiflix.Report.success("Report Bug", "Your report was sent successfully! Thanks for your contribution.", "Got it", () => {}, { borderRadius: 0, zindex: 10000 });
-                gamepadMenuControls.hideCursor();
+                gamepadMenuControls.disableCursor();
               }, function() {
                 audio.pause();
-                gamepadMenuControls.hideCursor();
+                gamepadMenuControls.disableCursor();
               }, {
                 borderRadius: 0,
                 okButtonBackground: "#5aace1",
@@ -6192,6 +6200,7 @@
               rendererQuality: parseFloat(document.querySelector(".settings-option-rendererQuality").value) / 100,
               mouseLookSpeed: parseFloat(document.querySelector(".settings-option-mouseLookSpeed").value),
               gamepadLookSpeed: parseFloat(document.querySelector(".settings-option-gamepadLookSpeed").value),
+              gamepadLookAcceleration: parseFloat(document.querySelector(".settings-option-gamepadLookAcceleration").value),
               touchLookSpeed: parseFloat(document.querySelector(".settings-option-touchLookSpeed").value)
             });
             sandbox.settings = user.data.settings;
@@ -6211,6 +6220,7 @@
               PointerControls.pointerSpeed = sandbox.settings.mouseLookSpeed * .12;
               TouchControls.speed = sandbox.settings.touchLookSpeed * .12;
               GamepadControls.lookSpeed = sandbox.settings.gamepadLookSpeed;
+              GamepadControls.lookSensitivity = sandbox.settings.gamepadLookAcceleration;
             }
           },
           keyDownFunction: function(event) {
@@ -6354,11 +6364,11 @@
       document.addEventListener("keyup", utils.game.keyUpFunction);
       document.addEventListener("mousedown", function(event) {
         if (document.pointerLockElement != null || utils.options.get("GameStartTime") == null || utils.options.get("GamePaused")) return;
-        if (document.hasFocus()) document.body.requestPointerLock(), PointerControls.lock();
+        if (document.hasFocus() && document.body.requestPointerLock) document.body.requestPointerLock(), PointerControls.lock();
       });
       document.addEventListener("mouseup", (event) => {
         if (!PointerControls.isLocked || utils.options.get("GameStartTime") == null || utils.options.get("GamePaused")) return;
-        if (document.hasFocus()) PointerControls.lock();
+        if (document.hasFocus() && document.body.requestPointerLock) PointerControls.lock();
       });
 
       const PointerControls = new PointerLockControls(camera, renderer.domElement);

@@ -234,6 +234,7 @@ user = {
             "rendererQuality": .5,
             "mouseLookSpeed": 5,
             "gamepadLookSpeed": 5,
+            "gamepadLookAcceleration": 5,
             "touchLookSpeed": 5
           }
         }));
@@ -264,6 +265,8 @@ user = {
           }
         }
       });
+    } else {
+      localStorage.setItem("local-user-data", JSON.stringify(user.data));
     }
   },
   getLobbies: function(callback = () => {}, error = () => {}) {

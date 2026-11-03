@@ -679,12 +679,12 @@
         ${content}
         `;
         document.querySelector(".window").style.display = "block";
-        gamepadMenuControls.showCursor();
+        gamepadMenuControls.enableCursor();
       }
       function closeWindow(removeLoading = true) {
         document.querySelector(".window").style.display = "";
         if (removeLoading) Notiflix.Loading.remove();
-        gamepadMenuControls.hideCursor();
+        gamepadMenuControls.disableCursor();
       }
       function formatNumber(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
@@ -982,8 +982,10 @@
         Notiflix.Loading.circle();
         Notiflix.Loading.change("Fetching latest server data...");
         user.getLobbies(function(lobbies) {
+          console.log(1)
           currentLobbies = lobbies;
           lobbies = lobbies.reverse();
+          console.log(2)
           openWindow("Lobbies", `
           <button class="button lobby-button lobby-create-button"><i class="fa fa-plus"></i> Create Lobby</button>
           <button class="button lobby-button lobby-enter-code-button"><i class="fa fa-unlock"></i> Enter Code</button>
@@ -991,6 +993,7 @@
           <div class="lobbies-description">A lobby is a game with custom presets created by other people. Lobbies marked red currently have no players in them. Lobbies marked green already have at least one player. The game will start when the required amount of players join that lobby.</div>
           <div class="lobby-list"></div>
           `);
+          console.log(3)
           for (let i = 0; i < lobbies.length; i++) {
             let lobby = lobbies[i];
             if (lobby.code) continue;

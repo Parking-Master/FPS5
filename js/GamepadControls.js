@@ -94,7 +94,7 @@ GamepadApiControls = function() {
     const intersects = raycaster.intersectObjects(utils.players.autoLockBoxes);
     if (intersects.length > 0) {
       utils.options.set("AllowAimUpdate", true);
-      if (intersects.distance < 20 && (looking || (!_this.data.autoLockPoint && utils.options.get("Walking")))) _this.data.autoLockPoint = intersects[0];
+      if (intersects[0].distance < 30 && (looking || (!_this.data.autoLockPoint && utils.options.get("Walking")))) _this.data.autoLockPoint = intersects[0];
     } else {
       if (utils.options.get("Aiming")) {
         utils.weapons.updateAim(weapon);
@@ -107,7 +107,7 @@ GamepadApiControls = function() {
       let autoLockPosition = utils.players.objects[_this.data.autoLockPoint.object.playerUUID].scene.position.clone();
       autoLockPosition.y += .8;
       vectors[16].setFromRotationMatrix(vectors[36].lookAt(camera.position, autoLockPosition, camera.up));
-      camera.quaternion.slerp(vectors[16], Math.min(.006 * (4 / _this.data.autoLockPoint.distance), .006));
+      camera.quaternion.slerp(vectors[16], Math.min(.01 * (1.5 / _this.data.autoLockPoint.distance), .01));
     }
   };
   this.updateWalking = function(deltaTime, gamepad, vehicle, walkSpeed) {
