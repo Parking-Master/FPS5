@@ -87,11 +87,12 @@ let spaces = {
 
 GamepadMenuControls = function(space) {
   let _this = this;
-  _this.connected = false;
-  _this.elementHovering = null;
   let currentSpace = spaces[space];
   let currentButtonIndex = parseInt(document.querySelector(currentSpace.startingElement).dataset.gamepadIndex);
+  let gamepad = null;
+  let time = null;
   let cursor = null;
+  let keyboard = null;
   let cursorActive = false;
   let cursorAcceleration = 0;
   let cursorX = (window.innerWidth / 2) - 10;
@@ -102,199 +103,218 @@ GamepadMenuControls = function(space) {
   let buttonMappings = ["a", "b", "x", "y", "lb", "rb", "lt", "rt", "back", "start", "l", "r", "up", "down", "left", "right"];
   let buttonRepeats = {};
   let currentKey = [0, 0];
+  let previousSelectMenu = null;
+  let moved = false;
+  let spam = false;
+  let spamTimeout = null;
+  let timestamp = null;
+  let threshold = .5;
   if (space == "main" && user.loggedIn) {
     currentSpace.navElements[0].down = "#lobby-button";
     currentSpace.navElements[1] = null;
     currentSpace.navElements[3].up = ".login-button";
   }
-  function focusCurrentButton() {
-    document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.outline = "2px solid #fff";
-    document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.boxShadow = "inset 0 0 40px rgba(255, 255, 255, .7)";
-  }
-  function blurCurrentButton() {
-    document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.outline = "";
-    document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.boxShadow = "";
-  }
-  function clickCurrentButton() {
-    document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).click();
-  }
-  function insertCharacter(character) {
-    if (!document.activeElement) return;
-    if (character == "delete") {
-      let caret = document.activeElement.selectionStart;
-      if (typeof document.activeElement.selectionStart === "undefined") caret = document.activeElement.value.length;
-      if (!caret || caret < 1) return;
-      let toCaret = document.activeElement.value.slice(0, caret - 1);
-      let fromCaret = document.activeElement.value.slice(caret, document.activeElement.value.length);
-      document.activeElement.value = toCaret + fromCaret;
-      document.activeElement.setSelectionRange(caret - 1, caret - 1);
-    } else {
-      let caret = document.activeElement.selectionStart;
-      if (typeof document.activeElement.selectionStart === "undefined") caret = document.activeElement.value.length;
-      let toCaret = document.activeElement.value.slice(0, caret);
-      let fromCaret = document.activeElement.value.slice(caret, document.activeElement.value.length);
-      document.activeElement.value = toCaret + character + fromCaret;
-      document.activeElement.setSelectionRange(caret + 1, caret + 1);
+  let navigationUtils = {
+    focus: function() {
+      document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.outline = "2px solid #fff";
+      document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.boxShadow = "inset 0 0 40px rgba(255, 255, 255, .7)";
+    },
+    blur: function() {
+      document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.outline = "";
+      document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.boxShadow = "";
+    },
+    click: function() {
+      document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).click();
     }
-  }
-  function toggleSpecialKeyboard() {
-    if (document.querySelector(".gamepad-keyboard").dataset.special == "1") {
-      document.querySelector(".gamepad-keyboard").dataset.special = "0";
-      document.querySelector(".gamepad-keyboard").innerHTML = `
-      <div class="gamepad-keyboard-row">
-        <div class="gamepad-keyboard-key">q</div>
-        <div class="gamepad-keyboard-key">w</div>
-        <div class="gamepad-keyboard-key">e</div>
-        <div class="gamepad-keyboard-key">r</div>
-        <div class="gamepad-keyboard-key">t</div>
-        <div class="gamepad-keyboard-key">y</div>
-        <div class="gamepad-keyboard-key">u</div>
-        <div class="gamepad-keyboard-key">i</div>
-        <div class="gamepad-keyboard-key">o</div>
-        <div class="gamepad-keyboard-key">p</div>
-      </div>
-      <div class="gamepad-keyboard-row">
-        <div class="gamepad-keyboard-key">a</div>
-        <div class="gamepad-keyboard-key">s</div>
-        <div class="gamepad-keyboard-key">d</div>
-        <div class="gamepad-keyboard-key">f</div>
-        <div class="gamepad-keyboard-key">g</div>
-        <div class="gamepad-keyboard-key">h</div>
-        <div class="gamepad-keyboard-key">j</div>
-        <div class="gamepad-keyboard-key">k</div>
-        <div class="gamepad-keyboard-key">l</div>
-        <div class="gamepad-keyboard-key" id="enter">↵</div>
-      </div>
-      <div class="gamepad-keyboard-row">
-        <div class="gamepad-keyboard-key">z</div>
-        <div class="gamepad-keyboard-key">x</div>
-        <div class="gamepad-keyboard-key">c</div>
-        <div class="gamepad-keyboard-key" id="space">&nbsp;</div>
-        <div class="gamepad-keyboard-key">v</div>
-        <div class="gamepad-keyboard-key">b</div>
-        <div class="gamepad-keyboard-key">n</div>
-        <div class="gamepad-keyboard-key">m</div>
-        <div class="gamepad-keyboard-key" id="caps-lock" data-value="1">&uparrow;</div>
-      </div>
-      `;
-    } else {
-      document.querySelector(".gamepad-keyboard").dataset.special = "1";
-      document.querySelector(".gamepad-keyboard").innerHTML = `
-      <div class="gamepad-keyboard-row">
-        <div class="gamepad-keyboard-key">1</div>
-        <div class="gamepad-keyboard-key">2</div>
-        <div class="gamepad-keyboard-key">3</div>
-        <div class="gamepad-keyboard-key">4</div>
-        <div class="gamepad-keyboard-key">5</div>
-        <div class="gamepad-keyboard-key">6</div>
-        <div class="gamepad-keyboard-key">7</div>
-        <div class="gamepad-keyboard-key">8</div>
-        <div class="gamepad-keyboard-key">9</div>
-        <div class="gamepad-keyboard-key">0</div>
-      </div>
-      <div class="gamepad-keyboard-row">
-        <div class="gamepad-keyboard-key">!</div>
-        <div class="gamepad-keyboard-key">@</div>
-        <div class="gamepad-keyboard-key">#</div>
-        <div class="gamepad-keyboard-key">$</div>
-        <div class="gamepad-keyboard-key">%</div>
-        <div class="gamepad-keyboard-key">^</div>
-        <div class="gamepad-keyboard-key">&</div>
-        <div class="gamepad-keyboard-key">*</div>
-        <div class="gamepad-keyboard-key">-</div>
-        <div class="gamepad-keyboard-key" id="enter">↵</div>
-      </div>
-      <div class="gamepad-keyboard-row">
-        <div class="gamepad-keyboard-key">+</div>
-        <div class="gamepad-keyboard-key">=</div>
-        <div class="gamepad-keyboard-key">;</div>
-        <div class="gamepad-keyboard-key" id="space">&nbsp;</div>
-        <div class="gamepad-keyboard-key">,</div>
-        <div class="gamepad-keyboard-key">.</div>
-        <div class="gamepad-keyboard-key">_</div>
-        <div class="gamepad-keyboard-key">/</div>
-        <div class="gamepad-keyboard-key" id="caps-lock" data-value="1">&uparrow;</div>
-      </div>
-      `;
-    }
-    let key = document.querySelectorAll(".gamepad-keyboard-row")[currentKey[0]].querySelectorAll(".gamepad-keyboard-key")[currentKey[1]];
-    document.querySelector(".gamepad-keyboard").style.display = "block";
-    key.classList.add("selected");
-  }
-  function enterKey() {
-    document.activeElement.blur();
-  }
-  let moved = false;
-  let spam = false;
-  let spamTimeout = null;
-  let timestamp = null;
-  function handleKeyboard(time, moveX, moveY) {
-    if (_this.keyboardLock) {
-      if (Math.abs(moveX) > .2 || Math.abs(moveY) > .2) {
-        if (moved && !spam) return;
-        if (!spam) spamTimeout = setTimeout(() => spam = true, 500);
-        moved = true;
-        if (spam) {
-          if (time - timestamp < 100) return;
-          timestamp = time;
-        }
-        function move(direction) {
-          if (direction == "right") {
-            currentKey[1]++;
-            if (currentKey[1] > 9) currentKey[1] = 9;
-          }
-          if (direction == "left") {
-            currentKey[1]--;
-            if (currentKey[1] < 0) currentKey[1] = 0;
-          }
-          if (direction == "down") {
-            let oldKey = currentKey[0];
-            currentKey[0]++;
-            if (currentKey[0] > 2) currentKey[0] = 2;
-            if (currentKey[0] == 2 && currentKey[1] > 3 && oldKey != currentKey[0]) currentKey[1]--;
-          }
-          if (direction == "up") {
-            currentKey[0]--;
-            if (currentKey[0] < 0) currentKey[0] = 0;
-            if (currentKey[0] == 1 && currentKey[1] > 3) currentKey[1]++;
-            if (currentKey[0] == 2 && currentKey[1] > 3) currentKey[1]--;
-          }
-          let key = document.querySelectorAll(".gamepad-keyboard-row")[currentKey[0]].querySelectorAll(".gamepad-keyboard-key")[currentKey[1]];
-          if (key) {
-            if (document.querySelector(".gamepad-keyboard-key.selected")) document.querySelectorAll(".gamepad-keyboard-key.selected").forEach(x => x.classList.remove("selected"));
-            key.classList.add("selected");
-          }
-        }
-        if (moveX > 0.2) {
-          move("right");
-        } else if (moveX < -0.2) {
-          move("left");
-        } else if (moveY > 0.2) {
-          move("down");
-        } else if (moveY < -0.2) {
-          move("up");
-        }
+  };
+  let keyboardUtils = {
+    insert: function(character) {
+      if (!document.activeElement) return;
+      if (character == "delete") {
+        let caret = document.activeElement.selectionStart;
+        if (typeof document.activeElement.selectionStart === "undefined") caret = document.activeElement.value.length;
+        if (!caret || caret < 1) return;
+        let toCaret = document.activeElement.value.slice(0, caret - 1);
+        let fromCaret = document.activeElement.value.slice(caret, document.activeElement.value.length);
+        document.activeElement.value = toCaret + fromCaret;
+        document.activeElement.setSelectionRange(caret - 1, caret - 1);
       } else {
-        clearTimeout(spamTimeout);
-        moved = false;
-        spam = false;
+        let caret = document.activeElement.selectionStart;
+        if (typeof document.activeElement.selectionStart === "undefined") caret = document.activeElement.value.length;
+        let toCaret = document.activeElement.value.slice(0, caret);
+        let fromCaret = document.activeElement.value.slice(caret, document.activeElement.value.length);
+        document.activeElement.value = toCaret + character + fromCaret;
+        document.activeElement.setSelectionRange(caret + 1, caret + 1);
+      }
+    },
+    toggleStyle: function(type = null) {
+      if (type == null) {
+        if (keyboard.dataset.special == "1") {
+          type = "0";
+        } else {
+          type = "1";
+        }
+      }
+      if (type == "0") {
+        keyboard.dataset.special = "0";
+        keyboard.innerHTML = `
+        <div class="gamepad-keyboard-row">
+          <div class="gamepad-keyboard-key">q</div>
+          <div class="gamepad-keyboard-key">w</div>
+          <div class="gamepad-keyboard-key">e</div>
+          <div class="gamepad-keyboard-key">r</div>
+          <div class="gamepad-keyboard-key">t</div>
+          <div class="gamepad-keyboard-key">y</div>
+          <div class="gamepad-keyboard-key">u</div>
+          <div class="gamepad-keyboard-key">i</div>
+          <div class="gamepad-keyboard-key">o</div>
+          <div class="gamepad-keyboard-key">p</div>
+        </div>
+        <div class="gamepad-keyboard-row">
+          <div class="gamepad-keyboard-key">a</div>
+          <div class="gamepad-keyboard-key">s</div>
+          <div class="gamepad-keyboard-key">d</div>
+          <div class="gamepad-keyboard-key">f</div>
+          <div class="gamepad-keyboard-key">g</div>
+          <div class="gamepad-keyboard-key">h</div>
+          <div class="gamepad-keyboard-key">j</div>
+          <div class="gamepad-keyboard-key">k</div>
+          <div class="gamepad-keyboard-key">l</div>
+          <div class="gamepad-keyboard-key" id="enter">↵</div>
+        </div>
+        <div class="gamepad-keyboard-row">
+          <div class="gamepad-keyboard-key">z</div>
+          <div class="gamepad-keyboard-key">x</div>
+          <div class="gamepad-keyboard-key">c</div>
+          <div class="gamepad-keyboard-key" id="space">&nbsp;</div>
+          <div class="gamepad-keyboard-key">v</div>
+          <div class="gamepad-keyboard-key">b</div>
+          <div class="gamepad-keyboard-key">n</div>
+          <div class="gamepad-keyboard-key">m</div>
+          <div class="gamepad-keyboard-key" id="caps-lock" data-value="1">&uparrow;</div>
+        </div>
+        `;
+      } else {
+        keyboard.dataset.special = "1";
+        keyboard.innerHTML = `
+        <div class="gamepad-keyboard-row">
+          <div class="gamepad-keyboard-key">1</div>
+          <div class="gamepad-keyboard-key">2</div>
+          <div class="gamepad-keyboard-key">3</div>
+          <div class="gamepad-keyboard-key">4</div>
+          <div class="gamepad-keyboard-key">5</div>
+          <div class="gamepad-keyboard-key">6</div>
+          <div class="gamepad-keyboard-key">7</div>
+          <div class="gamepad-keyboard-key">8</div>
+          <div class="gamepad-keyboard-key">9</div>
+          <div class="gamepad-keyboard-key">0</div>
+        </div>
+        <div class="gamepad-keyboard-row">
+          <div class="gamepad-keyboard-key">!</div>
+          <div class="gamepad-keyboard-key">@</div>
+          <div class="gamepad-keyboard-key">#</div>
+          <div class="gamepad-keyboard-key">$</div>
+          <div class="gamepad-keyboard-key">%</div>
+          <div class="gamepad-keyboard-key">^</div>
+          <div class="gamepad-keyboard-key">&</div>
+          <div class="gamepad-keyboard-key">*</div>
+          <div class="gamepad-keyboard-key">-</div>
+          <div class="gamepad-keyboard-key" id="enter">↵</div>
+        </div>
+        <div class="gamepad-keyboard-row">
+          <div class="gamepad-keyboard-key">+</div>
+          <div class="gamepad-keyboard-key">=</div>
+          <div class="gamepad-keyboard-key">;</div>
+          <div class="gamepad-keyboard-key" id="space">&nbsp;</div>
+          <div class="gamepad-keyboard-key">,</div>
+          <div class="gamepad-keyboard-key">.</div>
+          <div class="gamepad-keyboard-key">_</div>
+          <div class="gamepad-keyboard-key">/</div>
+          <div class="gamepad-keyboard-key" id="caps-lock" data-value="1">&uparrow;</div>
+        </div>
+        `;
+      }
+      let key = document.querySelectorAll(".gamepad-keyboard-row")[currentKey[0]].querySelectorAll(".gamepad-keyboard-key")[currentKey[1]];
+      keyboard.style.display = "block";
+      key.classList.add("selected");
+    },
+    enterKey: function() {
+      document.activeElement.blur();
+    },
+    update: function(moveX, moveY) {
+      if (_this.keyboardLock) {
+        if (Math.abs(moveX) > .2 || Math.abs(moveY) > .2) {
+          if (moved && !spam) return;
+          if (!spam) spamTimeout = setTimeout(() => spam = true, 500);
+          moved = true;
+          if (spam) {
+            if (time - timestamp < 100) return;
+            timestamp = time;
+          }
+          function move(direction) {
+            if (direction == "right") {
+              currentKey[1]++;
+              if (currentKey[1] > 9) currentKey[1] = 9;
+            }
+            if (direction == "left") {
+              currentKey[1]--;
+              if (currentKey[1] < 0) currentKey[1] = 0;
+            }
+            if (direction == "down") {
+              let oldKey = currentKey[0];
+              currentKey[0]++;
+              if (currentKey[0] > 2) currentKey[0] = 2;
+              if (currentKey[0] == 2 && currentKey[1] > 3 && oldKey != currentKey[0]) currentKey[1]--;
+            }
+            if (direction == "up") {
+              currentKey[0]--;
+              if (currentKey[0] < 0) currentKey[0] = 0;
+              if (currentKey[0] == 1 && currentKey[1] > 3) currentKey[1]++;
+              if (currentKey[0] == 2 && currentKey[1] > 3) currentKey[1]--;
+            }
+            let key = document.querySelectorAll(".gamepad-keyboard-row")[currentKey[0]].querySelectorAll(".gamepad-keyboard-key")[currentKey[1]];
+            if (key) {
+              if (document.querySelector(".gamepad-keyboard-key.selected")) document.querySelectorAll(".gamepad-keyboard-key.selected").forEach(x => x.classList.remove("selected"));
+              key.classList.add("selected");
+            }
+          }
+          if (moveX > 0.2) {
+            move("right");
+          } else if (moveX < -0.2) {
+            move("left");
+          } else if (moveY > 0.2) {
+            move("down");
+          } else if (moveY < -0.2) {
+            move("up");
+          }
+        } else {
+          clearTimeout(spamTimeout);
+          moved = false;
+          spam = false;
+        }
+      }
+      if (document.activeElement && document.activeElement.tagName == "INPUT" && /\b(text|email|password|number)\b/i.test(document.activeElement.type)) {
+        if (!_this.keyboardLock) {
+          if (document.querySelector(".gamepad-keyboard-key.selected")) document.querySelectorAll(".gamepad-keyboard-key.selected").forEach(x => x.classList.remove("selected"));
+          let key = document.querySelectorAll(".gamepad-keyboard-row")[currentKey[0]].querySelectorAll(".gamepad-keyboard-key")[currentKey[1]];
+          keyboard.style.display = "block";
+          if (document.activeElement.dataset.gamepadNumberkeys) keyboardUtils.toggleStyle("1");
+          key.classList.add("selected");
+        }
+        _this.keyboardLock = true;
+        _this.hideCursor();
+      } else if (document.activeElement && document.activeElement.tagName == "SELECT") {
+        let selectMenu = document.activeElement;
+        previousSelectMenu = selectMenu;
+        selectMenu.size = selectMenu.length;
+      } else {
+        keyboard.style.display = "";
+        if (previousSelectMenu && previousSelectMenu.size != 0) previousSelectMenu.size = 0;
+        _this.keyboardLock = false;
+        _this.showCursor();
       }
     }
-    if (document.activeElement && document.activeElement.tagName == "INPUT" && /\b(text|email|password|number)\b/i.test(document.activeElement.type)) {
-      if (!_this.keyboardLock) {
-        if (document.querySelector(".gamepad-keyboard-key.selected")) document.querySelectorAll(".gamepad-keyboard-key.selected").forEach(x => x.classList.remove("selected"));
-        let key = document.querySelectorAll(".gamepad-keyboard-row")[currentKey[0]].querySelectorAll(".gamepad-keyboard-key")[currentKey[1]];
-        document.querySelector(".gamepad-keyboard").style.display = "block";
-        key.classList.add("selected");
-      }
-      _this.keyboardLock = true;
-      _this.hideCursor();
-    } else {
-      document.querySelector(".gamepad-keyboard").style.display = "";
-      _this.keyboardLock = false;
-      _this.showCursor();
-    }
-  }
+  };
   function initControls() {
     document.head.innerHTML += `
     <style>
@@ -362,9 +382,12 @@ GamepadMenuControls = function(space) {
     .gamepad-keyboard-key.selected {
       background: #ddd;
     }
+    .gamepad-hovering {
+      background: #aaa !important;
+    }
     </style>
     `;
-    let keyboard = document.createElement("div");
+    keyboard = document.createElement("div");
     keyboard.className = "gamepad-keyboard";
     keyboard.dataset.special = "0";
     keyboard.innerHTML += `
@@ -408,26 +431,8 @@ GamepadMenuControls = function(space) {
     cursor.className = "gamepad-cursor";
     document.body.appendChild(keyboard);
     document.body.appendChild(cursor);
-    focusCurrentButton();
+    navigationUtils.focus();
   }
-  _this.enableCursor = function() {
-    if (!_this.connected) return;
-    cursor.style.display = "block";
-    cursor.style.opacity = "1";
-    cursorActive = true;
-  };
-  _this.disableCursor = function() {
-    if (!_this.connected) return;
-    cursor.style.display = "none";
-    cursorActive = false;
-  };
-  _this.showCursor = function() {
-    cursor.style.opacity = "1";
-  };
-  _this.hideCursor = function() {
-    cursor.style.opacity = "0";
-  };
-
   function buttonPress(event) {
     if (!event.repeat) {
       let notiflixReportButton = document.querySelector(".notiflix-report-button");
@@ -452,23 +457,29 @@ GamepadMenuControls = function(space) {
                 document.querySelectorAll(".gamepad-keyboard-key").forEach(x => x.textContent = x.textContent.toUpperCase());
               }
             } else if (keyElement.id == "enter") {
-              enterKey();
+              doInsert = false;
+              keyboardUtils.enterKey();
             }
           }
-          if (doInsert) insertCharacter(key);
+          if (doInsert) keyboardUtils.insert(key);
         } else {
           if (cursorActive && _this.elementHovering) {
             _this.elementHovering.focus();
             _this.elementHovering.click();
+            if (_this.elementHovering.tagName == "OPTION") {
+              _this.elementHovering.parentElement.value = _this.elementHovering.value;
+              _this.elementHovering.parentElement.blur();
+              if (typeof _this.elementHovering.parentElement.onchange == "function") _this.elementHovering.parentElement.onchange();
+            }
           } else if (notiflixReportButton) {
             notiflixReportButton.click();
           } else {
-            clickCurrentButton();
+            navigationUtils.click();
           }
         }
       } else if (event.button == "b") {
         if (_this.keyboardLock) {
-          enterKey();
+          keyboardUtils.enterKey();
         } else if (notiflixReportButton) {
           notiflixReportButton.click();
         } else if (notiflixCancelButton) {
@@ -483,18 +494,30 @@ GamepadMenuControls = function(space) {
           }
         }
       } else if (event.button == "start") {
-        if (_this.keyboardLock) enterKey();
+        if (_this.keyboardLock) keyboardUtils.enterKey();
         if (notiflixOkButton && notiflixCancelButton) {
           setTimeout(() => notiflixOkButton.click(), 100);
         } else {
           if (space == "game") utils.game.togglePause();
         }
       } else if (event.button == "lt" || event.button == "rt") {
-        if (_this.keyboardLock) toggleSpecialKeyboard();
+        if (_this.keyboardLock) keyboardUtils.toggleStyle();
       } else if (event.button == "x") {
-        if (_this.keyboardLock) insertCharacter("delete");
+        if (_this.keyboardLock) keyboardUtils.insert("delete");
       } else if (event.button == "y") {
-        if (_this.keyboardLock) insertCharacter(" ");
+        if (_this.keyboardLock) keyboardUtils.insert(" ");
+      } else if (event.button == "lb") {
+        if (_this.keyboardLock) {
+          let caret = document.activeElement.selectionStart;
+          document.activeElement.setSelectionRange(caret - 1, caret - 1);
+          document.activeElement.focus();
+        }
+      } else if (event.button == "rb") {
+        if (_this.keyboardLock) {
+          let caret = document.activeElement.selectionStart;
+          document.activeElement.setSelectionRange(caret + 1, caret + 1);
+          document.activeElement.focus();
+        }
       }
     }
   }
@@ -520,95 +543,116 @@ GamepadMenuControls = function(space) {
       }
     }
   }
+  function updateButtons() {
+    for (i in gamepad.buttons) {
+      if (gamepad.buttons[i].pressed) {
+        buttonPress({
+          button: buttonMappings[i],
+          repeat: buttonRepeats[buttonMappings[i]]
+        });
+        buttonRepeats[buttonMappings[i]] = true;
+      } else {
+        buttonRepeats[buttonMappings[i]] = false;
+      }
+    }
+  }
+  function updateCursor() {
+    let moveX = gamepad.axes[0];
+    let moveY = gamepad.axes[1];
+    updateDialogButtons();
+    keyboardUtils.update(moveX, moveY);
+    if (!_this.keyboardLock) {
+      if (Math.abs(moveY) < threshold && Math.abs(moveX) < threshold) {
+        cursorAcceleration = 0;
+      } else {
+        cursorAcceleration = Math.min(cursorAcceleration + 0.015, 1);
+        cursorX = Math.max(0, Math.min(cursorX + (moveX * cursorAcceleration * 25), window.innerWidth));
+        cursorY = Math.max(0, Math.min(cursorY + (moveY * cursorAcceleration * 25), window.innerHeight));
+        cursor.style.left = `${cursorX}px`;
+        cursor.style.top = `${cursorY}px`;
+      }
+      if (_this.elementHovering && _this.elementHovering.classList.contains("gamepad-hovering")) _this.elementHovering.classList.remove("gamepad-hovering");
+      _this.elementHovering = document.elementFromPoint(cursorX, cursorY);
+      if (_this.elementHovering && /\b(select|option|input|button)\b/i.test(_this.elementHovering.tagName)) _this.elementHovering.classList.add("gamepad-hovering");
+      let scrollY = gamepad.axes[3];
+      if (Math.abs(scrollY) > .1) {
+        let scrollableElements = document.querySelectorAll("[data-gamepad-scrollable]");
+        for (let i = 0; i < scrollableElements.length; i++) {
+          if (scrollableElements[i].contains(_this.elementHovering)) {
+            scrollableElements[i].scrollTop += scrollY * 10;
+          }
+        }
+      }
+    }
+  }
+  function updateNavigation() {
+    let delay = repeats == 1 ? 400 : 150;
+    if (time - lastButtonNavigation >= delay) {
+      if (gamepad.axes[0] < -threshold) {
+        navigationUtils.blur();
+        currentButtonIndex = parseInt(document.querySelector(currentSpace.navElements[currentButtonIndex].left).dataset.gamepadIndex);
+        focusUpdate = true;
+        repeats++;
+        lastButtonNavigation = time;
+      }
+      if (gamepad.axes[0] > threshold) {
+        navigationUtils.blur();
+        currentButtonIndex = parseInt(document.querySelector(currentSpace.navElements[currentButtonIndex].right).dataset.gamepadIndex);
+        focusUpdate = true;
+        repeats++;
+        lastButtonNavigation = time;
+      }
+      if (gamepad.axes[1] < -threshold) {
+        navigationUtils.blur();
+        currentButtonIndex = parseInt(document.querySelector(currentSpace.navElements[currentButtonIndex].up).dataset.gamepadIndex);
+        focusUpdate = true;
+        repeats++;
+        lastButtonNavigation = time;
+      }
+      if (gamepad.axes[1] > threshold) {
+        navigationUtils.blur();
+        currentButtonIndex = parseInt(document.querySelector(currentSpace.navElements[currentButtonIndex].down).dataset.gamepadIndex);
+        focusUpdate = true;
+        repeats++;
+        lastButtonNavigation = time;
+      }
+      if (Math.abs(gamepad.axes[0]) < threshold && Math.abs(gamepad.axes[1]) < threshold) {
+        repeats = 0;
+        lastButtonNavigation = null;
+      }
+    }
+  }
+  _this.connected = false;
+  _this.elementHovering = null;
+  _this.enableCursor = function() {
+    if (!_this.connected) return;
+    cursor.style.display = "block";
+    cursor.style.opacity = "1";
+    cursorActive = true;
+  };
+  _this.disableCursor = function() {
+    if (!_this.connected) return;
+    cursor.style.display = "none";
+    cursorActive = false;
+  };
+  _this.showCursor = function() {
+    cursor.style.opacity = "1";
+  };
+  _this.hideCursor = function() {
+    cursor.style.opacity = "0";
+  };
   _this.update = function() {
     let gamepads = navigator.getGamepads();
     if (gamepads.length > 0 && gamepads[0] != null) {
       if (_this.connected) {
-        if (focusUpdate) focusUpdate = false, focusCurrentButton();
-        let gamepad = gamepads[0];
-        for (i in gamepad.buttons) {
-          if (gamepad.buttons[i].pressed) {
-            buttonPress({
-              button: buttonMappings[i],
-              repeat: buttonRepeats[buttonMappings[i]]
-            });
-            buttonRepeats[buttonMappings[i]] = true;
-          } else {
-            buttonRepeats[buttonMappings[i]] = false;
-          }
-        }
-        let time = Date.now();
-        let threshold = .5;
+        gamepad = gamepads[0];
+        time = Date.now();
+        if (focusUpdate) focusUpdate = false, navigationUtils.focus();
+        updateButtons();
         if (cursorActive) {
-          let moveX = gamepad.axes[0];
-          let moveY = gamepad.axes[1];
-          updateDialogButtons();
-          handleKeyboard(time, moveX, moveY);
-          if (!_this.keyboardLock) {
-            if (Math.abs(moveY) < threshold && Math.abs(moveX) < threshold) {
-              cursorAcceleration = 0;
-            } else {
-              cursorAcceleration = Math.min(cursorAcceleration + 0.015, 1);
-              cursorX = Math.max(0, Math.min(cursorX + (moveX * cursorAcceleration * 25), window.innerWidth));
-              cursorY = Math.max(0, Math.min(cursorY + (moveY * cursorAcceleration * 25), window.innerHeight));
-              cursor.style.left = `${cursorX}px`;
-              cursor.style.top = `${cursorY}px`;
-            }
-            _this.elementHovering = document.elementFromPoint(cursorX, cursorY);
-            let scrollY = gamepad.axes[3];
-            if (Math.abs(scrollY) > .1) {
-              let scrollableElements = document.querySelectorAll("[data-gamepad-scrollable]");
-              for (let i = 0; i < scrollableElements.length; i++) {
-                if (scrollableElements[i].contains(_this.elementHovering)) {
-                  scrollableElements[i].scrollTop += scrollY * 10;
-                }
-              }
-            }
-          }
+          updateCursor();
         } else {
-          let delay = repeats == 1 ? 400 : 150;
-          if (time - lastButtonNavigation >= delay) {
-            if (gamepad.axes[0] < -threshold) {
-              blurCurrentButton();
-              currentButtonIndex = parseInt(document.querySelector(currentSpace.navElements[currentButtonIndex].left).dataset.gamepadIndex);
-              focusUpdate = true;
-              repeats++;
-              lastButtonNavigation = time;
-            }
-            if (gamepad.axes[0] > threshold) {
-              blurCurrentButton();
-              currentButtonIndex = parseInt(document.querySelector(currentSpace.navElements[currentButtonIndex].right).dataset.gamepadIndex);
-              focusUpdate = true;
-              repeats++;
-              lastButtonNavigation = time;
-            }
-            if (gamepad.axes[1] < -threshold) {
-              blurCurrentButton();
-              currentButtonIndex = parseInt(document.querySelector(currentSpace.navElements[currentButtonIndex].up).dataset.gamepadIndex);
-              focusUpdate = true;
-              repeats++;
-              lastButtonNavigation = time;
-            }
-            if (gamepad.axes[1] > threshold) {
-              blurCurrentButton();
-              currentButtonIndex = parseInt(document.querySelector(currentSpace.navElements[currentButtonIndex].down).dataset.gamepadIndex);
-              focusUpdate = true;
-              repeats++;
-              lastButtonNavigation = time;
-            }
-            if (Math.abs(gamepad.axes[0]) < threshold && Math.abs(gamepad.axes[1]) < threshold) {
-              repeats = 0;
-              lastButtonNavigation = null;
-            }
-          }
-          if (gamepad.buttons[0].pressed) {
-            if (!buttonRepeats[buttonMappings[0]]) {
-              clickCurrentButton();
-              buttonRepeats[buttonMappings[0]] = true;
-            }
-          } else {
-            buttonRepeats[buttonMappings[0]] = false;
-          }
+          updateNavigation();
         }
       } else {
         _this.connected = true;
