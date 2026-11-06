@@ -1209,7 +1209,6 @@
                   const name = idSplit[1];
                   model.scene.traverse(child => child.frustumCulled = false);
                   sandbox.weapons[name].model = model;
-                  sandbox.weapons[name].loaded = true;
                   if (name == sandbox.loadout[0]) utils.weapons.setPrimary(model.scene);
                   if (name == sandbox.loadout[1]) utils.weapons.setSecondary(model.scene);
                   utils.images.preload("/images/crosshairs/" + sandbox.weapons[name].reticle + ".png");
@@ -1236,7 +1235,7 @@
           utils.ui.elements.loadingScreen.querySelector(".loading-screen-indicator").style.opacity = "1";
           audio.initialize(function() {
             if (utils.options.get("MobileGame")) TouchControls.initialize(utils.ui.elements.container);
-            onWindowResize();
+            utils.game.updateWindowSize();
             if (sandbox.presets.options.teamGame) {
               utils.players.setArmorColor("self");
               utils.ui.elements.scores.classList.add("team-game");
@@ -2166,12 +2165,10 @@
             range: 12,
             recoil: 0.5,
             reticle: 0,
-            bulletHole: 0,
             defaultDelayBetweenShots: 100,
             holdType: "rifle",
             type: "rifle",
             model: null,
-            loaded: false,
             animationStructure: {
               idle: [1, 1, 1],
               reload: [2, 1, 1],
@@ -2202,12 +2199,10 @@
             range: 16,
             recoil: 1,
             reticle: 1,
-            bulletHole: 0,
             defaultDelayBetweenShots: 200,
             holdType: "pistol",
             type: "pistol",
             model: null,
-            loaded: false,
             animationStructure: {
               reload: [0, 1, 1],
               reload_full: [3, 1, 1],
@@ -2238,12 +2233,10 @@
             range: 10,
             recoil: 0.8,
             reticle: 2,
-            bulletHole: 0,
             defaultDelayBetweenShots: 80,
             holdType: "rifle",
             type: "rifle",
             model: null,
-            loaded: false,
             animationStructure: {
               idle: [1, 1, 1],
               reload: [2, 1.2, 1],
@@ -2274,12 +2267,10 @@
             range: 10,
             recoil: 0.5,
             reticle: 3,
-            bulletHole: 0,
             defaultDelayBetweenShots: 65,
             holdType: "rifle",
             type: "rifle",
             model: null,
-            loaded: false,
             animationStructure: {
               idle: [0, 1, 1],
               reload: [3, 1.5, 1],
@@ -2310,7 +2301,6 @@
             range: 60,
             recoil: 2,
             reticle: 4,
-            bulletHole: 0,
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 700,
@@ -2318,7 +2308,6 @@
             holdType: "rifle",
             type: "sniper-rifle",
             model: null,
-            loaded: false,
             animationStructure: {
               shoot: [0, 0.8, 1],
               idle: [1, 1, 1],
@@ -2349,12 +2338,10 @@
             range: 8,
             recoil: 1,
             reticle: 5,
-            bulletHole: 0,
             defaultDelayBetweenShots: 200,
             holdType: "pistol",
             type: "pistol",
             model: null,
-            loaded: false,
             animationStructure: {
               reload: [0, 1.2, 1],
               reload_full: [0, 1.2, 1],
@@ -2385,7 +2372,6 @@
             range: 22,
             recoil: 0.5,
             reticle: 6,
-            bulletHole: 0,
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 200,
@@ -2393,7 +2379,6 @@
             holdType: "rifle",
             type: "rifle",
             model: null,
-            loaded: false,
             animationStructure: {
               idle: [0, 1, 1],
               reload: [3, 1.6, 1],
@@ -2424,12 +2409,10 @@
             range: 100,
             recoil: .5,
             reticle: 7,
-            bulletHole: 0,
             defaultDelayBetweenShots: 100,
             holdType: "rifle",
             type: "rifle",
             model: null,
-            loaded: false,
             animationStructure: {
               shoot: [0, 1, 1],
               idle: [1, 1, 1],
@@ -2460,7 +2443,6 @@
             range: 30,
             recoil: 1,
             reticle: 8,
-            bulletHole: 0,
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 300,
@@ -2468,7 +2450,6 @@
             holdType: "rifle",
             type: "sniper-rifle",
             model: null,
-            loaded: false,
             animationStructure: {
               shoot: [0, 0.8, 1],
               idle: [1, 1, 1],
@@ -2499,13 +2480,11 @@
             range: 30,
             recoil: 2,
             reticle: 9,
-            bulletHole: 0,
             delayBetweenShots: 200,
             defaultDelayBetweenShots: 250,
             holdType: "pistol",
             type: "pistol",
             model: null,
-            loaded: false,
             animationStructure: {
               reload: [0, 1, 1],
               reload_full: [1, 1, 1],
@@ -2536,7 +2515,6 @@
             range: 30,
             recoil: 0.8,
             reticle: 10,
-            bulletHole: 0,
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 100,
@@ -2544,7 +2522,6 @@
             holdType: "rifle",
             type: "rifle",
             model: null,
-            loaded: false,
             animationStructure: {
               shoot: [0, 0.8, 1],
               idle: [1, 1, 1],
@@ -2574,7 +2551,6 @@
             range: 60,
             recoil: 3,
             reticle: 11,
-            bulletHole: 0,
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 700,
@@ -2582,7 +2558,6 @@
             holdType: "rifle",
             type: "rocket-launcher",
             model: null,
-            loaded: false,
             animationStructure: {
               shoot: [0, 0.1, 2],
               idle: [1, 1, 1],
@@ -2613,12 +2588,10 @@
             range: 12,
             recoil: .8,
             reticle: 12,
-            bulletHole: 0,
             defaultDelayBetweenShots: 150,
             holdType: "pistol",
             type: "pistol",
             model: null,
-            loaded: false,
             animationStructure: {
               shoot: [0, .5, 1],
               idle: [1, 1, 1],
@@ -2648,7 +2621,6 @@
             range: 60,
             recoil: 3,
             reticle: 11,
-            bulletHole: 0,
             scope: true,
             scopeRendered: false,
             delayBetweenShots: 400,
@@ -2656,7 +2628,6 @@
             holdType: "rifle",
             type: "rocket-launcher",
             model: null,
-            loaded: false,
             animationStructure: {
               shoot: [0, 0.5, 2],
               idle: [1, 1, 1],
@@ -2694,7 +2665,6 @@
             type: "shotgun",
             useShotgunStyleReload: true,
             model: null,
-            loaded: false,
             animationStructure: {
               idle: [0, 1, 1],
               reload_reach: [1, 1, 1],
@@ -2723,13 +2693,11 @@
             range: 10,
             recoil: 1,
             reticle: 14,
-            bulletHole: 0,
             defaultDelayBetweenShots: 500,
             holdType: "rifle",
             type: "grenade-launcher",
             useShotgunStyleReload: true,
             model: null,
-            loaded: false,
             animationStructure: {
               idle: [0, 1, 1],
               reload_reach: [1, 1, 1],
@@ -2756,13 +2724,11 @@
             range: 8,
             recoil: 1,
             reticle: 15,
-            bulletHole: 0,
             defaultDelayBetweenShots: 200,
             holdType: "rifle",
             type: "grenade-launcher",
             useShotgunStyleReload: true,
             model: null,
-            loaded: false,
             animationStructure: {
               idle: [0, 1, 1],
               reload_reach: [1, 1, 1],
@@ -4420,6 +4386,7 @@
           fire: function(rounds = 1) {
             if (utils.vehicles.check()) return utils.vehicles.check().horn = true;
             const weapon = utils.weapons.getCurrentEntry();
+            if (typeof weapon.bulletHole == "undefined") weapon.bulletHole = 0;
             if (utils.options.get("Reloading")) {
               if (weapon.type == "shotgun" && weapon.currentAmmo > 0) {
                 utils.weapons.stopReload();
@@ -6031,15 +5998,14 @@
             }
           },
           pauseMenuAction: function(action) {
+            if (action != "resume") audio.pause();
             if (action == "resume") {
               utils.game.togglePause();
             } else if (action == "leave-game") {
-              audio.pause();
               gamepadMenuControls.enableCursor();
               Notiflix.Confirm.show("Leave Game", "Are you sure you want to leave the current game and return to the Main Menu?", "Continue", "Cancel", function() {
                 audio.pause();
                 location.replace("/");
-                gamepadMenuControls.disableCursor();
               }, function() {
                 audio.pause();
                 gamepadMenuControls.disableCursor();
@@ -6050,7 +6016,6 @@
                 zindex: 10000
               });
             } else if (action == "settings") {
-              audio.pause();
               gamepadMenuControls.enableCursor();
               Notiflix.Confirm.show("", "", "Save", "Close", function() {
                 audio.pause();
@@ -6060,11 +6025,7 @@
               }, function() {
                 audio.pause();
                 gamepadMenuControls.disableCursor();
-              }, {
-                borderRadius: 0,
-                okButtonBackground: "#5aace1",
-                zindex: 10000
-              });
+              }, { borderRadius: 0, okButtonBackground: "#5aace1", zindex: 10000 });
               document.querySelector(".notiflix-confirm-content").dataset.gamepadScrollable = "";
               document.querySelector(".notiflix-confirm-head").innerHTML = `
               <div class="settings-wrapper">
@@ -6115,6 +6076,11 @@
                   <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.mouseLookSpeed}" name="mouseLookSpeed" class="settings-option settings-option-mouseLookSpeed" oninput="utils.game.updateSettingsInput(this)">
                 </div>
                 <div class="settings-container">
+                  <label for="touchLookSpeed">Touch Look Speed</label>
+                  <label for="touchLookSpeed" class="settings-range-number">${sandbox.settings.touchLookSpeed}</label>
+                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.touchLookSpeed}" name="touchLookSpeed" class="settings-option settings-option-touchLookSpeed" oninput="utils.game.updateSettingsInput(this)">
+                </div>
+                <div class="settings-container">
                   <label for="gamepadLookSpeed">Gamepad Look Speed</label>
                   <label for="gamepadLookSpeed" class="settings-range-number">${sandbox.settings.gamepadLookSpeed}</label>
                   <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.gamepadLookSpeed}" name="gamepadLookSpeed" class="settings-option settings-option-gamepadLookSpeed" oninput="utils.game.updateSettingsInput(this)">
@@ -6124,16 +6090,10 @@
                   <label for="gamepadLookAcceleration" class="settings-range-number">${sandbox.settings.gamepadLookAcceleration}</label>
                   <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.gamepadLookAcceleration}" name="gamepadLookAcceleration" class="settings-option settings-option-gamepadLookAcceleration" oninput="utils.game.updateSettingsInput(this)">
                 </div>
-                <div class="settings-container">
-                  <label for="touchLookSpeed">Touch Look Speed</label>
-                  <label for="touchLookSpeed" class="settings-range-number">${sandbox.settings.touchLookSpeed}</label>
-                  <input type="range" min="1" max="10" step=".5" value="${sandbox.settings.touchLookSpeed}" name="touchLookSpeed" class="settings-option settings-option-touchLookSpeed" oninput="utils.game.updateSettingsInput(this)">
-                </div>
               </div>
               `;
               document.querySelector(`.settings-option-cameraFov option[value="${sandbox.settings.cameraFov}"]`).selected = "selected";
             } else if (action == "report-bug") {
-              audio.pause();
               gamepadMenuControls.enableCursor();
               Notiflix.Confirm.prompt("Report Bug", "What problem are you having with FPS5? Write it below, and we'll try our best to fix it:", "", "Send", "Cancel", function() {
                 audio.pause();
@@ -6142,20 +6102,11 @@
               }, function() {
                 audio.pause();
                 gamepadMenuControls.disableCursor();
-              }, {
-                borderRadius: 0,
-                okButtonBackground: "#5aace1",
-                titleColor: "#5aace1",
-                zindex: 10000
-              });
+              }, { borderRadius: 0, okButtonBackground: "#5aace1", titleColor: "#5aace1", zindex: 10000 });
             }
           },
           updateSettingsInput: function(element) {
-            if (element.name == "rendererQuality") {
-              element.previousElementSibling.textContent = element.value + "%";
-            } else {
-              element.previousElementSibling.textContent = element.value;
-            }
+            element.previousElementSibling.textContent = element.value + (element.name == "rendererQuality" ? "%" : "");
           },
           updateSettingsFromDialog: function() {
             user.set("settings", {
@@ -6206,16 +6157,13 @@
             sandbox.settings = user.data.settings;
           },
           applySettings: function() {
-            if (!deathScreen && !utils.vehicles.check()) {
-              camera.fov = sandbox.settings.cameraFov;
-              camera.updateProjectionMatrix();
-            }
+            if (!deathScreen && !utils.vehicles.check()) camera.fov = sandbox.settings.cameraFov, camera.updateProjectionMatrix();
             if (sandbox.settings.shrinkScreen) {
               utils.ui.elements.container.style.scale = ".7";
             } else {
               utils.ui.elements.container.style.scale = "";
             }
-            onWindowResize();
+            utils.game.updateWindowSize();
             if (!utils.options.get("Zoomed")) {
               PointerControls.pointerSpeed = sandbox.settings.mouseLookSpeed * .12;
               TouchControls.speed = sandbox.settings.touchLookSpeed * .12;
@@ -6286,9 +6234,39 @@
               Notiflix.Loading.remove();
               Notiflix.Notify.error("No bots are available to play right now.");
             });
+          },
+          updateWindowSize: function() {
+            renderer.setPixelRatio(sandbox.settings.rendererQuality * 2.6 * (sandbox.settings.shrinkScreen ? .7 : 1));
+            let width = window.innerWidth * .5;
+            let height = window.innerHeight * .5;
+            if (utils.options.get("MobileGame")) {
+              if (!document.body.className.includes("auto-resize-mobile")) document.body.classList.add("auto-resize-mobile");
+              width = 1000;
+              height = 500;
+              if (window.innerWidth < width * (window.innerHeight / height)) {
+                utils.ui.elements.container.style.transform = `scale(${window.innerWidth / width})`;
+              } else {
+                utils.ui.elements.container.style.transform = `scale(${window.innerHeight / height})`;
+              }
+            } else if (window.innerWidth > 1920 && window.innerHeight > 1080) {
+              if (!document.body.className.includes("auto-resize-tv")) document.body.classList.add("auto-resize-tv");
+              width = 960;
+              height = 540;
+              if (window.innerWidth < width * (window.innerHeight / height)) {
+                utils.ui.elements.container.style.transform = `scale(${window.innerWidth / width})`;
+              } else {
+                utils.ui.elements.container.style.transform = `scale(${window.innerHeight / height})`;
+              }
+            } else {
+              if (document.body.className.includes("auto-resize-tv")) document.body.classList.remove("auto-resize-tv");
+            }
+            camera.aspect = width / height;
+            renderer.setSize(width, height, false);
+            camera.updateProjectionMatrix();
           }
         }
       };
+      window.addEventListener("resize", utils.game.updateWindowSize);
 
       for (medal in sandbox.medals) {
         let element = document.createElement("div");
@@ -6328,56 +6306,16 @@
         sandbox.initialize();
       };
 
-      function onWindowResize() {
-        renderer.setPixelRatio(sandbox.settings.rendererQuality * 2.6 * (sandbox.settings.shrinkScreen ? .7 : 1));
-        let width = window.innerWidth * .5;
-        let height = window.innerHeight * .5;
-        if (utils.options.get("MobileGame")) {
-          if (!document.body.className.includes("auto-resize-mobile")) document.body.classList.add("auto-resize-mobile");
-          width = 1000;
-          height = 500;
-          if (window.innerWidth < width * (window.innerHeight / height)) {
-            utils.ui.elements.container.style.transform = `scale(${window.innerWidth / width})`;
-          } else {
-            utils.ui.elements.container.style.transform = `scale(${window.innerHeight / height})`;
-          }
-        } else if (window.innerWidth > 1920 && window.innerHeight > 1080) {
-          if (!document.body.className.includes("auto-resize-tv")) document.body.classList.add("auto-resize-tv");
-          width = 960;
-          height = 540;
-          if (window.innerWidth < width * (window.innerHeight / height)) {
-            utils.ui.elements.container.style.transform = `scale(${window.innerWidth / width})`;
-          } else {
-            utils.ui.elements.container.style.transform = `scale(${window.innerHeight / height})`;
-          }
-        } else {
-          if (document.body.className.includes("auto-resize-tv")) document.body.classList.remove("auto-resize-tv");
-        }
-        camera.aspect = width / height;
-        renderer.setSize(width, height, false);
-        camera.updateProjectionMatrix();
-      }
-      window.addEventListener("resize", onWindowResize);
-      onWindowResize();
-
       document.addEventListener("keydown", utils.game.keyDownFunction);
       document.addEventListener("keyup", utils.game.keyUpFunction);
-      document.addEventListener("mousedown", function(event) {
-        if (document.pointerLockElement != null || utils.options.get("GameStartTime") == null || utils.options.get("GamePaused")) return;
-        if (document.hasFocus() && document.body.requestPointerLock) document.body.requestPointerLock(), PointerControls.lock();
-      });
-      document.addEventListener("mouseup", (event) => {
-        if (!PointerControls.isLocked || utils.options.get("GameStartTime") == null || utils.options.get("GamePaused")) return;
-        if (document.hasFocus() && document.body.requestPointerLock) PointerControls.lock();
-      });
+      document.addEventListener("mousedown", event => (!(document.pointerLockElement != null || utils.options.get("GameStartTime") == null || utils.options.get("GamePaused")) && document.hasFocus() && document.body.requestPointerLock && (document.body.requestPointerLock(), PointerControls.lock())));
+      document.addEventListener("mouseup", event => (!(!PointerControls.isLocked || utils.options.get("GameStartTime") == null || utils.options.get("GamePaused")) && document.hasFocus() && document.body.requestPointerLock && PointerControls.lock()));
 
       const PointerControls = new PointerLockControls(camera, renderer.domElement);
       const TouchControls = new TouchScreenControls();
       const GamepadControls = new GamepadApiControls();
       PointerControls.maxPolarAngle = Math.PI - 0.15;
       PointerControls.minPolarAngle = 0.15;
-      PointerControls.pointerSpeed = 0.6;
-      PointerControls.isLocked = true;
 
       utils.options.set("Walking", false);
       utils.options.set("Firing", false);
@@ -6391,25 +6329,8 @@
       utils.options.set("CurrentVehicle", false);
       utils.options.set("CurrentVehicleHovering", null);
       utils.options.set("ReloadCallback", {});
-      utils.options.set("bulletHoles", {
-        0: {
-          size: vectors[23],
-          material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
-        },
-        1: {
-          size: new THREE.Vector3(.02, .02, .02),
-          material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/1.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
-        },
-        2: {
-          size: vectors[23],
-          material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/2.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide })
-        }
-      });
-      utils.options.set("materials", {
-        Jeep_windshield: new THREE.MeshBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.1, depthWrite: false }),
-        Warthog_windshield: new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide }),
-        shattered_windshield: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, map: textureLoader.load("/images/assets/vehicles/shattered_glass.png") })
-      });
+      utils.options.set("bulletHoles", [{ size: vectors[23], material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/0.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }) }, { size: new THREE.Vector3(.02, .02, .02), material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/1.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }) }, { size: vectors[23], material: new THREE.MeshStandardMaterial({ map: textureLoader.load("/images/assets/bullet-holes/2.png"), transparent: true, depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, side: THREE.DoubleSide }) }]);
+      utils.options.set("materials", { Jeep_windshield: new THREE.MeshBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.1, depthWrite: false }), Warthog_windshield: new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide }), shattered_windshield: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, map: textureLoader.load("/images/assets/vehicles/shattered_glass.png") }) });
       utils.options.set("playerCamera", camera.clone());
       utils.options.set("scopeRenderTarget", new THREE.WebGLRenderTarget(250, 250));
       utils.options.set("scopeCompass", new THREE.Mesh(new THREE.CircleGeometry(0.75, 30), new THREE.MeshBasicMaterial({ map: textureLoader.load("/images/ui/compass.png"), transparent: true, opacity: 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide })));
@@ -6428,7 +6349,7 @@
       utils.options.set("CheckRunningAfterJump", false);
       utils.options.set("KillStreak", 0);
       utils.options.set("lastKill", null);
-      utils.options.set("MobileGame", /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in document.documentElement));
+      utils.options.set("MobileGame", /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ("ontouchstart" in document.documentElement));
       utils.options.get("LastPlayerVehicleCollision", null);
       utils.options.set("MeleeAllowed", false);
       utils.options.set("LastTimerUpdate", null);
@@ -6438,75 +6359,30 @@
       utils.options.set("StopFrame", false);
       utils.options.set("AllowAimUpdate", true);
       utils.options.set("GamePaused", false);
-
       scene.add(utils.options.get("playerCamera"));
 
-      gametime.on("jump", function(player) {
-        if (player != gametime.player.uuid) utils.players.animations.start(utils.players.objects[player], utils.players.objects[player].weapon.type + "_jump", { loop: THREE.LoopOnce, reset: true });
-      });
-      gametime.on("switchWeapon", function(player, weapon) {
-        if (player != gametime.player.uuid) utils.players.weapons.set(utils.players.objects[player], weapon);
-      });
-      gametime.on("spawnWeapon", function(player, weaponUUID, type, weapon, position, rotation, options, offset) {
-        if (player != gametime.player.uuid) utils.weapons.spawn(type, weapon, position, rotation, options, offset, weaponUUID);
-      });
-      gametime.on("pickupWeapon", function(player, weaponUUID) {
-        if (player != gametime.player.uuid) utils.weapons.pickup(utils.options.get("SpawnedWeapons")[weaponUUID], true);
-      });
-      gametime.on("startWalking", function(player) {
-        if (player != gametime.player.uuid) utils.players.startWalking(utils.players.objects[player]);
-      });
-      gametime.on("stopWalking", function(player) {
-        if (player != gametime.player.uuid) utils.players.stopWalking(utils.players.objects[player]);
-      });
-      gametime.on("startRunning", function(player) {
-        if (player != gametime.player.uuid) utils.players.startRunning(utils.players.objects[player]);
-      });
-      gametime.on("stopRunning", function(player) {
-        if (player != gametime.player.uuid) utils.players.stopRunning(utils.players.objects[player]);
-      });
-      gametime.on("fireWeapon", function(player, point, spreadX, spreadY, bulletHole, playerHit) {
-        if (player != gametime.player.uuid) utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY, bulletHole, playerHit);
-      });
-      gametime.on("reloadWeapon", function(player) {
-        if (player != gametime.player.uuid) utils.players.weapons.reload(utils.players.objects[player]);
-      });
-      gametime.on("throwGrenade", function(player, type, point, grenadeId) {
-        if (player != gametime.player.uuid) utils.players.grenades.throw(utils.players.objects[player], type, point, grenadeId);
-      });
-      gametime.on("explodeGrenade", function(player, grenadeId, grenadePosition) {
-        if (player != gametime.player.uuid) utils.players.grenades.explode(grenadeId, grenadePosition);
-      });
-      gametime.on("startCrouching", function(player) {
-        if (player != gametime.player.uuid) utils.players.startCrouching(utils.players.objects[player]);
-      });
-      gametime.on("stopCrouching", function(player) {
-        if (player != gametime.player.uuid) utils.players.stopCrouching(utils.players.objects[player]);
-      });
-      gametime.on("damage", function(player, damage, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) {
-        if (player == gametime.player.uuid) utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot), utils.effects.shock(damage / 400);
-      });
-      gametime.on("playerDie", function(player, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket) {
-        if (player != gametime.player.uuid) utils.players.health.die(utils.players.objects[player], killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket);
-      });
-      gametime.on("playerRespawn", function(player, spawnPoint) {
-        if (player != gametime.player.uuid) utils.players.health.respawn(utils.players.objects[player], spawnPoint);
-      });
-      gametime.on("enterVehicle", function(player, seat, vehicleIndex) {
-        if (player != gametime.player.uuid) utils.players.vehicles.enter(utils.players.objects[player], seat, utils.vehicles.objects[vehicleIndex]);
-      });
-      gametime.on("exitVehicle", function(player, seat, vehicleData) {
-        if (player != gametime.player.uuid) utils.players.vehicles.exit(utils.players.objects[player], seat, vehicleData);
-      });
-      gametime.on("vehicleHit", function(player, vehicleIndex, damage) {
-        if (player != gametime.player.uuid) utils.players.vehicles.hit(utils.players.objects[player], utils.vehicles.objects[vehicleIndex], damage);
-      });
-      gametime.on("rocketLaunch", function(player, weaponName, point, rocketId) {
-        if (player != gametime.player.uuid) utils.rockets.launch(weaponName, true, point, rocketId);
-      });
-      gametime.on("rocketExplode", function(player, rocketId) {
-        if (player != gametime.player.uuid) utils.rockets.explode(utils.rockets.objects[rocketId], true, player);
-      });
+      gametime.on("jump", player => player != gametime.player.uuid && utils.players.animations.start(utils.players.objects[player], utils.players.objects[player].weapon.type + "_jump", { loop: THREE.LoopOnce, reset: true }));
+      gametime.on("switchWeapon", (player, weapon) => player != gametime.player.uuid && utils.players.weapons.set(utils.players.objects[player], weapon));
+      gametime.on("spawnWeapon", (player, weaponUUID, type, weapon, position, rotation, options, offset) => player != gametime.player.uuid && utils.weapons.spawn(type, weapon, position, rotation, options, offset, weaponUUID));
+      gametime.on("pickupWeapon", (player, weaponUUID) => player != gametime.player.uuid && utils.weapons.pickup(utils.options.get("SpawnedWeapons")[weaponUUID], true));
+      gametime.on("startWalking", player => player != gametime.player.uuid && utils.players.startWalking(utils.players.objects[player]));
+      gametime.on("stopWalking", player => player != gametime.player.uuid && utils.players.stopWalking(utils.players.objects[player]));
+      gametime.on("startRunning", player => player != gametime.player.uuid && utils.players.startRunning(utils.players.objects[player]));
+      gametime.on("stopRunning", player => player != gametime.player.uuid && utils.players.stopRunning(utils.players.objects[player]));
+      gametime.on("fireWeapon", (player, point, spreadX, spreadY, bulletHole, playerHit) => player != gametime.player.uuid && utils.players.weapons.fire(utils.players.objects[player], point, spreadX, spreadY, bulletHole, playerHit));
+      gametime.on("reloadWeapon", player => player != gametime.player.uuid && utils.players.weapons.reload(utils.players.objects[player]));
+      gametime.on("throwGrenade", (player, type, point, grenadeId) => player != gametime.player.uuid && utils.players.grenades.throw(utils.players.objects[player], type, point, grenadeId));
+      gametime.on("explodeGrenade", (player, grenadeId, grenadePosition) => player != gametime.player.uuid && utils.players.grenades.explode(grenadeId, grenadePosition));
+      gametime.on("startCrouching", player => player != gametime.player.uuid && utils.players.startCrouching(utils.players.objects[player]));
+      gametime.on("stopCrouching", player => player != gametime.player.uuid && utils.players.stopCrouching(utils.players.objects[player]));
+      gametime.on("damage", (player, damage, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) => player == gametime.player.uuid && (utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot), utils.effects.shock(damage / 400)));
+      gametime.on("playerDie", (player, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket) => player != gametime.player.uuid && utils.players.health.die(utils.players.objects[player], killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket));
+      gametime.on("playerRespawn", (player, spawnPoint) => player != gametime.player.uuid && utils.players.health.respawn(utils.players.objects[player], spawnPoint));
+      gametime.on("enterVehicle", (player, seat, vehicleIndex) => player != gametime.player.uuid && utils.players.vehicles.enter(utils.players.objects[player], seat, utils.vehicles.objects[vehicleIndex]));
+      gametime.on("exitVehicle", (player, seat, vehicleData) => player != gametime.player.uuid && utils.players.vehicles.exit(utils.players.objects[player], seat, vehicleData));
+      gametime.on("vehicleHit", (player, vehicleIndex, damage) => player != gametime.player.uuid && utils.players.vehicles.hit(utils.players.objects[player], utils.vehicles.objects[vehicleIndex], damage));
+      gametime.on("rocketLaunch", (player, weaponName, point, rocketId) => player != gametime.player.uuid && utils.rockets.launch(weaponName, true, point, rocketId));
+      gametime.on("rocketExplode", (player, rocketId) => player != gametime.player.uuid && utils.rockets.explode(utils.rockets.objects[rocketId], true, player));
 
       user.getLobbies(function(lobbies) {
         let currentLobbyName = new URLSearchParams(location.search).get("lobby");

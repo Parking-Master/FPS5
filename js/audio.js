@@ -163,13 +163,11 @@ audio = {
     };
     audio.sounds["map.ambience"] = AudioWrapper("/sounds/ambience/" + sandbox.maps[sandbox.presets.map].ambienceSound + ".mp3");
     for (let i = 0; i < weapons.length; i++) {
-      if (sandbox.weapons[weapons[i]].loaded) {
-        audio.sounds["reload." + weapons[i] + ".normal"] = AudioWrapper("/sounds/weapons/reloading/" + weapons[i] + ".mp3");
-        audio.sounds["reload." + weapons[i] + ".full"] = AudioWrapper("/sounds/weapons/reloading/" + weapons[i] + ".full.mp3");
-        audio.sounds["fire." + weapons[i]] = AudioWrapper("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true, function(buffer) {
-          audio.sounds["3d.fire." + weapons[i]] = AudioWrapper3d("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true, buffer);
-        });
-      }
+      audio.sounds["reload." + weapons[i] + ".normal"] = AudioWrapper("/sounds/weapons/reloading/" + weapons[i] + ".mp3");
+      audio.sounds["reload." + weapons[i] + ".full"] = AudioWrapper("/sounds/weapons/reloading/" + weapons[i] + ".full.mp3");
+      audio.sounds["fire." + weapons[i]] = AudioWrapper("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true, function(buffer) {
+        audio.sounds["3d.fire." + weapons[i]] = AudioWrapper3d("/sounds/weapons/shooting/" + weapons[i] + ".mp3", true, buffer);
+      });
     }
     let vehicles = [...new Set(sandbox.maps[sandbox.presets.map].vehicles.map(vehicle => vehicle.type))];
     for (let i = 0; i < vehicles.length; i++) {
