@@ -31,6 +31,14 @@
           opacity: 1;
         }
       }
+      @keyframes reward {
+        0% {
+          color: #2fd600;
+        }
+        100% {
+          color: #2b78aa;
+        }
+      }
       html, body {
         margin: 0 !important;
         font-family: Arial, Helvetica, sans-serif;
@@ -539,6 +547,11 @@
         position: absolute;
         margin-top: -4px;
       }
+      .nx-loading-message {
+        left: 0;
+        top: 0;
+        transition: left 1s ease-in, top 1s ease-in;
+      }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" type="text/css" href="/css/responsive.css" id="responsive-stylesheet">
@@ -689,7 +702,6 @@
       function formatNumber(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
       }
-      if (!localStorage["points"]) localStorage.setItem("points", 0);
       function updateLoadout() {
         let character = user.data.character;
         let loadout = user.data.loadout;
@@ -1157,6 +1169,28 @@
       }
       window.addEventListener("resize", onWindowResize);
       onWindowResize();
+      let rewardedPoints = new URLSearchParams(location.search).get("pts");
+      if (rewardedPoints) {
+        let pointsElement = document.querySelector(".points");
+        window.history.replaceState({}, document.title, "/");
+        pointsElement.textContent = formatNumber(user.data.points - rewardedPoints) + " PTS";
+        Notiflix.Loading.pulse("+ " + rewardedPoints + " points");
+        let loadingMessageElement = document.querySelector(".nx-loading-message");
+        document.querySelector(".notiflix-loading-icon").style.display = "none";
+        loadingMessageElement.style.fontSize = "30px";
+        let targetPosition = pointsElement.getBoundingClientRect();
+        let currentPosition = { left: window.innerWidth / 2, top: window.innerHeight / 2 };
+        let moveAmount = { left: targetPosition.left - currentPosition.left, top: targetPosition.top - currentPosition.top };
+        setTimeout(function() {
+          loadingMessageElement.style.left = moveAmount.left + "px";
+          loadingMessageElement.style.top = moveAmount.top + "px";
+          setTimeout(function() {
+            Notiflix.Loading.remove();
+            pointsElement.textContent = formatNumber(user.data.points) + " PTS";
+            pointsElement.style.animation = "reward 1s step-end";
+          }, 600);
+        }, 2000);
+      }
     </script>
   </body>
 </html>

@@ -1052,7 +1052,7 @@
               delete tmpObjects[uuid];
             } else if (object.objectType == "gameOverTransition") {
               renderer.domElement.style.opacity = 0;
-              setTimeout(() => location.replace("/"), 5000);
+              setTimeout(() => location.replace("/?pts=" + gametime.player.data.score), 5000);
               delete tmpObjects[uuid];
             }
           }
@@ -5937,6 +5937,7 @@
           end: function() {
             if (utils.options.get("GameEnded")) return;
             utils.options.set("GameEnded", true);
+            user.set("points", user.data.points + gametime.player.data.score);
             utils.ui.hideDeathInfo();
             utils.ui.showLeaderboard();
             let redTeamScore = 0;
