@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preferences | FPS5</title>
+    <style>
+      @font-face {
+        font-family: "Aperture";
+        src: url(/fonts/Aperture.ttf);
+      }
+      html, body {
+        margin: 0 !important;
+        font-family: Arial, Helvetica, sans-serif;
+        overflow: hidden !important;
+      }
+      .wrapper {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        background: #cdd3d8;
+        border: 20px solid #d9d9d9;
+        box-sizing: border-box;
+        padding: 20px;
+      }
+      .weapon-list {
+        position: relative;
+        height: 100%;
+        overflow-y: scroll;
+        display: inline-block;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .secondary-weapon-list, .grenades-list, .character-list {
+        padding-right: 20px;
+        margin-right: 16px;
+        border-right: 2px solid #bbb;
+      }
+      .weapon-list::-webkit-scrollbar { 
+        display: none;
+      }
+      .weapon-card {
+        position: relative;
+        width: 200px;
+        background: rgba(255, 255, 255, .5);
+        box-sizing: border-box;
+        padding: 10px;
+        border-bottom: 1px solid #bbb;
+        height: 290px;
+        cursor: pointer !important;
+      }
+      .weapon-card.selected {
+        border-top: 5px solid #5aace1;
+        background: rgba(255, 255, 255, 0.75);
+      }
+      .weapon-card:hover {
+        background: rgba(255, 255, 255, 0.85);
+        /* transform: scale(.9); */
+      }
+      .weapon-card.selected::after {
+        content: "SELECTED";
+        position: absolute;
+        width: 60px;
+        background: #5aace1;
+        left: 0;
+        top: 10px;
+        text-align: right;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: bold;
+        color: #fff;
+      }
+      .weapon-card-preview {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        background-size: 100%;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+      .weapon-card-name {
+        font-size: 18px;
+      }
+      .weapon-card-description {
+        font-size: 10px;
+        color: #999;
+      }
+      .weapon-card-preview.medium-preview {
+        background-size: 60%;
+      }
+      .weapon-card-preview.small-preview {
+        background-size: 40%;
+      }
+      .weapon-card-preview.tiny-preview {
+        background-size: 30%;
+      }
+      .right-side {
+        float: right;
+      }
+      .selection-wrapper {
+        position: relative;
+        width: 100px;
+        display: inline-block;
+      }
+      .selection-preview {
+        position: relative;
+        width: 100%;
+        height: 100px;
+        background-image: url(/images/grenade-previews/mk2.png);
+        background-color: #fff;
+        background-size: 60%;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+      .weapon-list-header {
+        font-family: "Aperture";
+        font-size: 18px;
+        margin-bottom: 20px;
+        color: #2b78aa;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="weapon-list primary-weapon-list">
+        <div class="weapon-list-header">Primary Weapon</div>
+        <div class="weapon-card selected">
+          <div class="weapon-card-preview" style="background-image: url(/images/weapon-previews/AK-74.png)"></div>
+          <div class="weapon-card-name">AK-74</div>
+          <div class="weapon-card-description">A basic, mid-range automatic rifle with a generous amount of ammo and decent power.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview" style="background-image: url(/images/weapon-previews/AR-15.png)"></div>
+          <div class="weapon-card-name">AR-15</div>
+          <div class="weapon-card-description">Long-range marksman style rifle with high precision and power thanks to armor piercing rounds.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview" style="background-image: url(/images/weapon-previews/Ace-35r.png)"></div>
+          <div class="weapon-card-name">Ace-35r</div>
+          <div class="weapon-card-description">Burst-fire battle rifle with decent power and lots of ammo, but lower accuracy.</div>
+        </div>
+      </div>
+      <div class="weapon-list secondary-weapon-list">
+        <div class="weapon-list-header">Secondary Weapon</div>
+        <div class="weapon-card selected">
+          <div class="weapon-card-preview medium-preview" style="background-image: url(/images/weapon-previews/FN-502.png)"></div>
+          <div class="weapon-card-name">FN 502</div>
+          <div class="weapon-card-description">A tactical lightweight pistol with a lot of ammo and good accuracy.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview medium-preview" style="background-image: url(/images/weapon-previews/XD-Mod-2.png)"></div>
+          <div class="weapon-card-name">XD Mod.2</div>
+          <div class="weapon-card-description">A compact, very small pistol with great accuracy and armor piercing rounds.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview medium-preview" style="background-image: url(/images/weapon-previews/Desert-Eagle.png)"></div>
+          <div class="weapon-card-name">Desert Eagle</div>
+          <div class="weapon-card-description">A heavy, high damage pistol. Its ability to shock targets makes up for its low accuracy.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview" style="background-image: url(/images/weapon-previews/30-SST.png)"></div>
+          <div class="weapon-card-name">30-SST</div>
+          <div class="weapon-card-description">Mix between an Uzi and an SMG. Holds a lot of ammo but has low damage and accuracy.</div>
+        </div>
+      </div>
+      <div class="weapon-list grenades-list">
+        <div class="weapon-list-header">Grenades</div>
+        <div class="weapon-card selected">
+          <div class="weapon-card-preview medium-preview" style="background-image: url(/images/grenade-previews/mk2.png)"></div>
+          <div class="weapon-card-name">Mk2 Frag</div>
+          <div class="weapon-card-description">Basic fragrance grenade with decent range and a high explosive radius.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview medium-preview" style="background-image: url(/images/grenade-previews/plasma.png)"></div>
+          <div class="weapon-card-name">Plasma</div>
+          <div class="weapon-card-description">Outputs a large field of burning plasma that instantly damages nearby targets. It can also stick to targets if aimed correctly.</div>
+        </div>
+      </div>
+      <div class="weapon-list armor-ability-list">
+        <div class="weapon-list-header">Armor Ability</div>
+        <div class="weapon-card selected">
+          <div class="weapon-card-preview tiny-preview" style="background-image: url(/images/armor-abilities/none.png)"></div>
+          <div class="weapon-card-name">None</div>
+          <div class="weapon-card-description">No armor ability.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview tiny-preview" style="background-image: url(/images/armor-abilities/jet-pack.png)"></div>
+          <div class="weapon-card-name">Jet Pack</div>
+          <div class="weapon-card-description">The Jet Pack is useful for getting to high-up places and avoiding ground explosives.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview tiny-preview" style="background-image: url(/images/armor-abilities/thruster-pack.png)"></div>
+          <div class="weapon-card-name">Thruster Pack</div>
+          <div class="weapon-card-description">Outputs a short burst to make quick movements. Useful for quickly approaching or running away from enemies.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview tiny-preview" style="background-image: url(/images/armor-abilities/active-camo.png)"></div>
+          <div class="weapon-card-name">Active Camo</div>
+          <div class="weapon-card-description">Temporarily makes you blend into the background and turn nearly invisible for a few seconds.</div>
+        </div>
+      </div>
+      <div class="weapon-list character-list">
+        <div class="weapon-list-header">Armor</div>
+        <div class="weapon-card selected">
+          <div class="weapon-card-preview small-preview" style="background-image: url(/images/character-previews/Raven.gif)"></div>
+          <div class="weapon-card-name">Raven</div>
+          <div class="weapon-card-description">The Raven is a Class II armor, offering things like advanced vision using tech goggles, along with active camo.</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview small-preview" style="background-image: url(/images/character-previews/FOTUS.gif)"></div>
+          <div class="weapon-card-name">FOTUS</div>
+          <div class="weapon-card-description">The Fist Of The Unicorn Skin is a metafictional joke character from Halo 4. The spike on its helmet is based on the "Unicorn" in the name.</div>
+        </div>
+      </div>
+      <div class="weapon-list theme-list">
+        <div class="weapon-list-header">Menu Theme</div>
+        <div class="weapon-card selected">
+          <div class="weapon-card-preview small-preview" style="background-image: url(/images/themes/default.png)"></div>
+          <div class="weapon-card-name">Default</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview small-preview" style="background-image: url(/images/character-previews/white.png)"></div>
+          <div class="weapon-card-name">Cool White</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview small-preview" style="background-image: url(/images/character-previews/green.png)"></div>
+          <div class="weapon-card-name">Hacker Green</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview small-preview" style="background-image: url(/images/character-previews/red.png)"></div>
+          <div class="weapon-card-name">Red and Black</div>
+        </div>
+        <div class="weapon-card">
+          <div class="weapon-card-preview small-preview" style="background-image: url(/images/character-previews/black.png)"></div>
+          <div class="weapon-card-name">Midnight Black</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

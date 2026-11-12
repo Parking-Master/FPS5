@@ -733,7 +733,7 @@
         document.querySelector(".signup-button").style.display = "none";
         let displayUsername = user.data.username;
         if (displayUsername.length > 11) displayUsername = displayUsername = displayUsername.slice(0, 10) + "...";
-        document.querySelector(".loadout-header").innerHTML = `<p style="margin:0!important" title="${user.data.username}"><img src="${user.data.profilePicture}" class="profile-picture"> ${displayUsername}</p><span style="font-size:14px">YOUR LOADOUT &bullet; <a href="#">EDIT</a></span>`;
+        document.querySelector(".loadout-header").innerHTML = `<p style="margin:0!important" title="${user.data.username}"><img src="${user.data.profilePicture}" class="profile-picture"> ${displayUsername}</p><span style="font-size:14px">YOUR LOADOUT &bullet; <a href="/preferences.html">EDIT</a></span>`;
       }
 
       function createLobby(dialog = true, lobbyName, lobbyOptions) {
@@ -1100,6 +1100,8 @@
       document.addEventListener("click", function(event) {
         if (event.target.id == "lobby-button") {
           findLobby();
+        } else if (event.target.id == "preferences-button") {
+          location.href = "/preferences.html";
         } else if (event.target.className.includes("lobby-create-button")) {
           createLobby();
         } else if (event.target.className.includes("lobby-enter-code-button")) {
