@@ -45,6 +45,9 @@
         border-bottom: 1px solid #bbb;
         cursor: pointer !important;
       }
+      .item-card * {
+        pointer-events: none !important;
+      }
       .item-card.selected {
         /* box-shadow: 0 -5px 0 #5aace1; */
         background: rgba(255, 255, 255, 0.75);
@@ -148,9 +151,190 @@
         display: inline-block;
         margin: 0 2px;
       }
+      .selection-container.scrollable:after {
+        content: "\f107";
+        font-family: "FontAwesome";
+        position: absolute;
+        bottom: 3px;
+        margin-left: -140px;
+        width: 140px;
+        height: 10px;
+        line-height: 10px;
+        background: #ddd;
+        text-align: center;
+        color: #888;
+        font-size: 16px;
+        border-top: 1px solid #bbb;
+      }
+      @media only screen and (max-width:780px) {
+        .second-section {
+          transform: scale(.8);
+          transform-origin: top center;
+        }
+      }
+      @media only screen and (max-height:690px) {
+        .second-section {
+          transform: scale(.8);
+          transform-origin: top center;
+        }
+      }
+      @media only screen and (max-height:620px) {
+        .item-list {
+          height: 280px;
+        }
+      }
+      @media only screen and (max-height:500px) {
+        .item-list {
+          height: 140px;
+        }
+      }
+      .window {
+        position: absolute;
+        max-width: 600px;
+        max-height: 400px;
+        width: 100%;
+        height: 100%;
+        background: #fff;
+        border: 8px solid #5aace1;
+        border-top: none;
+        left: 50%;
+        top: 50%;
+        margin-left: -300px;
+        margin-top: -200px;
+        z-index: 9999;
+        overflow-y: scroll;
+        scrollbar-width: thin !important;
+        padding: 20px;
+        box-sizing: border-box;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        display: none;
+      }
+      .window-header {
+        font-size: 30px;
+        font-family: "Aperture";
+      }
+      .window-close {
+        float: right;
+        cursor: pointer !important;
+      }
+      @media only screen and (max-width:600px) {
+        .window {
+          left: 0;
+          margin-left: 0;
+        }
+      }
+      @media only screen and (max-height:400px) {
+        .window {
+          top: 0;
+          margin-top: 0;
+        }
+      }
+      .notiflix-loading {
+        background: rgba(0, 0, 0, .6) !important;
+      }
+      .notiflix-loading-icon {
+        animation: flicker 1s step-end infinite;
+      }
+      .notiflix-report, notiflix-confirm {
+        z-index: 10000 !important;
+      }
+      .notiflix-report-button, .notiflix-confirm-buttons a {
+        color: #fff !important;
+      }
+      .notiflix-report-icon {
+        width: 70px !important;
+        height: 70px !important;
+      }
+      .preview-left-section {
+        position: relative;
+        margin: 0;
+        float: left;
+        background: #ccc;
+        box-sizing: border-box;
+        width: 50%;
+        height: 90%;
+        background-size: 80%;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+      .preview-right-section {
+        position: relative;
+        margin: 0;
+        float: right;
+        box-sizing: border-box;
+        width: 50%;
+        height: 90%;
+        padding-left: 10px;
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .preview-description {
+        font-size: 14px;
+        color: #999;
+        border-left: 3px solid #ddd;
+        padding-left: 4px;
+      }
+      .preview-specs {
+        position: relative;
+        width: 100%;
+        height: 140px;
+        background: #333;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .preview-specs-bar {
+        position: relative;
+        width: 60px;
+        margin: 10px;
+        margin-top: auto;
+        margin-bottom: 0;
+        font-size: 12px;
+        background: #eee;
+        text-align: center;
+      }
+      .preview-specs-bar::after {
+        content: "";
+        position: absolute;
+        bottom: -20px;
+        left: 0;
+        width: 45px;
+        text-align: center;
+        font-size: 10px;
+      }
+      .preview-specs-bar_damage::after {
+        content: "Damage";
+      }
+      .preview-specs-bar_range::after {
+        content: "Range";
+      }
+      .preview-specs-bar_firerate::after {
+        content: "Fire Rate";
+      }
+      .preview-specs-bar_accuracy::after {
+        content: "Accuracy";
+      }
+      .preview-equip {
+        width: 100%;
+        padding: 0;
+        font-size: 16px;
+        background: #5aace1;
+        border: none;
+        color: #fff;
+      }
+      .preview-equip:hover {
+        background: #4e8cb6;
+      }
+      .preview-equip:active {
+        background: #3d6e8f;
+      }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   </head>
   <body>
+    <script src="https://parking-master.github.io/Parking-Master-2.0/notiflix/notiflix-3.2.8.min.js"></script>
+    <div class="window" data-gamepad-scrollable></div>
     <div class="wrapper">
       <div class="first-section">
         <div class="button-container button-container-keyboard_settings">
@@ -253,6 +437,107 @@
       </div>
     </div>
     <script>
+      Notiflix.Loading.init({ svgColor: "#fff" });
+      let itemData = {
+        "AK-74": {
+          type: "weapon",
+          displayName: "AK-74",
+          description: "Basic mid-range automatic rifle with a generous amount of ammo and decent power.",
+          damage: 4,
+          range: 4.3,
+          fireRate: 6.4,
+          accuracy: 3
+        },
+        "AR-15": {
+          type: "weapon",
+          displayName: "AR-15",
+          description: "Long-range marksman style rifle with high precision and power thanks to armor piercing rounds.",
+          damage: 5.7,
+          range: 6.6,
+          fireRate: 9.5,
+          accuracy: 8.7
+        },
+        "Ace-35r": {
+          type: "weapon",
+          displayName: "Ace-35r",
+          description: "Burst-fire battle rifle with decent power and lots of ammo, but lower accuracy.",
+          damage: 4.2,
+          range: 5,
+          fireRate: 9.6,
+          accuracy: 3.6
+        },
+        "FN-502": {
+          type: "weapon",
+          displayName: "FN-502",
+          description: "Tactical lightweight pistol with a lot of ammo and good accuracy.",
+          damage: 4.4,
+          range: 6,
+          fireRate: 9.5,
+          accuracy: 8
+        },
+        "XD-Mod-2": {
+          type: "weapon",
+          displayName: "XD Mod.2",
+          description: "Compact, very small pistol with great accuracy and armor piercing rounds.",
+          damage: 4.9,
+          range: 6.5,
+          fireRate: 9.2,
+          accuracy: 8.4
+        },
+        "Desert-Eagle": {
+          type: "weapon",
+          displayName: "Desert Eagle",
+          description: "Heavy high-power pistol. Its ability to shock targets makes up for its low accuracy.",
+          damage: 7,
+          range: 4.5,
+          fireRate: 4.1,
+          accuracy: 2.9
+        },
+        "mk2": {
+          type: "grenade",
+          displayName: "Mk2 Frag Grenades",
+          description: "Basic fragrance grenade with decent damage and a high explosive radius.",
+          damage: 8,
+          range: 7.5
+        },
+        "plasma": {
+          type: "grenade",
+          displayName: "Plasma Grenades",
+          description: "Outputs a large field of burning plasma that instantly damages nearby targets. It can also stick to targets if aimed correctly.",
+          damage: 9.2,
+          range: 4.1
+        },
+        "Raven": {
+          type: "character",
+          displayName: "Raven",
+          description: "Originally introduced in FPS3 as a Class I armor, The Raven is a newer Class II armor, offering things like advanced vision using tech goggles - along with upgraded armor abilities such as active camo."
+        },
+        "FOTUS": {
+          type: "character",
+          displayName: "FOTUS",
+          description: 'The FOTUS Armor, which stands for Fist Of The Unicorn Skin, is a metafictional joke character originally from Halo 4 multiplayer. The spike on its helmet is a reference to the "Unicorn" in the name.'
+        },
+        "none": {
+          type: "armor-ability",
+          displayName: "None",
+          description: "When chosen, no armor ability will be applied. Recommended if you like to make things more difficult than they have to be."
+        },
+        "jet-pack": {
+          type: "armor-ability",
+          displayName: "Jet Pack",
+          description: "Basic Jet Pack that allows you to reach high surfaces and avoid explosives near the ground."
+        },
+        "thruster-pack": {
+          type: "armor-ability",
+          displayName: "Thruster Pack",
+          description: "Instantly outputs a burst of gas that allows you to quickly escape from or lunge at enemies."
+        },
+        "active-camo": {
+          type: "armor-ability",
+          displayName: "Active Camoflauge",
+          description: "Makes you look nearly invisible for a few seconds, using special light redirecting technology. Useful for planning sneak attacks or hiding to recover."
+        },
+      };
       function openWindow(title, content) {
         document.querySelector(".window").innerHTML = `
         <div class="window-header">${title} <span class="window-close">&times;</span></div>
@@ -261,15 +546,84 @@
         document.querySelector(".window").style.display = "block";
         // gamepadMenuControls.enableCursor();
       }
+      function closeWindow(removeLoading = true) {
+        document.querySelector(".window").style.display = "";
+        if (removeLoading) Notiflix.Loading.remove();
+        gamepadMenuControls.disableCursor();
+      }
       function selectItem(group, item) {
         document.querySelector(`.${group}-list .item-card.selected`).classList.remove("selected");
         document.querySelector(`.${group}-list .item-card[data-item="${item}"]`).classList.add("selected");
       }
-      document.querySelectorAll(".item-card").forEach(card => {
-        card.addEventListener("click", function() {
-          selectItem(card.dataset.group, card.dataset.item);
-        });
+      function clickItem(card) {
+        Notiflix.Loading.circle();
+        // Notiflix.Loading.change("Fetching latest server data...");
+        let item = itemData[card.dataset.item];
+        if (item.type == "weapon") {
+          openWindow(item.displayName, `
+          <div class="preview-left-section" style="background-image: url(/images/weapon-previews/${card.dataset.item}.png)"></div>
+          <div class="preview-right-section">
+            <div class="preview-description">${item.description}</div>
+            <div class="preview-specs">
+              <div class="preview-specs-bar preview-specs-bar_damage" style="height: ${item.damage * 10}%; background: ${item.damage < 4 ? "#ff0000" : item.damage < 7 ? "#eee" : "#32CD32"}">${item.damage} / 10</div>
+              <div class="preview-specs-bar preview-specs-bar_range" style="height: ${item.range * 10}%; background: ${item.range < 4 ? "#ff0000" : item.range < 8.5 ? "#eee" : "#32CD32"}">${item.range} / 10</div>
+              <div class="preview-specs-bar preview-specs-bar_firerate" style="height: ${item.fireRate * 10}%; background: ${item.fireRate < 4 ? "#ff0000" : item.fireRate < 8.5 ? "#eee" : "#32CD32"}">${item.fireRate} / 10</div>
+              <div class="preview-specs-bar preview-specs-bar_accuracy" style="height: ${item.accuracy * 10}%; background: ${item.accuracy < 3 ? "#ff0000" : item.accuracy < 8.5 ? "#eee" : "#32CD32"}">${item.accuracy} / 10</div>
+            </div>
+            <button class="preview-equip">Equip</button>
+          </div>
+          `);
+        } else if (item.type == "grenade") {
+          openWindow(item.displayName, `
+          <div class="preview-left-section" style="background-image: url(/images/grenade-previews/${card.dataset.item}.png)"></div>
+          <div class="preview-right-section">
+            <div class="preview-description">${item.description}</div>
+            <div class="preview-specs">
+              <div class="preview-specs-bar preview-specs-bar_damage" style="height: ${item.damage * 10}%; background: ${item.damage < 4 ? "#ff0000" : item.damage < 7 ? "#eee" : "#32CD32"}">${item.damage} / 10</div>
+              <div class="preview-specs-bar preview-specs-bar_range" style="height: ${item.range * 10}%; background: ${item.range < 4 ? "#ff0000" : item.range < 8.5 ? "#eee" : "#32CD32"}">${item.range} / 10</div>
+            </div>
+            <button class="preview-equip">Equip</button>
+          </div>
+          `);
+        } else if (item.type == "character") {
+          openWindow(item.displayName, `
+          <div class="preview-left-section" style="background-image: url(/images/character-previews/${card.dataset.item}.gif); background-size: 50%"></div>
+          <div class="preview-right-section">
+            <div class="preview-description">${item.description}</div>
+            <div class="preview-specs"></div>
+            <button class="preview-equip">Equip</button>
+          </div>
+          `);
+        } else if (item.type == "armor-ability") {
+          openWindow(item.displayName, `
+          <div class="preview-left-section" style="background-image: url(/images/armor-abilities/${card.dataset.item}.png); background-size: 20%"></div>
+          <div class="preview-right-section">
+            <div class="preview-description">${item.description}</div>
+            <div class="preview-specs"></div>
+            <button class="preview-equip">Equip</button>
+          </div>
+          `);
+        }
+        // selectItem(card.dataset.group, card.dataset.item);
+      }
+      document.addEventListener("click", function(event) {
+        if (event.target.className.includes("item-card")) {
+          clickItem(event.target);
+        } else if (event.target.className.includes("window-close")) {
+          closeWindow();
+        }
       });
+      function onWindowResize() {
+        document.querySelectorAll(".item-list").forEach(list => {
+          if (list.getBoundingClientRect().height < list.scrollHeight) {
+            list.parentElement.classList.add("scrollable");
+          } else {
+            list.parentElement.classList.remove("scrollable");
+          }
+        });
+      }
+      onWindowResize();
+      window.addEventListener("resize", onWindowResize);
     </script>
   </body>
 </html>
