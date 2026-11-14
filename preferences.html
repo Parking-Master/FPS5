@@ -334,6 +334,7 @@
   </head>
   <body>
     <script src="https://parking-master.github.io/Parking-Master-2.0/notiflix/notiflix-3.2.8.min.js"></script>
+    <script src="/js/user.js"></script>
     <div class="window" data-gamepad-scrollable></div>
     <div class="wrapper">
       <div class="first-section">
@@ -438,6 +439,9 @@
     </div>
     <script>
       Notiflix.Loading.init({ svgColor: "#fff" });
+      Notiflix.Notify.init({
+        info: { shadow:true,background:"#fff",textColor:"#25750a",notiflixIconColor:"#25750a" }
+      });
       let itemData = {
         "AK-74": {
           type: "weapon",
@@ -495,14 +499,14 @@
         },
         "mk2": {
           type: "grenade",
-          displayName: "Mk2 Frag Grenades",
+          displayName: "Mk2 Frag Grenade",
           description: "Basic fragrance grenade with decent damage and a high explosive radius.",
           damage: 8,
           range: 7.5
         },
         "plasma": {
           type: "grenade",
-          displayName: "Plasma Grenades",
+          displayName: "Plasma Grenade",
           description: "Outputs a large field of burning plasma that instantly damages nearby targets. It can also stick to targets if aimed correctly.",
           damage: 9.2,
           range: 4.1
@@ -549,13 +553,39 @@
       function closeWindow(removeLoading = true) {
         document.querySelector(".window").style.display = "";
         if (removeLoading) Notiflix.Loading.remove();
-        gamepadMenuControls.disableCursor();
+        // gamepadMenuControls.disableCursor();
       }
-      function selectItem(group, item) {
+      function selectItem(group, item, equip = true) {
+        if (equip) {
+          Notiflix.Notify.success(`${itemData[item].displayName} has been equipped.`);
+          if (group == "primary-weapon") {
+            let loadout = user.data.loadout;
+            loadout[0] = item;
+            user.set("loadout", loadout);
+          } else if (group == "secondary-weapon") {
+            let loadout = user.data.loadout;
+            loadout[1] = item;
+            user.set("loadout", loadout);
+          } else if (group == "grenades") {
+            let grenades = { "mk2": 0, "plasma": 0 };
+            grenades[item] = 2;
+            user.set("grenades", grenades);
+          } else if (group == "character") {
+            user.set("character", item);
+          } else if (group == "armor-ability") {
+            if (item == "none") {
+              user.set("armorAbility", null);
+            } else {
+              user.set("armorAbility", item);
+            }
+          }
+        }
         document.querySelector(`.${group}-list .item-card.selected`).classList.remove("selected");
         document.querySelector(`.${group}-list .item-card[data-item="${item}"]`).classList.add("selected");
+        closeWindow();
       }
       function clickItem(card) {
+        if (!card.dataset.item) return;
         Notiflix.Loading.circle();
         // Notiflix.Loading.change("Fetching latest server data...");
         let item = itemData[card.dataset.item];
@@ -604,7 +634,9 @@
           </div>
           `);
         }
-        // selectItem(card.dataset.group, card.dataset.item);
+        document.querySelector(".preview-equip").addEventListener("click", function() {
+          selectItem(card.dataset.group, card.dataset.item);
+        });
       }
       document.addEventListener("click", function(event) {
         if (event.target.className.includes("item-card")) {
@@ -615,7 +647,7 @@
       });
       function onWindowResize() {
         document.querySelectorAll(".item-list").forEach(list => {
-          if (list.getBoundingClientRect().height < list.scrollHeight) {
+          if (parseFloat(getComputedStyle(list).height) < list.scrollHeight) {
             list.parentElement.classList.add("scrollable");
           } else {
             list.parentElement.classList.remove("scrollable");
@@ -624,6 +656,11 @@
       }
       onWindowResize();
       window.addEventListener("resize", onWindowResize);
+      selectItem("primary-weapon", user.data.loadout[0], false);
+      selectItem("secondary-weapon", user.data.loadout[1], false);
+      selectItem("grenades", user.data.grenades["mk2"] == 2 ? "mk2" : "plasma", false);
+      selectItem("character", user.data.character, false);
+      selectItem("armor-ability", user.data.armorAbility || "none", false);
     </script>
   </body>
 </html>

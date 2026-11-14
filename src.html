@@ -2360,9 +2360,9 @@
             currentAmmo: 36,
             maxAmmo: 36,
             maxTotalAmmo: 180,
-            damage: 7,
+            damage: 9,
             headshotDamage: 13,
-            spread: 0.1,
+            spread: 0.2,
             muzzleFlash: true,
             zoomPosition: [0.032, 0.0031, -0.075, 0.046, -0.057, -0.02],
             zoomFov: 33,
@@ -4438,7 +4438,7 @@
                       utils.effects.muzzleFlash();
                     }
                   }
-                  utils.effects.bob(1, weapon.recoil);
+                  if (!zoomed) utils.effects.bob(1, weapon.recoil / 2);
                   utils.effects.shake(weapon.recoil / (zoomed ? 4 : 2), 100, 50 * weapon.recoil);
 
                   roundsFired++;
