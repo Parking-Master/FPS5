@@ -82,6 +82,36 @@ let spaces = {
         "down": ".pause-menu-option-report-bug"
       }
     ]
+  },
+  "preferences": {
+    "startingElement": ".keyboard-settings-button",
+    "autoUpdate": true,
+    "navElements": [
+      {
+        "left": ".keyboard-settings-button",
+        "right": ".gamepad-settings-button",
+        "up": ".keyboard-settings-button",
+        "down": ".keyboard-settings-button"
+      },
+      {
+        "left": ".keyboard-settings-button",
+        "right": ".touchscreen-settings-button",
+        "up": ".gamepad-settings-button",
+        "down": ".gamepad-settings-button"
+      },
+      {
+        "left": ".gamepad-settings-button",
+        "right": ".performance-settings-button",
+        "up": ".touchscreen-settings-button",
+        "down": ".touchscreen-settings-button"
+      },
+      {
+        "left": ".touchscreen-settings-button",
+        "right": ".performance-settings-button",
+        "up": ".performance-settings-button",
+        "down": ".performance-settings-button"
+      }
+    ]
   }
 };
 

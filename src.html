@@ -5703,6 +5703,9 @@
           },
           flip: function() {
             if (utils.vehicles.check(true)) return;
+            let time = Date.now();
+            if (time - utils.options.get("LastVehicleFlip") < 300) return;
+            utils.options.set("LastVehicleFlip", time);
             let didFlip = false;
             for (let i = 0; i < utils.vehicles.objects.length; i++) {
               const vehicle = utils.vehicles.objects[i];
@@ -6314,7 +6317,7 @@
 
       const PointerControls = new PointerLockControls(camera, renderer.domElement);
       const TouchControls = new TouchScreenControls();
-      const GamepadControls = new GamepadApiControls();
+      let GamepadControls = null;
       PointerControls.maxPolarAngle = Math.PI - 0.15;
       PointerControls.minPolarAngle = 0.15;
 
@@ -6360,6 +6363,7 @@
       utils.options.set("StopFrame", false);
       utils.options.set("AllowAimUpdate", true);
       utils.options.set("GamePaused", false);
+      utils.options.set("LastVehicleFlip", null);
       scene.add(utils.options.get("playerCamera"));
 
       gametime.on("jump", player => player != gametime.player.uuid && utils.players.animations.start(utils.players.objects[player], utils.players.objects[player].weapon.type + "_jump", { loop: THREE.LoopOnce, reset: true }));
@@ -6420,6 +6424,7 @@
             sandbox.presets.options.scoreLimit = lobby.scoreLimit;
             sandbox.presets.options.timeLimit = lobby.timeLimit == null ? null : lobby.timeLimit * 60;
             sandbox.presets.map = lobby.map;
+            GamepadControls = new GamepadApiControls();
             utils.ui.elements.loadingScreenMain.style.backgroundImage = "url(/images/maps/" + sandbox.presets.map + ".png)";
             utils.ui.elements.loadingScreenMain.querySelector(".mode-value").textContent = sandbox.presets.mode;
             utils.ui.elements.loadingScreenMain.querySelector(".map-value").textContent = sandbox.presets.map.replace(/_/g, " ");

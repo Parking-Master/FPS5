@@ -57,9 +57,7 @@ GamepadApiControls = function() {
   this.onbuttondown = function(event) {
     if (!event.repeat && sandbox.settings.bindings.gamepad.interact.includes(event.button) && _this.data.interactButtonTime == null) return _this.data.interactButtonTime = event.timestamp;
     utils.game.keyDownFunction(event);
-    if (!event.repeat) {
-      if (sandbox.settings.bindings.gamepad.sprint.includes(event.button) && event.gamepad.axes[1] < -.95) utils.weapons.sprint();
-    }
+    if (!event.repeat && sandbox.settings.bindings.gamepad.sprint.includes(event.button) && event.gamepad.axes[1] < -.95) utils.weapons.sprint();
   };
   this.onbuttonup = function(event) {
     utils.game.keyUpFunction(event);
