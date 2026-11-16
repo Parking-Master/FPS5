@@ -128,6 +128,7 @@
         background: rgba(255, 255, 255, .75);
         border: none;
         border-bottom: 5px solid #5aace1;
+        color: #000 !important;
       }
       .button-container .button:hover {
         background: #ddd;
@@ -328,13 +329,14 @@
         box-sizing: border-box;
         width: 50%;
         height: 100%;
-        padding: 5px;
       }
       .settings-left-section {
         float: left;
+        padding-right: 10px;
       }
       .settings-right-section {
         float: right;
+        padding-left: 10px;
       }
       .settings-binding {
         position: relative;
@@ -411,6 +413,47 @@
         width: 20px;
         filter: brightness(10) invert(1);
         pointer-events: none !important;
+      }
+      .settings-binding-error {
+        border-color: #ce2333;
+        color: #ce2333;
+        display: none;
+      }
+      .settings-wrapper {
+        text-align: left !important;
+      }
+      .settings-wrapper label {
+        font-size: 13px;
+      }
+      .settings-option {
+        float: right !important;
+      }
+      .settings-wrapper input[type="checkbox"] {
+        width: 20px !important;
+        height: 20px !important;
+        position: relative !important;
+        margin-left: 10px !important;
+        vertical-align: middle !important;
+      }
+      .settings-wrapper input[type="range"] {
+        margin-top: -9px !important;
+      }
+      .settings-option-description {
+        font-size: 12px;
+        color: #999;
+        padding-left: 10px;
+        border-left: 1px solid #999;
+      }
+      input[type="range"] {
+        width: 100%;
+      }
+      select {
+        width: 70px;
+        background: #ddd;
+        border: none;
+        padding: 4px 10px;
+        color: #000 !important;
+        border-radius: 0;
       }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -723,6 +766,22 @@
           selectItem(card.dataset.group, card.dataset.item);
         });
       }
+      function setPerformance(updateUser = false) {
+        if (updateUser) {
+          user.set("settings", user.data.settings);
+        } else {
+          user.data.settings.cameraFov = parseFloat(document.querySelector(".settings-option-cameraFov").value);
+          user.data.settings.shrinkScreen = document.querySelector(".settings-option-shrinkScreen").checked;
+          user.data.settings.rendererQuality = document.querySelector(".settings-option-rendererQuality").value / 100;
+          updatePerformance();
+        }
+      }
+      function updatePerformance() {
+        document.querySelector(".settings-option-cameraFov").value = user.data.settings.cameraFov;
+        document.querySelector(".settings-option-shrinkScreen").checked = user.data.settings.shrinkScreen;
+        document.querySelector(".settings-option-rendererQuality").value = user.data.settings.rendererQuality * 100;
+        document.querySelector(".settings-option-rendererQuality").parentElement.querySelector(".settings-range-value").textContent = Math.round(user.data.settings.rendererQuality * 100) + "%";
+      }
       function openSettings(settings) {
         Notiflix.Loading.circle();
         if (settings == "keyboard") {
@@ -731,6 +790,7 @@
             <div class="settings-header">Bindings</div>
             <button class="button reset-bindings reset-keyboard-bindings">Reset</button>
             <div class="settings-description">To change keyboard bindings, select a box for the action you'd like to do, then click the key on your keyboard you want to use. You can bind up to two keys for an action.</div>
+            <div class="settings-description settings-binding-error"></div>
             <div class="settings-binding" data-action="jump"><div class="settings-binding-label">Jump</div><div class="settings-binding-box settings-binding-second-key"></div><div class="settings-binding-box settings-binding-first-key">Space</div></div>
             <div class="settings-binding" data-action="fire"><div class="settings-binding-label">Fire Weapon</div><div class="settings-binding-box settings-binding-second-key">]</div><div class="settings-binding-box settings-binding-first-key">F</div></div>
             <div class="settings-binding" data-action="zoom"><div class="settings-binding-label">Zoom Weapon</div><div class="settings-binding-box settings-binding-second-key"></div><div class="settings-binding-box settings-binding-first-key">I</div></div>
@@ -765,6 +825,7 @@
             <div class="settings-header">Bindings</div>
             <button class="button reset-bindings reset-gamepad-bindings">Reset</button>
             <div class="settings-description">To change gamepad bindings, select a box for the action you'd like to do, then click the button on your controller you want to use. You can bind up to two buttons for an action.</div>
+            <div class="settings-description settings-binding-error"></div>
             <div class="settings-binding" data-action="jump"><div class="settings-binding-label">Jump</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">Space</div></div>
             <div class="settings-binding" data-action="fire"><div class="settings-binding-label">Fire Weapon</div><div class="settings-binding-box settings-binding-second-button">]</div><div class="settings-binding-box settings-binding-first-button">F</div></div>
             <div class="settings-binding" data-action="zoom"><div class="settings-binding-label">Zoom Weapon</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">I</div></div>
@@ -797,34 +858,152 @@
           `);
           updateBindings("gamepad");
           updateLookSpeeds();
+        } else if (settings == "gamepad") {
+          openWindow("Gamepad Settings", `
+          <div class="settings-section settings-left-section">
+            <div class="settings-header">Bindings</div>
+            <button class="button reset-bindings reset-gamepad-bindings">Reset</button>
+            <div class="settings-description">To change gamepad bindings, select a box for the action you'd like to do, then click the button on your controller you want to use. You can bind up to two buttons for an action.</div>
+            <div class="settings-description settings-binding-error"></div>
+            <div class="settings-binding" data-action="jump"><div class="settings-binding-label">Jump</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">Space</div></div>
+            <div class="settings-binding" data-action="fire"><div class="settings-binding-label">Fire Weapon</div><div class="settings-binding-box settings-binding-second-button">]</div><div class="settings-binding-box settings-binding-first-button">F</div></div>
+            <div class="settings-binding" data-action="zoom"><div class="settings-binding-label">Zoom Weapon</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">I</div></div>
+            <div class="settings-binding" data-action="reload"><div class="settings-binding-label">Reload Weapon</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">R</div></div>
+            <div class="settings-binding" data-action="switch"><div class="settings-binding-label">Switch Weapon</div><div class="settings-binding-box settings-binding-second-button">Tab</div><div class="settings-binding-box settings-binding-first-button">Y</div></div>
+            <div class="settings-binding" data-action="grenade"><div class="settings-binding-label">Throw Grenade</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">G</div></div>
+            <div class="settings-binding" data-action="melee"><div class="settings-binding-label">Melee</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">B</div></div>
+            <div class="settings-binding" data-action="armorAbility"><div class="settings-binding-label">Use Armor Ability</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">M</div></div>
+            <div class="settings-binding" data-action="sprint"><div class="settings-binding-label">Sprint (hold)</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">ShiftLeft</div></div>
+            <div class="settings-binding" data-action="crouch"><div class="settings-binding-label">Toggle Crouch</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">C</div></div>
+            <div class="settings-binding" data-action="enterVehicle"><div class="settings-binding-label">Enter Vehicle</div><div class="settings-binding-box settings-binding-second-button">T</div><div class="settings-binding-box settings-binding-first-button">E</div></div>
+            <div class="settings-binding" data-action="vehicleView"><div class="settings-binding-label">Toggle Vehicle View</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">V</div></div>
+            <div class="settings-binding" data-action="interact"><div class="settings-binding-label">Pick Up Weapon</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">T</div></div>
+            <div class="settings-binding" data-action="leaderboard"><div class="settings-binding-label">Leaderboard (hold)</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">L</div></div>
+            <div class="settings-binding" data-action="pause"><div class="settings-binding-label">Toggle Pause</div><div class="settings-binding-box settings-binding-second-button"></div><div class="settings-binding-box settings-binding-first-button">P</div></div>
+          </div>
+          <div class="settings-section settings-right-section">
+            <div class="settings-header">Aiming</div>
+            <button class="button reset-bindings reset-gamepad-aiming-bindings">Reset</button>
+            <div class="settings-description">Change the in-game look speed and acceleration of your gamepad.</div>
+            <div class="settings-look-speed-container">
+              <label for="gamepadLookSpeed">Look Speed <span class="settings-range-value">5</span></label>
+              <input type="range" min="1" max="10" step=".5" value="5" name="gamepadLookSpeed" class="settings-option settings-option-gamepadLookSpeed" oninput="setLookSpeed(this)" onchange="setLookSpeed(null, true)">
+            </div>
+            <div class="settings-look-speed-container">
+              <label for="gamepadLookAcceleration">Look Acceleration <span class="settings-range-value">5</span></label>
+              <input type="range" min="1" max="10" step=".5" value="5" name="gamepadLookAcceleration" class="settings-option settings-option-gamepadLookAcceleration" oninput="setLookSpeed(this)" onchange="setLookSpeed(null, true)">
+            </div>
+          </div>
+          `);
+          updateBindings("gamepad");
+          updateLookSpeeds();
+        } else if (settings == "touchscreen") {
+          openWindow("Touchscreen Settings", `
+          <div class="settings-section settings-left-section">
+            <div class="settings-header">Aiming</div>
+            <button class="button reset-bindings reset-touchscreen-aiming-bindings">Reset</button>
+            <div class="settings-description">Change the in-game look speed of touchscreen devices.</div>
+            <div class="settings-look-speed-container">
+              <label for="touchLookSpeed">Look Speed <span class="settings-range-value">5</span></label>
+              <input type="range" min="1" max="10" step=".5" value="5" name="touchLookSpeed" class="settings-option settings-option-touchLookSpeed" oninput="setLookSpeed(this)" onchange="setLookSpeed(null, true)">
+            </div>
+          </div>
+          `);
+          updateLookSpeeds();
+        } else if (settings == "performance") {
+          openWindow("Performance & Graphics", `
+          <div class="settings-section settings-left-section">
+            <div class="settings-container">
+              <label for="cameraFov">Camera FOV</label>
+              <select value="${user.data.settings.cameraFov}" name="cameraFov" class="settings-option settings-option-cameraFov" onchange="setPerformance(), setPerformance(true)">
+                <option value="38">38°</option>
+                <option value="39">39°</option>
+                <option value="40">40°</option>
+                <option value="41">41°</option>
+                <option value="42">42°</option>
+                <option value="43">43°</option>
+                <option value="44">44°</option>
+                <option value="45">45°</option>
+                <option value="46">46°</option>
+                <option value="47">47°</option>
+                <option value="48">48°</option>
+                <option value="49">49°</option>
+                <option value="50">50°</option>
+                <option value="51">51°</option>
+                <option value="52">52°</option>
+                <option value="53">53°</option>
+                <option value="54">54°</option>
+                <option value="55">55°</option>
+                <option value="56">56°</option>
+                <option value="57">57°</option>
+                <option value="58">58°</option>
+                <option value="59">59°</option>
+                <option value="60">60°</option>
+              </select>
+              <div class="settings-option-description">The vertical FOV of the player camera.</div>
+            </div>
+            <div class="settings-container">
+              <label for="shrinkScreen">Shrink Screen</label>
+              <input type="checkbox" name="shrinkScreen" class="settings-option settings-option-shrinkScreen" onchange="setPerformance(), setPerformance(true)" ${user.data.settings.shrinkScreen ? "checked" : ""}>
+              <div class="settings-option-description">Whether to shrink the screen to improve performance without lowering quality.</div>
+            </div>
+            <div class="settings-container">
+              <label for="rendererQuality">Renderer Quality <span class="settings-range-value">${Math.round(user.data.settings.rendererQuality * 100)}%</span></label>
+              <div class="settings-option-description">The percentage of screen resolution the game should follow. Set lower for better performance.</div>
+              <input type="range" min="10" max="100" step="1" value="${user.data.settings.rendererQuality * 100}" name="rendererQuality" class="settings-option settings-option-rendererQuality" oninput="setPerformance()" onchange="setPerformance(true)">
+            </div>
+          </div>
+          `);
+          document.querySelector(`.settings-option-cameraFov option[value="${user.data.settings.cameraFov}"]`).selected = "selected";
+          updateLookSpeeds();
         }
       }
       function formatKeyBinding(key) {
+        if (!key) return "";
         if (key.startsWith("Key")) key = key.replace("Key", "");
         if (key.startsWith("Digit")) key = key.replace("Digit", "");
         if (key == "BracketRight") key = "]";
         if (key == "BracketLeft") key = "[";
         return key;
       }
+      function showBindingError(type, action) {
+        document.querySelector(".settings-binding-error").textContent = `The "${action}" action is not bound to any ${type == "keyboard" ? "keys" : "buttons"}.`;
+        document.querySelector(".settings-binding-error").style.display = "block";
+      }
+      function hideBindingError() {
+        document.querySelector(".settings-binding-error").style.display = "";
+      }
       function updateBindings(type) {
+        let actionNotBinded = null;
         if (type == "keyboard") {
           for (action in user.data.settings.bindings.keyboard) {
-            document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-first-key`).textContent = formatKeyBinding(user.data.settings.bindings.keyboard[action][0]);
-            if (typeof user.data.settings.bindings.keyboard[action][1] === "undefined") {
-              document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-second-key`).textContent = "";
+            let binding = user.data.settings.bindings.keyboard[action];
+            if (binding.length == 0) actionNotBinded = action;
+            document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-first-key`).textContent = formatKeyBinding(binding[0]);
+            let secondBox = document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-second-key`);
+            if (typeof binding[1] === "undefined") {
+              secondBox.textContent = "";
             } else {
-              document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-second-key`).textContent = formatKeyBinding(user.data.settings.bindings.keyboard[action][1]);
+              secondBox.textContent = formatKeyBinding(binding[1]);
             }
           }
         } else if (type == "gamepad") {
           for (action in user.data.settings.bindings.gamepad) {
-            document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-first-button`).innerHTML = `<img src="/images/assets/gamepad-buttons/${user.data.settings.bindings.gamepad[action][0]}.png" class="gamepad-button-icon">`;
-            if (typeof user.data.settings.bindings.gamepad[action][1] === "undefined") {
-              document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-second-button`).innerHTML = "";
+            let binding = user.data.settings.bindings.gamepad[action];
+            if (binding.length == 0) actionNotBinded = action;
+            document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-first-button`).innerHTML = `<img src="/images/assets/gamepad-buttons/${binding[0]}.png" alt="${binding[0]}" class="gamepad-button-icon">`;
+            let secondBox = document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-second-button`);
+            if (typeof binding[1] === "undefined") {
+              secondBox.innerHTML = "";
             } else {
-              document.querySelector(`.settings-binding[data-action=${action}] .settings-binding-second-button`).innerHTML = `<img src="/images/assets/gamepad-buttons/${user.data.settings.bindings.gamepad[action][1]}.png" class="gamepad-button-icon">`;
+              secondBox.innerHTML = `<img src="/images/assets/gamepad-buttons/${binding[1]}.png" alt="${binding[1]}" class="gamepad-button-icon">`;
             }
           }
+        }
+        if (actionNotBinded) {
+          showBindingError(type, actionNotBinded);
+        } else {
+          hideBindingError();
         }
       }
       function updateLookSpeeds() {
@@ -840,6 +1019,9 @@
           gamepadLookSpeed.parentElement.querySelector(".settings-range-value").textContent = user.data.settings.gamepadLookSpeed;
           gamepadLookAcceleration.value = user.data.settings.gamepadLookAcceleration;
           gamepadLookAcceleration.parentElement.querySelector(".settings-range-value").textContent = user.data.settings.gamepadLookAcceleration;
+        } else if (touchLookSpeed) {
+          touchLookSpeed.value = user.data.settings.touchLookSpeed;
+          touchLookSpeed.parentElement.querySelector(".settings-range-value").textContent = user.data.settings.touchLookSpeed;
         }
       }
       function setLookSpeed(element, updateUser = false) {
@@ -859,36 +1041,42 @@
           updateLookSpeeds();
         }
       }
-      function listenForBinding(inputType, element) {
+      function listenForBinding(type, element) {
         let banner = document.querySelector(".binding-banner");
         banner.style.display = "flex";
-        if (inputType == "keyboard") {
+        if (type == "keyboard") {
           banner.textContent = "Click any key to bind (Esc to delete binding)";
           document.onkeydown = function(event) {
             event.preventDefault();
             document.onkeydown = null;
             banner.style.display = "";
+            let binding = user.data.settings.bindings.keyboard[element.parentElement.dataset.action];
             let keyName = formatKeyBinding(event.code);
             let index = element.className.includes("second-key") ? 1 : 0;
+            let otherIndex = index == 1 ? 0 : 1;
             if (event.code == "Escape") {
-              user.data.settings.bindings.keyboard[element.parentElement.dataset.action].splice(index, 1);
+              binding.splice(index, 1);
             } else {
-              user.data.settings.bindings.keyboard[element.parentElement.dataset.action][index] = event.code;
+              if (binding[otherIndex] == event.code) binding.splice(otherIndex, 1);
+              binding[index] = event.code;
             }
             user.set("settings", user.data.settings);
             updateBindings("keyboard");
           };
-        } else if (inputType == "gamepad") {
+        } else if (type == "gamepad") {
           banner.textContent = "Click any button to bind (A + B to delete binding)";
           let previousButtonStates = {};
           let buttonMappings = ["a", "b", "x", "y", "lb", "rb", "lt", "rt", "back", "start", "l", "r", "up", "down", "left", "right"];
           function next(button) {
             banner.style.display = "";
+            let binding = user.data.settings.bindings.gamepad[element.parentElement.dataset.action];
             let index = element.className.includes("second-button") ? 1 : 0;
+            let otherIndex = index == 1 ? 0 : 1;
             if (button == null) {
-              user.data.settings.bindings.gamepad[element.parentElement.dataset.action].splice(index, 1);
+              binding.splice(index, 1);
             } else {
-              user.data.settings.bindings.gamepad[element.parentElement.dataset.action][index] = button;
+              if (binding[otherIndex] == button) binding.splice(otherIndex, 1);
+              binding[index] = button;
             }
             user.set("settings", user.data.settings);
             updateBindings("gamepad");
@@ -968,6 +1156,10 @@
           user.data.settings.gamepadLookAcceleration = 5;
           updateLookSpeeds();
           setLookSpeed(null, true);
+        } else if (type == "touchscreen-aiming") {
+          user.data.settings.touchLookSpeed = 5;
+          updateLookSpeeds();
+          setLookSpeed(null, true);
         }
       }
       document.addEventListener("click", function(event) {
@@ -997,6 +1189,8 @@
           resetToDefault("gamepad");
         } else if (event.target.className.includes("reset-gamepad-aiming-bindings")) {
           resetToDefault("gamepad-aiming");
+        } else if (event.target.className.includes("reset-touchscreen-aiming-bindings")) {
+          resetToDefault("touchscreen-aiming");
         }
       });
       function onWindowResize() {

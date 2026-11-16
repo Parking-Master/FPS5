@@ -2153,8 +2153,8 @@
             currentAmmo: 36,
             maxAmmo: 36,
             maxTotalAmmo: 216,
-            damage: 7,
-            headshotDamage: 8,
+            damage: 10,
+            headshotDamage: 11,
             spread: 1.2,
             muzzleFlash: true,
             zoomPosition: [0.0395, 0.0132, -0.05, 0.045, -0.025, 0.12],
@@ -2187,8 +2187,8 @@
             currentAmmo: 12,
             maxAmmo: 12,
             maxTotalAmmo: 48,
-            damage: 12,
-            headshotDamage: 18,
+            damage: 18,
+            headshotDamage: 24,
             spread: 0.3,
             muzzleFlash: true,
             zoomPosition: [0.0325, 0.013, -0.016, 0.04991641660703782, -0.0778416846389471, 0.09494591130849153],
@@ -2468,8 +2468,8 @@
             currentAmmo: 8,
             maxAmmo: 8,
             maxTotalAmmo: 32,
-            damage: 15,
-            headshotDamage: 20,
+            damage: 21,
+            headshotDamage: 28,
             spread: 0.8,
             muzzleFlash: true,
             zoomPosition: [.0349,.007,-.015,.05,-.035,.15],
@@ -2576,8 +2576,8 @@
             currentAmmo: 12,
             maxAmmo: 12,
             maxTotalAmmo: 36,
-            damage: 12,
-            headshotDamage: 20,
+            damage: 16,
+            headshotDamage: 26,
             spread: 0.6,
             muzzleFlash: true,
             zoomPosition: [0.04013,0.0014,-0.016,0.013914,-0.094842,0.1259459],
@@ -6380,7 +6380,7 @@
       gametime.on("explodeGrenade", (player, grenadeId, grenadePosition) => player != gametime.player.uuid && utils.players.grenades.explode(grenadeId, grenadePosition));
       gametime.on("startCrouching", player => player != gametime.player.uuid && utils.players.startCrouching(utils.players.objects[player]));
       gametime.on("stopCrouching", player => player != gametime.player.uuid && utils.players.stopCrouching(utils.players.objects[player]));
-      gametime.on("damage", (player, damage, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) => player == gametime.player.uuid && (utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot), utils.effects.shock(damage / 400)));
+      gametime.on("damage", (player, damage, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot) => player == gametime.player.uuid && (utils.health.subtract(damage, utils.players.objects[killer], null, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot), utils.effects.shock(damage / 800)));
       gametime.on("playerDie", (player, killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket) => player != gametime.player.uuid && utils.players.health.die(utils.players.objects[player], killer, isHeadshot, isMelee, isGrenade, isVehicle, isSnapshot, isRocket));
       gametime.on("playerRespawn", (player, spawnPoint) => player != gametime.player.uuid && utils.players.health.respawn(utils.players.objects[player], spawnPoint));
       gametime.on("enterVehicle", (player, seat, vehicleIndex) => player != gametime.player.uuid && utils.players.vehicles.enter(utils.players.objects[player], seat, utils.vehicles.objects[vehicleIndex]));
