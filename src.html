@@ -249,6 +249,7 @@
         font-size: 11px;
         font-weight: 600;
         color: #67d4ff;
+        margin-top: 6px;
       }
       .ui-ammo-info {
         font-family: "Arame";
@@ -3083,6 +3084,13 @@
             utils.ui.elements.killStats.appendChild(row);
             utils.options.addTmpObject(row, "htmlElement", 6000);
           },
+          addWeaponPickupRow: function(weaponName) {
+            const row = document.createElement("div");
+            row.className = "row";
+            row.textContent = `Picked Up ${weaponName}`;
+            utils.ui.elements.killStats.appendChild(row);
+            utils.options.addTmpObject(row, "htmlElement", 6000);
+          },
           displayMedal: function(medal, doSound = true) {
             utils.ui.cache.activePoints += sandbox.medals[medal].points;
             if (typeof utils.game.medals[medal] === "undefined") utils.game.medals[medal] = 0;
@@ -3271,6 +3279,7 @@
                 weaponRotation: 0,
                 visibleOnRadar: false,
                 allowedToUpdate: true,
+                respawnTimestamp: null,
                 vehicle: null,
                 uuid: player.uuid,
                 team: player.data.team
@@ -3433,7 +3442,7 @@
                   const rotation = gametimePlayer.data.rotation;
                   const target = vectors[12];
                   vectors[12].set(position[0], position[1], position[2]);
-                  playerObject.scene.position.lerp(target, 0.25);
+                  if (Date.now() - playerObject.respawnTimestamp > 500) playerObject.scene.position.lerp(target, 0.25);
                   playerObject.weaponRotation = rotation[0];
                   playerObject.visibleOnRadar = gametimePlayer.data.visibleOnRadar;
                   playerObject.vehicle = gametimePlayer.data.vehicle;
@@ -3777,6 +3786,7 @@
               if (!player) return;
               player.isDead = false;
               player.allowedToUpdate = true;
+              player.respawnTimestamp = Date.now();
               player.scene.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2]);
               player.scene.rotation.set(spawnPoint[3], spawnPoint[4], spawnPoint[5]);
             },
@@ -4997,6 +5007,7 @@
                 new TWEEN.Tween(utils.weapons.getChild().position).to({ x: 0, y: 0, z: 0 }, 200).easing(TWEEN.Easing.Quadratic.InOut).start();
                 new TWEEN.Tween(utils.weapons.getChild().rotation).to({ x: 0, y: 0, z: 0 }, 200).easing(TWEEN.Easing.Quadratic.InOut).start();
                 utils.weapons.update();
+                utils.ui.addWeaponPickupRow(newWeapon.displayName);
               }
               next();
             }
@@ -6418,6 +6429,7 @@
             sandbox.presets.options.teamGame = lobby.teamsEnabled;
             sandbox.presets.options.teamSize = lobby.teamSize;
             sandbox.presets.options.playersNeeded = lobby.playersNeeded;
+            sandbox.presets.options.respawnTime = lobby.respawnTime;
             sandbox.presets.options.radar = lobby.radarEnabled;
             sandbox.presets.options.vehicles = lobby.vehiclesEnabled;
             sandbox.presets.options.mapWeapons = lobby.mapWeaponsEnabled;
@@ -6480,6 +6492,7 @@
                       utils.models.get("propweapon." + weapon.type).requiredMaps.push(sandbox.presets.map);
                     });
                   }
+                  if (sandbox.presets.loadout.indexOf("random") > -1) sandbox.models.forEach(model => { if (model.id.startsWith("weapon.") || model.id.startsWith("propweapon.")) model.requiredMaps.push(sandbox.presets.map) });
                   sandbox.loadModels();
                 } else if (players.length > sandbox.presets.options.playersNeeded) {
                   utils.ui.elements.loadingScreen.querySelector(".loading-screen-dialog").style.opacity = "1";

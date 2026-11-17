@@ -552,6 +552,45 @@
         top: 0;
         transition: left 1s ease-in, top 1s ease-in;
       }
+      .loader-banner {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        background: #d9d9d9;
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity .3s;
+        pointer-events: none !important;
+      }
+      .loader {
+        position: absolute;
+        width: 40px;
+        height: 60px;
+      }
+      .loader::before, .loader::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: #5aace1;
+        clip-path: polygon(0 0,100% 0, 100% 67%,50% 67%,50% 34%,0 34%);
+        animation: sp7 2s infinite;
+      }
+      .loader::after {
+        --s: -1, -1;
+      }
+      @keyframes sp7 {
+        0%, 10% { transform: scale(var(--s, 1)) translate(0,0) rotate(0deg) }
+        33% { transform:scale(var(--s, 1)) translate(0,-20px) rotate(0deg) }
+        66% { transform:scale(var(--s, 1)) translate(10px,-20px) rotate(-90deg) }
+        90%, 100% { transform:scale(var(--s, 1)) translate(10px,-10px) rotate(-90deg) }
+      }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" type="text/css" href="/css/responsive.css" id="responsive-stylesheet">
@@ -559,6 +598,9 @@
   <body>
     <script src="https://parking-master.github.io/Parking-Master-2.0/notiflix/notiflix-3.2.8.min.js"></script>
     <script src="/js/user.js"></script>
+    <div class="loader-banner">
+      <div class="loader"></div>
+    </div>
     <div class="window" data-gamepad-scrollable></div>
     <div class="wrapper">
       <img src="/images/menu/heading.png" class="header">
@@ -605,6 +647,7 @@
           teamsEnabled: false,
           teamSize: null,
           playersNeeded: 2,
+          respawnTime: 4,
           personalLoadoutsEnabled: true,
           presets: {
             loadout: ["AK-74", "FN-502"],
@@ -622,6 +665,7 @@
           teamsEnabled: true,
           teamSize: 2,
           playersNeeded: 4,
+          respawnTime: 4,
           personalLoadoutsEnabled: true,
           presets: {
             loadout: ["AK-74", "FN-502"],
@@ -639,6 +683,7 @@
           teamsEnabled: true,
           teamSize: 4,
           playersNeeded: 8,
+          respawnTime: 4,
           personalLoadoutsEnabled: true,
           presets: {
             loadout: ["AK-74", "FN-502"],
@@ -656,6 +701,7 @@
           teamsEnabled: false,
           teamSize: null,
           playersNeeded: 2,
+          respawnTime: 4,
           personalLoadoutsEnabled: false,
           presets: {
             loadout: ["random", "random"],
@@ -673,6 +719,7 @@
           teamsEnabled: false,
           teamSize: null,
           playersNeeded: 2,
+          respawnTime: 4,
           personalLoadoutsEnabled: false,
           presets: {
             loadout: ["HK-G28"],
@@ -788,6 +835,11 @@
             <div class="lobby-options-container">
               <label for="playersNeeded">Players Needed to Start</label>
               <input type="text" data-min="1" data-max="16" value="2" name="playersNeeded" class="input number-input lobby-options-playersNeeded" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)" data-override-teams="0" data-gamepad-numberkeys="1">
+            </div>
+            <br>
+            <div class="lobby-options-container">
+              <label for="respawnTime">Respawn Time (seconds)</label>
+              <input type="text" data-min="0" data-max="60" value="4" name="respawnTime" class="input number-input lobby-options-respawnTime" onchange="updateLobbyInputs(this)" oninput="updateLobbyInputs(this)" data-override-teams="0" data-gamepad-numberkeys="1">
             </div>
             <br>
             <div class="lobby-options-container">
@@ -1060,6 +1112,7 @@
           teamsEnabled: document.querySelector(".lobby-options-teamsEnabled").dataset.enabled == "1",
           teamSize: document.querySelector(".lobby-options-teamsEnabled").dataset.enabled == "1" ? document.querySelector(".lobby-options-teamSize").value - 0 : null,
           playersNeeded: document.querySelector(".lobby-options-playersNeeded").value - 0,
+          respawnTime: document.querySelector(".lobby-options-respawnTime").value - 0,
           personalLoadoutsEnabled: document.querySelector(".lobby-options-personalLoadoutsEnabled").dataset.enabled == "1",
           presets: {
             loadout: [document.querySelector(".lobby-options-presets-primary_weapon").value],
@@ -1171,28 +1224,41 @@
       }
       window.addEventListener("resize", onWindowResize);
       onWindowResize();
-      let rewardedPoints = new URLSearchParams(location.search).get("pts");
-      if (rewardedPoints) {
-        let pointsElement = document.querySelector(".points");
-        window.history.replaceState({}, document.title, "/");
-        pointsElement.textContent = formatNumber(user.data.points - rewardedPoints) + " PTS";
-        Notiflix.Loading.pulse("+ " + rewardedPoints + " points");
-        let loadingMessageElement = document.querySelector(".nx-loading-message");
-        document.querySelector(".notiflix-loading-icon").style.display = "none";
-        loadingMessageElement.style.fontSize = "30px";
-        let targetPosition = pointsElement.getBoundingClientRect();
-        let currentPosition = { left: window.innerWidth / 2, top: window.innerHeight / 2 };
-        let moveAmount = { left: targetPosition.left - currentPosition.left, top: targetPosition.top - currentPosition.top };
-        setTimeout(function() {
-          loadingMessageElement.style.left = moveAmount.left + "px";
-          loadingMessageElement.style.top = moveAmount.top + "px";
-          setTimeout(function() {
-            Notiflix.Loading.remove();
-            pointsElement.textContent = formatNumber(user.data.points) + " PTS";
-            pointsElement.style.animation = "reward 1s step-end";
-          }, 600);
-        }, 2000);
-      }
+      let startTime = Date.now();
+      window.addEventListener("load", function() {
+        function checkTime() {
+          if (Date.now() - startTime > 2000) {
+            let loader = document.querySelector(".loader-banner");
+            loader.style.opacity = "0";
+            setTimeout(() => loader.remove(), 500);
+            let rewardedPoints = new URLSearchParams(location.search).get("pts");
+            if (rewardedPoints) {
+              let pointsElement = document.querySelector(".points");
+              window.history.replaceState({}, document.title, "/");
+              pointsElement.textContent = formatNumber(user.data.points - rewardedPoints) + " PTS";
+              Notiflix.Loading.pulse("+ " + rewardedPoints + " points");
+              let loadingMessageElement = document.querySelector(".nx-loading-message");
+              document.querySelector(".notiflix-loading-icon").style.display = "none";
+              loadingMessageElement.style.fontSize = "30px";
+              let targetPosition = pointsElement.getBoundingClientRect();
+              let currentPosition = { left: window.innerWidth / 2, top: window.innerHeight / 2 };
+              let moveAmount = { left: targetPosition.left - currentPosition.left, top: targetPosition.top - currentPosition.top };
+              setTimeout(function() {
+                loadingMessageElement.style.left = moveAmount.left + "px";
+                loadingMessageElement.style.top = moveAmount.top + "px";
+                setTimeout(function() {
+                  Notiflix.Loading.remove();
+                  pointsElement.textContent = formatNumber(user.data.points) + " PTS";
+                  pointsElement.style.animation = "reward 1s step-end";
+                }, 600);
+              }, 2000);
+            }
+          } else {
+            requestAnimationFrame(checkTime);
+          }
+        }
+        checkTime();
+      });
     </script>
   </body>
 </html>
