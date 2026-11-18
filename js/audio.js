@@ -159,7 +159,8 @@ audio = {
       "rocket.launch": AudioWrapper3d("/sounds/weapons/rocket-launch.mp3", true),
       "rocket.explosion": AudioWrapper3d("/sounds/weapons/rocket-explode.mp3", true),
       "music.ending": AudioWrapper("/sounds/ending-music.mp3"),
-      "announcer.game-over": AudioWrapper("/sounds/game-over.mp3")
+      "announcer.game-over": AudioWrapper("/sounds/game-over.mp3"),
+      "announcer.betray": AudioWrapper("/sounds/betray.mp3")
     };
     audio.sounds["map.ambience"] = AudioWrapper("/sounds/ambience/" + sandbox.maps[sandbox.presets.map].ambienceSound + ".mp3");
     for (let i = 0; i < weapons.length; i++) {
@@ -503,6 +504,12 @@ audio = {
   },
   gameOver: function() {
     let sound = audio.sounds["announcer.game-over"];
+    sound.play();
+  },
+  betray: function() {
+    let sound = audio.sounds["announcer.betray"];
+    sound.pause();
+    sound.currentTime = 0;
     sound.play();
   },
   armorAbilityLoop: function(armorAbility) {

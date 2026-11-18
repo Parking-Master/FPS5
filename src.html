@@ -3070,9 +3070,19 @@
             if (killer == "self" && player == "self") {
               text = "YOU COMMITED SUICIDE";
             } else if (killer != "self" && player == "self") {
-              text = gametime.players[killer].username.toUpperCase() + " KILLED YOU";
+              if (sandbox.presets.options.teamGame && gametime.players[killer].data.team == gametime.player.data.team) {
+                text = gametime.players[killer].username.toUpperCase() + " BETRAYED YOU";
+                audio.betray();
+              } else {
+                text = gametime.players[killer].username.toUpperCase() + " KILLED YOU";
+              }
             } else if (killer == gametime.player.uuid && player != "self") {
-              text = "YOU KILLED " + gametime.players[player].username.toUpperCase();
+              if (sandbox.presets.options.teamGame && gametime.players[player].data.team == gametime.player.data.team) {
+                text = "YOU BETRAYED " + gametime.players[player].username.toUpperCase();
+                audio.betray();
+              } else {
+                text = "YOU KILLED " + gametime.players[player].username.toUpperCase();
+              }
             } else if (killer == player) {
               text = gametime.players[player].username.toUpperCase() + " COMMITED SUICIDE";
             } else {
