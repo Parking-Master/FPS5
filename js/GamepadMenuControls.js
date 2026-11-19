@@ -91,25 +91,109 @@ let spaces = {
         "left": ".keyboard-settings-button",
         "right": ".gamepad-settings-button",
         "up": ".keyboard-settings-button",
-        "down": ".keyboard-settings-button"
+        "down": ".item-card[data-item='AK-74']"
       },
       {
         "left": ".keyboard-settings-button",
         "right": ".touchscreen-settings-button",
         "up": ".gamepad-settings-button",
-        "down": ".gamepad-settings-button"
+        "down": ".item-card[data-item='FN-502']"
       },
       {
         "left": ".gamepad-settings-button",
         "right": ".performance-settings-button",
         "up": ".touchscreen-settings-button",
-        "down": ".touchscreen-settings-button"
+        "down": ".item-card[data-item='mk2']"
       },
       {
         "left": ".touchscreen-settings-button",
         "right": ".performance-settings-button",
         "up": ".performance-settings-button",
-        "down": ".performance-settings-button"
+        "down": ".item-card[data-item='Raven']"
+      },
+      {
+        "left": ".item-card[data-item='AK-74']",
+        "right": ".item-card[data-item='FN-502']",
+        "up": ".keyboard-settings-button",
+        "down": ".item-card[data-item='AR-15']"
+      },
+      {
+        "left": ".item-card[data-item='AR-15']",
+        "right": ".item-card[data-item='XD-Mod-2']",
+        "up": ".item-card[data-item='AK-74']",
+        "down": ".item-card[data-item='Ace-35r']"
+      },
+      {
+        "left": ".item-card[data-item='Ace-35r']",
+        "right": ".item-card[data-item='Desert-Eagle']",
+        "up": ".item-card[data-item='AR-15']",
+        "down": ".item-card[data-item='Ace-35r']"
+      },
+      {
+        "left": ".item-card[data-item='AK-74']",
+        "right": ".item-card[data-item='mk2']",
+        "up": ".gamepad-settings-button",
+        "down": ".item-card[data-item='XD-Mod-2']"
+      },
+      {
+        "left": ".item-card[data-item='AR-15']",
+        "right": ".item-card[data-item='plasma']",
+        "up": ".item-card[data-item='FN-502']",
+        "down": ".item-card[data-item='Desert-Eagle']"
+      },
+      {
+        "left": ".item-card[data-item='Ace-35r']",
+        "right": ".item-card[data-item='plasma']",
+        "up": ".item-card[data-item='XD-Mod-2']",
+        "down": ".item-card[data-item='Desert-Eagle']"
+      },
+      {
+        "left": ".item-card[data-item='FN-502']",
+        "right": ".item-card[data-item='Raven']",
+        "up": ".touchscreen-settings-button",
+        "down": ".item-card[data-item='plasma']"
+      },
+      {
+        "left": ".item-card[data-item='XD-Mod-2']",
+        "right": ".item-card[data-item='FOTUS']",
+        "up": ".item-card[data-item='mk2']",
+        "down": ".item-card[data-item='plasma']"
+      },
+      {
+        "left": ".item-card[data-item='mk2']",
+        "right": ".item-card[data-item='none']",
+        "up": ".performance-settings-button",
+        "down": ".item-card[data-item='FOTUS']"
+      },
+      {
+        "left": ".item-card[data-item='plasma']",
+        "right": ".item-card[data-item='jet-pack']",
+        "up": ".item-card[data-item='Raven']",
+        "down": ".item-card[data-item='FOTUS']"
+      },
+      {
+        "left": ".item-card[data-item='Raven']",
+        "right": ".item-card[data-item='none']",
+        "up": ".keyboard-settings-button",
+        "down": ".item-card[data-item='jet-pack']"
+      },
+      {
+        "left": ".item-card[data-item='FOTUS']",
+        "right": ".item-card[data-item='jet-pack']",
+        "up": ".item-card[data-item='none']",
+        "down": ".item-card[data-item='thruster-pack']"
+      },
+      {
+        "left": ".item-card[data-item='FOTUS']",
+        "right": ".item-card[data-item='thruster-pack']",
+        "up": ".item-card[data-item='jet-pack']",
+        "down": ".item-card[data-item='active-camo']"
+      },
+      {
+        "left": ".item-card[data-item='FOTUS']",
+        "right": ".item-card[data-item='active-camo']",
+        "up": ".item-card[data-item='thruster-pack']",
+        "down": ".item-card[data-item='active-camo']"
       }
     ]
   }
@@ -147,7 +231,8 @@ GamepadMenuControls = function(space) {
   let navigationUtils = {
     focus: function() {
       document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.outline = "2px solid #fff";
-      document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.boxShadow = "inset 0 0 40px rgba(255, 255, 255, .7)";
+      document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.boxShadow = "inset 0 0 50px rgba(107, 191, 255, 0.7)";
+      document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).scrollIntoView();
     },
     blur: function() {
       document.querySelector(`[data-gamepad-index="${currentButtonIndex}"]`).style.outline = "";
@@ -269,6 +354,7 @@ GamepadMenuControls = function(space) {
       key.classList.add("selected");
     },
     enterKey: function() {
+      if (document.activeElement.tagName == "INPUT") document.activeElement.dispatchEvent(new Event("change"));
       document.activeElement.blur();
     },
     update: function(moveX, moveY) {

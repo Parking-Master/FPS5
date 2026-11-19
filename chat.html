@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Chat | FPS5</title>
+    <style>
+      @font-face {
+        font-family: "Aperture";
+        src: url(/fonts/Aperture.ttf);
+      }
+      html, body {
+        margin: 0 !important;
+        font-family: Arial, Helvetica, sans-serif;
+        overflow: hidden !important;
+      }
+      .wrapper {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        background: #cdd3d8;
+        box-sizing: border-box;
+        background-image: url(/images/menu/splatter.png);
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 70%;
+      }
+      .chat-header {
+        color: #2b78aa;
+        font-family: "Aperture";
+        font-size: 36px;
+      }
+      .chat-description {
+        color: #999;
+        font-family: "Aperture";
+        font-size: 14px;
+        border-left: 3px solid #aaa;
+        padding-left: 10px;
+        max-width: 400px;
+      }
+      .chat-wrapper {
+        position: relative;
+        margin-left: 100px;
+        margin-top: 40px;
+        box-sizing: border-box;
+        max-width: 600px;
+        height: 100%;
+        overflow: hidden;
+      }
+      .chat-wrapper > * {
+        flex: 1;
+      }
+      .sidebar-wrapper {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 300px;
+        background: #eee;
+        height: 100%;
+        box-sizing: border-box;
+        padding: 40px 20px;
+        overflow-y: scroll;
+      }
+      .message-list {
+        position: relative;
+        width: 100%;
+        height: calc(100% - 120px);
+        overflow-y: scroll;
+        overflow-x: hidden;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+        padding-bottom: 100px;
+      }
+      .message-list::-webkit-scrollbar { 
+        display: none;
+      }
+      .message {
+        position: relative;
+        max-width: 100%;
+        width: max-content;
+        font-family: "Aperture" !important;
+        color: #333 !important;
+      }
+      .message:last-child {
+        margin-bottom: 100px;
+      }
+      .message-header {
+        position: relative;
+        width: 100%;
+        height: 30px;
+        padding: 5px;
+      }
+      .message-header * {
+        display: inline-block;
+        line-height: 30px;
+      }
+      .message-header .message-profile-picture {
+        position: relative;
+        width: 30px;
+        height: 30px;
+        float: left;
+        background-image: url(https://cdn.jsdelivr.net/gh/Parking-Master/Parking-Master@latest/img/profile-picture.png);
+        background-size: 100%;
+        background-repeat: no-repeat;
+        background-color: #fff;
+        border: 2px solid #2b78aa;
+        border-radius: 100%;
+        box-sizing: border-box;
+      }
+      .message-header .message-username {
+        margin-left: 10px;
+      }
+      .message-text {
+        width: 100%;
+        background: #fff;
+        padding: 10px;
+        box-sizing: border-box;
+        font-size: 16px;
+      }
+      .chat-controls {
+        position: relative;
+        width: 100%;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        top: 0;
+        margin: 20px 0;
+      }
+      .chat-input-box {
+        flex: 6;
+        padding: 10px;
+        border-left: none !important;
+        outline: none !important;
+        font-size: 16px;
+      }
+      .chat-controls > * {
+        margin: 0;
+        height: 100%;
+        box-sizing: border-box;
+        border: none;
+        border-left: 1px solid #ddd;
+        border-radius: 0 !important;
+        background: #fff;
+      }
+      .chat-button {
+        flex: 1;
+        width: 40px;
+        background-size: 18px;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+      .chat-button-send {
+        background-image: url(/images/menu/chat-button-send.png);
+      }
+      .chat-button-reference {
+        background-image: url(/images/menu/chat-button-reference.png);
+      }
+      .chat-button-invite {
+        background-image: url(/images/menu/chat-button-invite.png);
+      }
+      .chat-button:hover {
+        background-color: #eee;
+      }
+      .chat-button:active {
+        background-color: #ddd;
+      }
+      .sidebar-header {
+        font-size: 24px;
+      }
+      .sidebar-text {
+        margin: 15px 0;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 15px;
+      }
+      .player-list {
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .player {
+        height: 100px !important;
+        background-image: url(https://cdn.jsdelivr.net/gh/Parking-Master/Parking-Master@latest/img/profile-picture.png);
+        background-size: 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+        flex: 1;
+        flex-basis: 0%;
+        flex-basis: calc(50% - 20px);
+        margin: 10px;
+        max-width: calc(50% - 20px);
+        cursor: pointer;
+      }
+      .player:hover {
+        background-color: #ddd;
+      }
+      .status {
+        position: relative;
+        float: left;
+        width: 10px;
+        height: 10px;
+        border-radius: 100%;
+        background: #5cb85c;
+        margin: 3px;
+      }
+      a {
+        color: #5aace1 !important;
+      }
+      @media only screen and (max-width:1060px) {
+        .chat-wrapper {
+          margin-left: 40px;
+        }
+      }
+      @media only screen and (max-width:960px) {
+        .chat-wrapper {
+          max-width: 500px;
+        }
+      }
+      @media only screen and (max-width:860px) {
+        .chat-wrapper {
+          max-width: 400px;
+        }
+      }
+      @media only screen and (max-width:760px) {
+        .player {
+          flex-basis: calc(33.3% - 20px);
+          max-width: calc(33.3% - 20px);
+        }
+        .sidebar-wrapper {
+          width: 250px;
+        }
+      }
+      @media only screen and (max-width:700px) {
+        .sidebar-wrapper {
+          display: none;
+        }
+        .chat-wrapper {
+          max-width: 100%;
+          margin: 30px;
+        }
+      }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="chat-wrapper">
+        <div class="chat-header">World Chat</div>
+        <div class="chat-description">Chat with other FPS5 players from anywhere in the world. Remember to follow the <a href="">chatroom rules</a>.</div>
+        <div class="chat-controls">
+          <input class="chat-input-box" type="text" placeholder="Enter your message here...">
+          <div class="chat-button chat-button-send"></div>
+          <div class="chat-button chat-button-reference"></div>
+          <div class="chat-button chat-button-invite"></div>
+        </div>
+        <div class="message-list">
+          <div class="message">
+            <div class="message-header">
+              <div class="message-profile-picture"></div>
+              <div class="message-username">GuestUser1234</div>
+              <div class="message-header-separator">&bullet;</div>
+              <div class="message-date">5s ago</div>
+            </div>
+            <div class="message-text">bla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla bla</div>
+          </div>
+          <div class="message">
+            <div class="message-header">
+              <div class="message-profile-picture"></div>
+              <div class="message-username">GuestUser1234</div>
+              <div class="message-header-separator">&bullet;</div>
+              <div class="message-date">5s ago</div>
+            </div>
+            <div class="message-text">bla bla</div>
+          </div>
+          <div class="message">
+            <div class="message-header">
+              <div class="message-profile-picture"></div>
+              <div class="message-username">GuestUser1234</div>
+              <div class="message-header-separator">&bullet;</div>
+              <div class="message-date">5s ago</div>
+            </div>
+            <div class="message-text">bla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla bla</div>
+          </div>
+          <div class="message">
+            <div class="message-header">
+              <div class="message-profile-picture"></div>
+              <div class="message-username">GuestUser1234</div>
+              <div class="message-header-separator">&bullet;</div>
+              <div class="message-date">5s ago</div>
+            </div>
+            <div class="message-text">bla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla bla</div>
+          </div>
+        </div>
+      </div>
+      <div class="sidebar-wrapper">
+        <div class="sidebar-header">Players</div>
+        <div class="sidebar-text"><div class="status"></div> 3060 online</div>
+        <div class="player-list">
+          <div class="player"></div>
+          <div class="player"></div>
+          <div class="player"></div>
+          <div class="player"></div>
+          <div class="player"></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
