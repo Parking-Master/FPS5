@@ -71,6 +71,7 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
         padding-bottom: 100px;
+        border-left: 1px solid #aaa;
       }
       .message-list::-webkit-scrollbar { 
         display: none;
@@ -81,6 +82,8 @@
         width: max-content;
         font-family: "Aperture" !important;
         color: #333 !important;
+        margin-top: 10px;
+        margin-left: 20px;
       }
       .message:last-child {
         margin-bottom: 100px;
@@ -117,6 +120,7 @@
         padding: 10px;
         box-sizing: border-box;
         font-size: 16px;
+        word-wrap: break-word;
       }
       .chat-controls {
         position: relative;
@@ -240,10 +244,73 @@
           margin: 30px;
         }
       }
+      .loader-banner {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        background: #d9d9d9;
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity .3s;
+        pointer-events: none !important;
+      }
+      .loader {
+        position: absolute;
+        width: 40px;
+        height: 60px;
+      }
+      .loader::before, .loader::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: #5aace1;
+        clip-path: polygon(0 0,100% 0, 100% 67%,50% 67%,50% 34%,0 34%);
+        animation: sp7 2s infinite;
+      }
+      .loader::after {
+        --s: -1, -1;
+      }
+      @keyframes sp7 {
+        0%, 10% { transform: scale(var(--s, 1)) translate(0,0) rotate(0deg) }
+        33% { transform:scale(var(--s, 1)) translate(0,-20px) rotate(0deg) }
+        66% { transform:scale(var(--s, 1)) translate(10px,-20px) rotate(-90deg) }
+        90%, 100% { transform:scale(var(--s, 1)) translate(10px,-10px) rotate(-90deg) }
+      }
+      #NotiflixNotifyWrap a {
+        color: #fff !important;
+      }
+      .notiflix-report, notiflix-confirm {
+        z-index: 10000 !important;
+      }
+      .notiflix-report-button, .notiflix-confirm-buttons a {
+        color: #fff !important;
+      }
+      .reference-user-list {
+        border: 1px solid #ddd;
+        max-height: 100px;
+        overflow-y: scroll;
+      }
+      .reference-user-entry {
+        display: block;
+        margin: 10px 0;
+      }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   </head>
   <body>
+    <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
+    <script src="https://parking-master.github.io/Parking-Master-2.0/notiflix/notiflix-3.2.8.min.js"></script>
+    <script src="/js/user.js"></script>
+    <div class="loader-banner">
+      <div class="loader"></div>
+    </div>
     <div class="wrapper">
       <div class="chat-wrapper">
         <div class="chat-header">World Chat</div>
@@ -254,56 +321,210 @@
           <div class="chat-button chat-button-reference"></div>
           <div class="chat-button chat-button-invite"></div>
         </div>
-        <div class="message-list">
-          <div class="message">
-            <div class="message-header">
-              <div class="message-profile-picture"></div>
-              <div class="message-username">GuestUser1234</div>
-              <div class="message-header-separator">&bullet;</div>
-              <div class="message-date">5s ago</div>
-            </div>
-            <div class="message-text">bla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla bla</div>
-          </div>
-          <div class="message">
-            <div class="message-header">
-              <div class="message-profile-picture"></div>
-              <div class="message-username">GuestUser1234</div>
-              <div class="message-header-separator">&bullet;</div>
-              <div class="message-date">5s ago</div>
-            </div>
-            <div class="message-text">bla bla</div>
-          </div>
-          <div class="message">
-            <div class="message-header">
-              <div class="message-profile-picture"></div>
-              <div class="message-username">GuestUser1234</div>
-              <div class="message-header-separator">&bullet;</div>
-              <div class="message-date">5s ago</div>
-            </div>
-            <div class="message-text">bla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla bla</div>
-          </div>
-          <div class="message">
-            <div class="message-header">
-              <div class="message-profile-picture"></div>
-              <div class="message-username">GuestUser1234</div>
-              <div class="message-header-separator">&bullet;</div>
-              <div class="message-date">5s ago</div>
-            </div>
-            <div class="message-text">bla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla blabla bla bla bla bla bla</div>
-          </div>
-        </div>
+        <div class="message-list"></div>
       </div>
       <div class="sidebar-wrapper">
         <div class="sidebar-header">Players</div>
-        <div class="sidebar-text"><div class="status"></div> 3060 online</div>
-        <div class="player-list">
-          <div class="player"></div>
-          <div class="player"></div>
-          <div class="player"></div>
-          <div class="player"></div>
-          <div class="player"></div>
-        </div>
+        <div class="sidebar-text"><div class="status"></div> <span class="players-amount">0</span> online</div>
+        <div class="player-list"></div>
       </div>
     </div>
+    <script>
+      Notiflix.Notify.init({
+        messageMaxLength: 1000,
+        plainText: false,
+        timeout: 5000
+      });
+      let lastMessageTime = null;
+      let users = [];
+      let prohibited_words = [];
+      fetch("/words.json").then(response => response.json()).then(data => (prohibited_words = data.words));
+
+      gametime.set("username", user.data.username);
+      gametime.set("player", {
+        profilePicture: user.data.profilePicture
+      });
+      gametime.set("channel", "fps5-world-chat");
+      gametime.on("postMessage", function(player, message, username, profilePicture, date) {
+        appendMessage(message, username, profilePicture, date);
+      });
+      gametime.onconnect = function() {
+        gametime.update();
+      };
+      let uuids = [];
+      gametime.onupdate = function(player) {
+        if (uuids.indexOf(player.uuid) < 0) {
+          uuids.push(player.uuid);
+          updatePlayersOnline();
+        }
+      };
+      gametime.connect();
+
+      function updatePlayersOnline() {
+        document.querySelector(".player-list").innerHTML = "";
+        document.querySelector(".players-amount").textContent = Object.keys(gametime.players).length;
+        for (player in gametime.players) {
+          document.querySelector(".player-list").innerHTML += `
+          <div class="player" style="background-image: url(${gametime.players[player].data.profilePicture})"></div>
+          `;
+        }
+      }
+      function formatMessageTime(date) {
+        let currentTime = Date.now();
+        let result = null;
+        let difference = currentTime - date;
+        if (difference < 60 * 1000) {
+          result = Math.floor(difference / 1000) + "s";
+        } else if (difference < 60 * 60 * 1000) {
+          result = Math.floor(difference / 60 / 1000) + "m";
+        } else if (difference < 24 * 60 * 60 * 1000) {
+          result = Math.floor(difference / 60 / 60 / 1000) + "h";
+        } else if (difference < 30 * 24 * 60 * 60 * 1000) {
+          result = Math.floor(difference / 24 / 60 / 60 / 1000) + "d";
+        } else if (difference < 365 * 24 * 60 * 60 * 1000) {
+          result = Math.floor(difference / 30 / 24 / 60 / 60 / 1000) + "mo";
+        } else {
+          result = Math.floor(difference / 365 / 24 / 60 / 60 / 1000) + "y";
+        }
+        result += " ago";
+        return result;
+      }
+      function formatMessage(message) {
+        let result = "";
+        let messageSplit = message.split(" ");
+        messageSplit.forEach(fragment => {
+          if (fragment.startsWith("@")) {
+            let username = fragment.replace("@", "").replace(".", "").trim();
+            let referencedUser = users.filter(user => user.username == username)[0];
+            if (referencedUser) {
+              result += `<a href="#">${fragment}</a> `;
+            } else {
+              result += fragment + " ";
+            }
+          } else {
+            result += fragment + " ";
+          }
+        });
+        result = result.trim();
+        return result;
+      }
+      function sendMessage() {
+        let input = document.querySelector(".chat-input-box");
+        let message = input.value.trim().replace(/[<>]/g, "");
+        if (message.length <= 400 && message.length >= 1) {
+          let messageContainsProhibitedWord = false;
+          for (let i = 0; i < prohibited_words.length; i++) {
+            if (message.toLowerCase().replace(/[0-9]/g, "").match(new RegExp(`\\b(${RegExp.escape(prohibited_words[i])})\\b`, "g"))) messageContainsProhibitedWord = true;
+          }
+          if (messageContainsProhibitedWord) {
+            Notiflix.Notify.warning("You are not allowed to post this message. Please remove any innaproppriate words from your message. If you continue this behaviour, you are at risk of being banned. Learn more at our <a href='/terms.html'>Terms and Conditions</a>.");
+          } else {
+            let time = Date.now();
+            if (time - lastMessageTime < 10000) {
+              let timeToWait = Math.ceil((10000 - (time - lastMessageTime)) / 1000);
+              Notiflix.Notify.warning(`Please wait ${timeToWait} more seconds to post your next message.`);
+            } else {
+              user.sendChatMessage(message);
+              gametime.run("postMessage", [gametime.player.uuid, message, user.data.username, user.data.profilePicture, time]);
+              input.value = "";
+              lastMessageTime = time;
+            }
+          }
+        }
+        input.blur();
+      }
+      function appendMessage(message, username, profilePicture, date) {
+        let messageList = document.querySelector(".message-list");
+        let formattedTime = formatMessageTime(date);
+        let formattedMessage = formatMessage(message);
+        messageList.innerHTML += `
+        <div class="message" data-date="${date}">
+          <div class="message-header">
+            <div class="message-profile-picture" ${profilePicture ? `style="background-image: url(${profilePicture})"` : ""}></div>
+            <div class="message-username">${username}</div>
+            <div class="message-header-separator">&bullet;</div>
+            <div class="message-date" title="${new Date(date).toLocaleString()}">${formattedTime}</div>
+          </div>
+          <div class="message-text">${formattedMessage}</div>
+        </div>
+        `;
+        messageList.scrollTop = messageList.scrollHeight;
+      }
+      function referenceUser() {
+        Notiflix.Confirm.show("Reference User", "Choose a user to reference in your message:", "Choose", "Cancel", function(code) {
+          let foundLobby = false;
+          for (let i = 0; i < currentLobbies.length; i++) {
+            let lobby = currentLobbies[i];
+            if (lobby.code == code) {
+              foundLobby = true;
+              closeWindow(false);
+              Notiflix.Loading.change("Joining lobby...");
+              location.href = "/src.html?code=" + lobby.code;
+              return;
+            }
+          }
+          if (!foundLobby) Notiflix.Report.failure("Error finding lobby", "We couldn't find a lobby with that code. Check if you typed it right and try again.", "Close", { borderRadius: 0 });
+        }, () => {}, {
+          borderRadius: 0,
+          okButtonBackground: "#5aace1",
+          titleColor: "#5aace1",
+          zindex: 10000
+        });
+        document.querySelector("#NXConfirmButtonOk").remove();
+        document.querySelector("#NXConfirmButtonCancel").style.width = "100%";
+        document.querySelector("#NXConfirmButtonCancel").style.margin = "0";
+        let usersHtml = users.map(user => `<a class="reference-user-entry" href="#" onclick="event.preventDefault(), addUserReference('${user.username}')">@${user.username}</a>`).join("");
+        document.querySelector(".notiflix-confirm-head").innerHTML += `
+        <div class="reference-user-list">
+          ${usersHtml}
+        </div>
+        `;
+      }
+      function addUserReference(username) {
+        let input = document.querySelector(".chat-input-box");
+        if (input.value.trim()) {
+          input.value += " @" + username + " ";
+        } else {
+          input.value = "@" + username + " ";
+        }
+        input.focus();
+        document.querySelector("#NXConfirmButtonCancel").click();
+      }
+      let startTime = Date.now();
+      user.getAllUsers(function(_users) {
+        users = _users;
+        user.getChat(function(messages) {
+          for (let i = 0; i < messages.length; i++) {
+            let message = messages[i];
+            appendMessage(message.message, message.username, message.profilePicture, message.createdAt);
+          }
+          function checkTime() {
+            if (Date.now() - startTime > 2000) {
+              let loader = document.querySelector(".loader-banner");
+              loader.style.opacity = "0";
+              setTimeout(() => loader.remove(), 500);
+            } else {
+              requestAnimationFrame(checkTime);
+            }
+          }
+          checkTime();
+        });
+      });
+      document.querySelector(".chat-input-box").addEventListener("keydown", function(event) {
+        if (event.key == "Enter") sendMessage();
+      });
+      document.querySelector(".chat-button-send").addEventListener("click", function(event) {
+        sendMessage();
+      });
+      document.querySelector(".chat-button-reference").addEventListener("click", function(event) {
+        referenceUser();
+      });
+      setInterval(function() {
+        document.querySelectorAll(".message").forEach(element => {
+          let date = parseFloat(element.dataset.date);
+          element.querySelector(".message-date").textContent = formatMessageTime(date);
+        });
+      }, 3000);
+    </script>
   </body>
 </html>

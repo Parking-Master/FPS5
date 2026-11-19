@@ -305,6 +305,29 @@ user = {
         callback();
       }
     });
+  },
+  getChat: function(callback = () => {}, error = () => {}) {
+    fetch(user.serverURL + "/chat/get").then(response => response.json()).then(function(lobbies) {
+      callback(lobbies);
+    }).catch(() => error());
+  },
+  sendChatMessage: function(message) {
+    fetch(user.serverURL + "/chat/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: message,
+        username: user.data.username
+      })
+    }).then(function(response) {
+      if (response.status == 200) {
+        callback();
+      } else {
+        error();
+      }
+    });
   }
 };
 user.load();

@@ -1053,7 +1053,7 @@
               delete tmpObjects[uuid];
             } else if (object.objectType == "gameOverTransition") {
               renderer.domElement.style.opacity = 0;
-              setTimeout(() => location.replace("/?pts=" + gametime.player.data.score), 5000);
+              setTimeout(() => location.replace("/?pts=" + gametime.player.data.score + "&w=" + (object.won ? "1" : "0")), 5000);
               delete tmpObjects[uuid];
             }
           }
@@ -5968,6 +5968,7 @@
             let blueTeamScore = 0;
             let highestPlayerScore = 0;
             let winnerText = null;
+            let won = false;
             for (player in gametime.players) {
               let gametimePlayer = gametime.players[player];
               if (sandbox.presets.options.teamGame) {
@@ -5978,8 +5979,10 @@
                 }
                 if (redTeamScore > blueTeamScore) {
                   winnerText = "RED TEAM WINS!";
+                  won = gametimePlayer.data.team == gametime.player.data.team;
                 } else if (blueTeamScore > redTeamScore) {
                   winnerText = "BLUE TEAM WINS!";
+                  won = gametimePlayer.data.team == gametime.player.data.team;
                 } else {
                   winnerText = "TIE GAME";
                 }
@@ -5987,10 +5990,12 @@
                 if (winnerText == null) {
                   highestPlayerScore = gametimePlayer.data.kills;
                   winnerText = gametimePlayer.username + " WINS!";
+                  won = gametimePlayer.uuid == gametime.player.uuid;
                 } else {
                   if (gametimePlayer.data.kills > highestPlayerScore) {
                     highestPlayerScore = gametimePlayer.data.kills;
                     winnerText = gametimePlayer.username + " WINS!";
+                    won = gametimePlayer.uuid == gametime.player.uuid;
                   } else if (gametimePlayer.data.kills == highestPlayerScore) {
                     winnerText = "TIE GAME";
                   }
@@ -6000,7 +6005,7 @@
             utils.ui.elements.leaderboard.querySelector(".winning-team").textContent = winnerText;
             audio.gameOver();
             document.body.style.background = "#000";
-            utils.options.addTmpObject({}, "gameOverTransition", 4000);
+            utils.options.addTmpObject({ won: won }, "gameOverTransition", 4000);
           },
           togglePause: function() {
             audio.pause();

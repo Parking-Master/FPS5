@@ -1234,6 +1234,9 @@
             loader.style.opacity = "0";
             setTimeout(() => loader.remove(), 500);
             let rewardedPoints = new URLSearchParams(location.search).get("pts");
+            let won = new URLSearchParams(location.search).get("w") == "1";
+            user.set("gamesPlayed", user.data.gamesPlayed + 1);
+            if (won) user.set("gamesWon", user.data.gamesWon + 1);
             if (rewardedPoints) {
               let pointsElement = document.querySelector(".points");
               window.history.replaceState({}, document.title, "/");
