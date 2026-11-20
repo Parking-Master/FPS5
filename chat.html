@@ -88,6 +88,9 @@
       .message:last-child {
         margin-bottom: 100px;
       }
+      .message.message-invite .message-text {
+        box-shadow: 10px 0 0 #6aace1;
+      }
       .message-header {
         position: relative;
         width: 100%;
@@ -113,6 +116,10 @@
       }
       .message-header .message-username {
         margin-left: 10px;
+        cursor: pointer;
+      }
+      .message-header .message-username:hover {
+        text-decoration: underline;
       }
       .message-text {
         width: 100%;
@@ -186,7 +193,7 @@
       .player {
         height: 100px !important;
         background-image: url(https://cdn.jsdelivr.net/gh/Parking-Master/Parking-Master@latest/img/profile-picture.png);
-        background-size: 100%;
+        background-size: 80%;
         background-position: center;
         background-repeat: no-repeat;
         flex: 1;
@@ -286,11 +293,148 @@
       #NotiflixNotifyWrap a {
         color: #fff !important;
       }
+      .notiflix-loading {
+        background: rgba(0, 0, 0, .6) !important;
+      }
+      .notiflix-loading-icon {
+        animation: flicker 1s step-end infinite;
+      }
       .notiflix-report, notiflix-confirm {
         z-index: 10000 !important;
       }
       .notiflix-report-button, .notiflix-confirm-buttons a {
         color: #fff !important;
+      }
+      .notiflix-report-icon {
+        width: 70px !important;
+        height: 70px !important;
+      }
+      .window {
+        position: absolute;
+        max-width: 600px;
+        max-height: 400px;
+        width: 100%;
+        height: 100%;
+        background: #fff;
+        border: 8px solid #5aace1;
+        border-top: none;
+        left: 50%;
+        top: 50%;
+        margin-left: -300px;
+        margin-top: -200px;
+        z-index: 9999;
+        overflow-y: scroll;
+        scrollbar-width: thin !important;
+        padding: 20px;
+        box-sizing: border-box;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        display: none;
+      }
+      .window-header {
+        font-size: 30px;
+        font-family: "Aperture";
+      }
+      .window-close {
+        float: right;
+        cursor: pointer !important;
+      }
+      @media only screen and (max-width:600px) {
+        .window {
+          left: 0;
+          margin-left: 0;
+        }
+      }
+      @media only screen and (max-height:400px) {
+        .window {
+          top: 0;
+          margin-top: 0;
+        }
+      }
+      .lobby-list {
+        position: relative;
+        width: 100%;
+      }
+      .lobby {
+        width: 100%;
+        height: 60px;
+        margin-bottom: 10px;
+        background: #eee;
+        box-sizing: border-box;
+        padding: 10px;
+        cursor: pointer !important;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        white-space: nowrap;
+        scrollbar-width: thin;
+      }
+      .lobby:hover {
+        background: #ddd;
+      }
+      .lobby:active {
+        background: #aaa;
+      }
+      .lobby * {
+        pointer-events: none !important;
+      }
+      .lobby-map-preview {
+        position: relative;
+        width: 60px;
+        height: 38px;
+        background-color: #ccc;
+        background-size: cover;
+        float: left;
+        margin-right: 20px;
+      }
+      .lobby-map-name {
+        position: relative;
+        width: 100%;
+        top: 20px;
+        color: #eee;
+        text-align: center;
+        font-family: "Aperture";
+        font-size: 10px;
+        text-shadow: 0 0 2px #000;
+        white-space: nowrap;
+        display: inline-block;
+      }
+      .lobby-name {
+        font-size: 20px;
+      }
+      .lobby-info {
+        font-size: 12px;
+        color: #888;
+      }
+      .lobby-status {
+        position: relative;
+        width: 10px;
+        height: 10px;
+        float: right;
+        margin: auto 0;
+        border-radius: 100%;
+        top: -24px;
+      }
+      .lobby-status.lobby-status-active {
+        background: #00ff00;
+      }
+      .lobby-status.lobby-status-inactive {
+        background: #ff0000;
+      }
+      .lobby-status.lobby-status-full {
+        background: #ffd500;
+      }
+      .lobbies-description {
+        color: #999;
+        font-size: 14px;
+        margin: 10px 0;
+        border-left: 3px solid #ddd;
+        padding-left: 10px;
+      }
+      .lobby-status-player-count {
+        font-size: 10px;
+        left: -20px;
+        position: relative;
+        color: #999;
+        top: -5px;
       }
       .reference-user-list {
         border: 1px solid #ddd;
@@ -301,6 +445,27 @@
         display: block;
         margin: 10px 0;
       }
+      .player-context-menu {
+        position: fixed;
+        background: #fff;
+        border: 1px solid #ccc;
+        color: #000;
+      }
+      .player-context-menu-header {
+        margin: 10px;
+        font-size: 20px;
+      }
+      .player-context-menu-option {
+        min-width: 130px;
+        margin: 0 10px;
+        border-top: 1px solid #ddd;
+        padding: 10px 0;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .player-context-menu-option:hover {
+        text-decoration: underline;
+      }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   </head>
@@ -308,6 +473,7 @@
     <script src="https://parking-master.github.io/Gametime.js-4.0/gametime.min.js"></script>
     <script src="https://parking-master.github.io/Parking-Master-2.0/notiflix/notiflix-3.2.8.min.js"></script>
     <script src="/js/user.js"></script>
+    <div class="window" data-gamepad-scrollable></div>
     <div class="loader-banner">
       <div class="loader"></div>
     </div>
@@ -330,6 +496,7 @@
       </div>
     </div>
     <script>
+      Notiflix.Loading.init({ svgColor: "#fff" });
       Notiflix.Notify.init({
         messageMaxLength: 1000,
         plainText: false,
@@ -338,6 +505,7 @@
       let lastMessageTime = null;
       let users = [];
       let prohibited_words = [];
+      let contextMenuOpen = false;
       fetch("/words.json").then(response => response.json()).then(data => (prohibited_words = data.words));
 
       gametime.set("username", user.data.username);
@@ -360,12 +528,25 @@
       };
       gametime.connect();
 
+      function openWindow(title, content) {
+        document.querySelector(".window").innerHTML = `
+        <div class="window-header">${title} <span class="window-close">&times;</span></div>
+        ${content}
+        `;
+        document.querySelector(".window").style.display = "block";
+        // gamepadMenuControls.enableCursor();
+      }
+      function closeWindow(removeLoading = true) {
+        document.querySelector(".window").style.display = "";
+        if (removeLoading) Notiflix.Loading.remove();
+        // gamepadMenuControls.disableCursor();
+      }
       function updatePlayersOnline() {
         document.querySelector(".player-list").innerHTML = "";
         document.querySelector(".players-amount").textContent = Object.keys(gametime.players).length;
         for (player in gametime.players) {
           document.querySelector(".player-list").innerHTML += `
-          <div class="player" style="background-image: url(${gametime.players[player].data.profilePicture})"></div>
+          <div class="player" style="background-image: url(${gametime.players[player].data.profilePicture})" data-player-username="${gametime.players[player].username}"></div>
           `;
         }
       }
@@ -397,7 +578,7 @@
             let username = fragment.replace("@", "").replace(".", "").trim();
             let referencedUser = users.filter(user => user.username == username)[0];
             if (referencedUser) {
-              result += `<a href="#">${fragment}</a> `;
+              result += `<a href="#" class="player-reference" data-player-username="${username}">${fragment}</a> `;
             } else {
               result += fragment + " ";
             }
@@ -405,12 +586,27 @@
             result += fragment + " ";
           }
         });
+        if (message.startsWith(":invite:")) {
+          let inviteData = JSON.parse(message.split(":invite:")[1]);
+          result = `
+          <a href="#" class="player-reference" data-player-username="${inviteData.sender}" data-player-invite>${inviteData.sender}</a> invited <a href="#" class="player-reference" data-player-username="${inviteData.username}">${inviteData.username}</a> to a game:
+          <br>
+          <br>
+          <a href="/src.html?lobby=${inviteData.lobby}">${inviteData.lobby}</a>
+          `;
+        }
         result = result.trim();
         return result;
       }
-      function sendMessage() {
-        let input = document.querySelector(".chat-input-box");
-        let message = input.value.trim().replace(/[<>]/g, "");
+      function sendMessage(customMessage = null) {
+        let input = null;
+        let message = null;
+        if (customMessage == null) {
+          input = document.querySelector(".chat-input-box");
+          message = input.value.trim().replace(/[<>]/g, "");
+        } else {
+          message = customMessage;
+        }
         if (message.length <= 400 && message.length >= 1) {
           let messageContainsProhibitedWord = false;
           for (let i = 0; i < prohibited_words.length; i++) {
@@ -426,22 +622,22 @@
             } else {
               user.sendChatMessage(message);
               gametime.run("postMessage", [gametime.player.uuid, message, user.data.username, user.data.profilePicture, time]);
-              input.value = "";
+              if (input) input.value = "";
               lastMessageTime = time;
             }
           }
         }
-        input.blur();
+        if (input) input.blur();
       }
       function appendMessage(message, username, profilePicture, date) {
         let messageList = document.querySelector(".message-list");
         let formattedTime = formatMessageTime(date);
         let formattedMessage = formatMessage(message);
         messageList.innerHTML += `
-        <div class="message" data-date="${date}">
+        <div class="message ${formattedMessage.includes("data-player-invite") ? "message-invite" : ""}" data-date="${date}">
           <div class="message-header">
             <div class="message-profile-picture" ${profilePicture ? `style="background-image: url(${profilePicture})"` : ""}></div>
-            <div class="message-username">${username}</div>
+            <div class="message-username" data-player-username="${username}">${username}</div>
             <div class="message-header-separator">&bullet;</div>
             <div class="message-date" title="${new Date(date).toLocaleString()}">${formattedTime}</div>
           </div>
@@ -451,22 +647,8 @@
         messageList.scrollTop = messageList.scrollHeight;
       }
       function referenceUser() {
-        Notiflix.Confirm.show("Reference User", "Choose a user to reference in your message:", "Choose", "Cancel", function(code) {
-          let foundLobby = false;
-          for (let i = 0; i < currentLobbies.length; i++) {
-            let lobby = currentLobbies[i];
-            if (lobby.code == code) {
-              foundLobby = true;
-              closeWindow(false);
-              Notiflix.Loading.change("Joining lobby...");
-              location.href = "/src.html?code=" + lobby.code;
-              return;
-            }
-          }
-          if (!foundLobby) Notiflix.Report.failure("Error finding lobby", "We couldn't find a lobby with that code. Check if you typed it right and try again.", "Close", { borderRadius: 0 });
-        }, () => {}, {
+        Notiflix.Confirm.show("Reference User", "Choose a user to reference in your message:", "", "Cancel", () => {}, () => {}, {
           borderRadius: 0,
-          okButtonBackground: "#5aace1",
           titleColor: "#5aace1",
           zindex: 10000
         });
@@ -489,6 +671,92 @@
         }
         input.focus();
         document.querySelector("#NXConfirmButtonCancel").click();
+      }
+      function openContextMenu(event) {
+        let username = event.target.dataset.playerUsername;
+        let menu = document.createElement("div");
+        menu.className = "player-context-menu";
+        menu.innerHTML = `<div class="player-context-menu-header">${username}</div>`;
+        if (users.filter(user => user.username == username).length > 0) menu.innerHTML += `<div class="player-context-menu-option player-context-menu-option-view_profile">View Profile</div>`;
+        if (username != user.data.username) {
+          menu.innerHTML += `
+          <div class="player-context-menu-option player-context-menu-option-invite_to_lobby" data-player-username="${username}">Invite to Lobby</div>
+          <div class="player-context-menu-option player-context-menu-option-request_1v1" data-player-username="${username}">Request 1v1</div>
+          `;
+        }
+        menu.innerHTML += `<div class="player-context-menu-option player-context-menu-option-reference_player" data-player-username="${username}">Reference Player</div>`;
+        let left = event.pageX;
+        let top = event.pageY;
+        if (left + 130 > window.innerWidth) left -= 130;
+        if (top + 200 > window.innerHeight) top -= 200;
+        menu.style = `left: ${left}px; top: ${top}px`;
+        document.body.appendChild(menu);
+        contextMenuOpen = true;
+      }
+      function closeContextMenu() {
+        document.querySelector(".player-context-menu").remove();
+        contextMenuOpen = false;
+      }
+      let threeLetterMonthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      function openLobbies(username) {
+        Notiflix.Loading.circle();
+        Notiflix.Loading.change("Fetching latest server data...");
+        user.getLobbies(function(lobbies) {
+          currentLobbies = lobbies;
+          lobbies = lobbies.reverse();
+          openWindow("Lobbies", `
+          <div class="lobbies-description">Choose the lobby you'd like to invite this user to.</div>
+          <div class="lobby-list"></div>
+          `);
+          for (let i = 0; i < lobbies.length; i++) {
+            let lobby = lobbies[i];
+            if (lobby.code) continue;
+            let lobbyCreationDate = new Date(lobby.creationDate);
+            let lobbyCreatedAt = threeLetterMonthNames[lobbyCreationDate.toISOString().split("-")[1] - 1] + " " + lobbyCreationDate.toISOString().split("-")[2].split("T")[0] + " " + lobbyCreationDate.toISOString().split("-")[0] + " " + lobbyCreationDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+            let scoreLimit = lobby.timeLimit;
+            let timeLimit = lobby.timeLimit;
+            if (scoreLimit == null) scoreLimit = "∞";
+            if (timeLimit == null) timeLimit = "∞";
+            document.querySelector(".lobby-list").innerHTML += `
+            <div class="lobby" data-lobby-name="${lobby.name}" data-player-username="${username}">
+              <div class="lobby-map-preview" style="background-image: url(/images/map-previews/${lobby.map}.png)"><span class="lobby-map-name">${lobby.map.replace(/_/g, " ")}</span></div>
+              <div class="lobby-name">${lobby.name.trim()}</div>
+              <div class="lobby-info">${lobbyCreatedAt} &bullet; Mode: <b>${lobby.mode.toUpperCase()}</b> &bullet; Score limit: <b>${scoreLimit}</b> &bullet; Time: <b>${timeLimit}</b> minutes</div>
+              <div class="lobby-status lobby-status-${lobby.playersActive < 1 ? "inactive" : lobby.playersActive >= lobby.playersNeeded ? "full" : "active"}"><span class="lobby-status-player-count">${Math.min(lobby.playersActive, lobby.playersNeeded)}/${lobby.playersNeeded}</span></div>
+            </div>
+            `;
+          }
+        });
+      }
+      function inviteToGame(username = null, lobby = null) {
+        if (!username) {
+          Notiflix.Confirm.show("Invite User", "Who do you want to invite?", "", "Cancel", () => {}, () => {}, {
+            borderRadius: 0,
+            titleColor: "#5aace1",
+            zindex: 10000
+          });
+          document.querySelector("#NXConfirmButtonOk").remove();
+          document.querySelector("#NXConfirmButtonCancel").style.width = "100%";
+          document.querySelector("#NXConfirmButtonCancel").style.margin = "0";
+          let usersHtml = users.map(user => `<a class="reference-user-entry" href="#" onclick="event.preventDefault(), inviteToGame('${user.username}')">@${user.username}</a>`).join("");
+          document.querySelector(".notiflix-confirm-head").innerHTML += `
+          <div class="reference-user-list">
+            ${usersHtml}
+          </div>
+          `;
+        } else {
+          if (document.querySelector("#NXConfirmButtonCancel")) document.querySelector("#NXConfirmButtonCancel").click();
+          if (!lobby) {
+            openLobbies(username);
+          } else {
+            sendMessage(`:invite:${JSON.stringify({
+              sender: user.data.username,
+              username: username,
+              lobby: lobby
+            })}`);
+            Notiflix.Notify.success("Invite sent!");
+          }
+        }
       }
       let startTime = Date.now();
       user.getAllUsers(function(_users) {
@@ -513,11 +781,31 @@
       document.querySelector(".chat-input-box").addEventListener("keydown", function(event) {
         if (event.key == "Enter") sendMessage();
       });
-      document.querySelector(".chat-button-send").addEventListener("click", function(event) {
-        sendMessage();
-      });
-      document.querySelector(".chat-button-reference").addEventListener("click", function(event) {
-        referenceUser();
+      document.addEventListener("click", function(event) {
+        if (contextMenuOpen) closeContextMenu();
+        if (event.target.className.includes("window-close")) {
+          closeWindow();
+        } else if (event.target.classList.contains("chat-button-send")) {
+          sendMessage();
+        } else if (event.target.classList.contains("chat-button-reference")) {
+          referenceUser();
+        } else if (event.target.classList.contains("chat-button-invite")) {
+          inviteToGame();
+        } else if (event.target.classList.contains("player")) {
+          openContextMenu(event);
+        } else if (event.target.classList.contains("player-reference")) {
+          event.preventDefault();
+          openContextMenu(event);
+        } else if (event.target.classList.contains("message-username")) {
+          openContextMenu(event);
+        } else if (event.target.classList.contains("player-context-menu-option-invite_to_lobby")) {
+          inviteToGame(event.target.dataset.playerUsername);
+        } else if (event.target.classList.contains("player-context-menu-option-reference_player")) {
+          addUserReference(event.target.dataset.playerUsername);
+        } else if (event.target.classList.contains("lobby")) {
+          closeWindow();
+          inviteToGame(event.target.dataset.playerUsername, event.target.dataset.lobbyName);
+        }
       });
       setInterval(function() {
         document.querySelectorAll(".message").forEach(element => {

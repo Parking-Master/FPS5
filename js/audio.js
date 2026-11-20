@@ -17,19 +17,20 @@ const AudioWrapper = function(src, alias = false, callback = () => {}) {
       offset: 0,
       playing: false,
       loaded: false,
-      loadPromise: function() {
+      loadPromise: function(loadCallback = null) {
         if (i == 0) {
           fetch(src).then(res => res.arrayBuffer()).then(buffer => ctx.decodeAudioData(buffer)).then(decoded => {
             if (alias) mainWrapper.alias.buffer = decoded, mainWrapper.alias.loaded = true;
             wrapper.buffer = decoded;
             wrapper.loaded = true;
             callback(decoded);
+            if (typeof loadCallback === "function") loadCallback();
             audio.checkIfLoaded();
           });
         }
       },
       play: function() {
-        if (!wrapper.buffer) return wrapper.loadPromise.then(() => wrapper.play());
+        if (!wrapper.buffer) return wrapper.loadPromise(() => wrapper.play());
         if (wrapper.playing) return;
         const source = ctx.createBufferSource();
         source.buffer = wrapper.buffer;

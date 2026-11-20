@@ -963,7 +963,7 @@
             if (frameCount % 4 == 0) utils.ui.radar.update(playerObject, playersIterated - 1);
             if (playerObject.animationMixer) {
               playerObject.animationMixer.update(clockDelta);
-              if (!playerObject.isRunning && (playerObject.vehicle ? playerObject.vehicle.seat != "driver" : true)) {
+              if (!playerObject.isRunning && (playerObject.vehicle ? playerObject.vehicle.seat != "driver" : true) && playerObject.weapon) {
                 const offset = playerObject.weapon.type == "pistol" ? 1.3 : 0.9;
                 const weaponRotation = Math.min(Math.max(-playerObject.weaponRotation + offset, 0.1), 1.7);
                 const rightShoulder = playerObject.scene.getObjectByName("mixamorigRightShoulder");
@@ -3576,6 +3576,7 @@
           },
           weapons: {
             set: function(player, weapon) {
+              if (!player || weapon == "random") return;
               let type = "rifle";
               if (sandbox.weapons[weapon].holdType == "pistol") {
                 type = "pistol";
