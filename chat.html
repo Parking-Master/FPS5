@@ -91,6 +91,16 @@
       .message.message-invite .message-text {
         box-shadow: 10px 0 0 #6aace1;
       }
+      .message.message-notification .message-text::before {
+        content: "";
+        position: absolute;
+        background: red;
+        width: 20px;
+        height: 20px;
+        right: -10px;
+        top: 35px;
+        border-radius: 100%;
+      }
       .message-header {
         position: relative;
         width: 100%;
@@ -516,6 +526,12 @@
       gametime.on("postMessage", function(player, message, username, profilePicture, date) {
         appendMessage(message, username, profilePicture, date);
       });
+      gametime.on("request1v1", function(sender, username, id, map) {
+        if (username == user.data.username) open1v1Request(sender, id, map);
+      });
+      gametime.on("accept1v1", function(sender, id, map) {
+        if (sender == user.data.username) location.href = `/src.html?1v1id=${id}&map=${map}`;
+      });
       gametime.onconnect = function() {
         gametime.update();
       };
@@ -589,7 +605,7 @@
         if (message.startsWith(":invite:")) {
           let inviteData = JSON.parse(message.split(":invite:")[1]);
           result = `
-          <a href="#" class="player-reference" data-player-username="${inviteData.sender}" data-player-invite>${inviteData.sender}</a> invited <a href="#" class="player-reference" data-player-username="${inviteData.username}">${inviteData.username}</a> to a game:
+          <a href="#" class="player-reference" data-player-username="${inviteData.sender}" data-player-invite ${inviteData.username == user.data.username ? "data-message-notification" : ""}>${inviteData.sender}</a> invited <a href="#" class="player-reference" data-player-username="${inviteData.username}">${inviteData.username}</a> to a game:
           <br>
           <br>
           <a href="/src.html?lobby=${inviteData.lobby}">${inviteData.lobby}</a>
@@ -634,7 +650,7 @@
         let formattedTime = formatMessageTime(date);
         let formattedMessage = formatMessage(message);
         messageList.innerHTML += `
-        <div class="message ${formattedMessage.includes("data-player-invite") ? "message-invite" : ""}" data-date="${date}">
+        <div class="message${formattedMessage.includes("data-player-invite") ? " message-invite" : ""}${formattedMessage.includes("data-message-notification") ? " message-notification" : ""}" data-date="${date}">
           <div class="message-header">
             <div class="message-profile-picture" ${profilePicture ? `style="background-image: url(${profilePicture})"` : ""}></div>
             <div class="message-username" data-player-username="${username}">${username}</div>
@@ -730,7 +746,7 @@
       }
       function inviteToGame(username = null, lobby = null) {
         if (!username) {
-          Notiflix.Confirm.show("Invite User", "Who do you want to invite?", "", "Cancel", () => {}, () => {}, {
+          Notiflix.Confirm.show("Invite to Lobby", "Who do you want to invite?", "", "Cancel", () => {}, () => {}, {
             borderRadius: 0,
             titleColor: "#5aace1",
             zindex: 10000
@@ -757,6 +773,25 @@
             Notiflix.Notify.success("Invite sent!");
           }
         }
+      }
+      function request1v1(username) {
+        let id = Math.floor(100000 + Math.random() * 900000);
+        let maps = ["Cargo_Port", "Lihid", "Standoff", "Vertex"];
+        let chosenMap = maps[Math.floor(Math.random() * maps.length)];
+        gametime.run("request1v1", [user.data.username, username, id, chosenMap]);
+        Notiflix.Notify.success("Request sent. If this player accepts, you will both automatically be redirected to the match.");
+      }
+      function open1v1Request(sender, id, map) {
+        Notiflix.Confirm.show("1v1 Request", `@${sender} has requested a 1v1 match with you. Do you accept?`, "Join", "Cancel", function() {
+          let id = Math.floor(100000 + Math.random() * 900000);
+          gametime.run("accept1v1", [sender, id, map]);
+          location.href = `/src.html?1v1id=${id}&map=${map}`;
+        }, () => {}, {
+          borderRadius: 0,
+          okButtonBackground: "#5aace1",
+          titleColor: "#5aace1",
+          zindex: 10000
+        });
       }
       let startTime = Date.now();
       user.getAllUsers(function(_users) {
@@ -800,6 +835,8 @@
           openContextMenu(event);
         } else if (event.target.classList.contains("player-context-menu-option-invite_to_lobby")) {
           inviteToGame(event.target.dataset.playerUsername);
+        } else if (event.target.classList.contains("player-context-menu-option-request_1v1")) {
+          request1v1(event.target.dataset.playerUsername);
         } else if (event.target.classList.contains("player-context-menu-option-reference_player")) {
           addUserReference(event.target.dataset.playerUsername);
         } else if (event.target.classList.contains("lobby")) {

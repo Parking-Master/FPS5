@@ -6419,6 +6419,11 @@
       user.getLobbies(function(lobbies) {
         let currentLobbyName = new URLSearchParams(location.search).get("lobby");
         let currentLobbyCode = new URLSearchParams(location.search).get("code");
+        let _1v1id = new URLSearchParams(location.search).get("1v1id");
+        if (_1v1id) {
+          currentLobbyName = "customGameLobby-1v1-" + _1v1id;
+          lobbies.push({"mode":"slayer","scoreLimit":25,"timeLimit":15,"teamsEnabled":false,"teamSize":null,"playersNeeded":2,"personalLoadoutsEnabled":true,"presets":{"loadout":["AK-74","FN-502"],"armorAbility":null,"grenades":{"mk2":2,"plasma":0}},"radarEnabled":true,"vehiclesEnabled":true,"map":new URLSearchParams(location.search).get("map"),"name":"customGameLobby-1v1-"+_1v1id,"creationDate":null,"playersActive":0,"respawnTime":4,"mapWeaponsEnabled":true});
+        }
         let lobbyFound = false;
         for (let i = 0; i < lobbies.length; i++) {
           let lobby = lobbies[i];
