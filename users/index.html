@@ -11,7 +11,7 @@
       }
       html, body {
         margin: 0 !important;
-        font-family: Arial, Helvetica, sans-serif;
+        font-family: "Aperture";
         overflow: hidden !important;
       }
       .wrapper {
@@ -30,6 +30,14 @@
       }
       .users-wrapper {
         position: relative;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+      .users-container {
+        position: relative;
         max-width: 700px;
         height: 100%;
         padding-top: 40px;
@@ -39,7 +47,7 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
-      .users-wrapper::-webkit-scrollbar { 
+      .users-container::-webkit-scrollbar { 
         display: none;
       }
       .user-container {
@@ -67,7 +75,7 @@
       .user-container:last-child {
         margin-bottom: 150px;
       }
-      .users-wrapper-header .user-profile-picture {
+      .users-container-header .user-profile-picture {
         background: none !important;
       }
       .user-container * {
@@ -76,14 +84,13 @@
         font-size: 16px;
         text-align: center;
       }
-      .users-wrapper-header * {
+      .users-container-header * {
         font-size: 10px !important;
       }
       .user-profile-picture {
         position: relative;
         width: 20px;
         height: 20px;
-        background-image: url(https://cdn.jsdelivr.net/gh/Parking-Master/Parking-Master@latest/img/profile-picture.png);
         background-size: 100%;
         background-position: center;
         background-repeat: no-repeat;
@@ -162,6 +169,160 @@
         66% { transform:scale(var(--s, 1)) translate(10px,-20px) rotate(-90deg) }
         90%, 100% { transform:scale(var(--s, 1)) translate(10px,-10px) rotate(-90deg) }
       }
+      .profile-main-wrapper {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        align-content: center;
+        overflow-y: scroll;
+      }
+      .profile-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 700px;
+        height: 100%;
+        max-height: 500px;
+        min-height: 400px;
+        margin: 0 auto;
+      }
+      .profile-container-wrapper {
+        position: relative;
+        width: 100%;
+        height: 50%;
+        display: flex;
+        box-sizing: border-box;
+      }
+      .profile-container {
+        outline: 1px solid rgba(255, 255, 255, .3);
+      }
+      .profile-profile-picture {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        background-size: 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-color: rgba(255, 255, 255, .5);
+        border-radius: 100%;
+        margin: 0 auto;
+      }
+      .profile-container {
+        position: relative;
+        box-sizing: border-box;
+        height: 100%;
+      }
+      .profile-container-1 {
+        flex: 1;
+        align-content: center;
+      }
+      .profile-container-2 {
+        flex: 2;
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+      }
+      .profile-container-3 {
+        flex: 2;
+        display: flex;
+      }
+      .profile-container-2 .profile-sub-container {
+        position: relative;
+        width: calc(100% - 50px);
+        flex-basis: calc(50% - 50px);
+        border: 1px solid white;
+        margin: 25px;
+        box-sizing: border-box;
+        align-content: center;
+        background: rgba(255, 255, 255, .2);
+      }
+      .profile-container-3 .profile-sub-container {
+        position: relative;
+        width: calc(100% - 50px);
+        flex-basis: calc(50% - 50px);
+        border: 1px solid white;
+        margin: 25px;
+        box-sizing: border-box;
+        align-content: start;
+        background: rgba(255, 255, 255, .2);
+        color: #fff;
+        padding: 20px;
+        overflow-y: scroll;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .profile-container-3 .profile-sub-container::-webkit-scrollbar { 
+        display: none;
+      }
+      .progress-track {
+        position: relative;
+        width: 90%;
+        height: 3px;
+        background: #fff;
+        margin: 0 auto;
+      }
+      .progress-bar {
+        position: relative;
+        width: 50%;
+        height: 100%;
+        background: #5ac650;
+      }
+      .profile-progress-text {
+        color: #fff;
+        text-align: center;
+        margin-top: 10px;
+      }
+      .profile-header {
+        font-size: 30px;
+        border-bottom: 1px solid #fff;
+      }
+      .profile-stats {
+        border-left: 2px solid #bbb;
+        padding-left: 30px;
+        margin: 10px 0;
+      }
+      .profile-stats li {
+        list-style-type: square;
+        font-size: 20px;
+      }
+      .profile-loadout {
+        position: relative;
+        width: 100%;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      .profile-loadout::before {
+        content: "+";
+        position: absolute;
+        font-size: 50px;
+      }
+      .profile-loadout-box {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        background: #c8d1d9;
+        border: 1px solid white;
+        margin: 20px;
+      }
+      .profile-loadout-item {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background-size: 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+        transform: rotate(25deg);
+      }
+      .profile-loadout-box:last-child .profile-loadout-item {
+        background-size: 50%;
+      }
+      .profile-bio {
+        background: rgba(255, 255, 255, .1);
+        border-left: 5px solid #fff;
+        padding-left: 10px;
+      }
     </style>
   </head>
   <body>
@@ -171,38 +332,119 @@
       <div class="loader"></div>
     </div>
     <div class="wrapper">
-      <div class="header">All Players</div>
       <div class="users-wrapper">
-        <div class="user-container users-wrapper-header">
-          <div class="user-profile-picture"></div>
-          <div class="user-username">Username</div>
-          <div class="user-points">Points</div>
-          <div class="user-join-date">Joined</div>
-          <div class="user-games-played">Games Played</div>
-          <div class="user-games-won">Games Won</div>
+        <div class="header">All Players</div>
+        <div class="users-container">
+          <div class="user-container users-container-header">
+            <div class="user-profile-picture"></div>
+            <div class="user-username">Username</div>
+            <div class="user-points">Points</div>
+            <div class="user-join-date">Joined</div>
+            <div class="user-games-played">Games Played</div>
+            <div class="user-games-won">Games Won</div>
+          </div>
+        </div>
+      </div>
+      <div class="profile-main-wrapper">
+        <div class="profile-wrapper">
+          <div class="profile-container-wrapper">
+            <div class="profile-container profile-container-1">
+              <div class="profile-profile-picture"></div>
+            </div>
+            <div class="profile-container profile-container-2">
+              <div class="profile-sub-container profile-matches-won-percentage">
+                <div class="progress-track">
+                  <div class="progress-bar"></div>
+                </div>
+                <div class="profile-progress-text">Wins <span class="value">50</span>% of matches</div>
+              </div>
+              <div class="profile-sub-container profile-top-players-percentage">
+                <div class="progress-track">
+                  <div class="progress-bar"></div>
+                </div>
+                <div class="profile-progress-text">Top <span class="value">50</span>% of players</div>
+              </div>
+            </div>
+          </div>
+          <div class="profile-container-wrapper">
+            <div class="profile-container profile-container-3">
+              <div class="profile-sub-container">
+                <div class="profile-header profile-username">GuestUser124</div>
+                <ul class="profile-stats">
+                  <li class="profile-points">6,790 points</li>
+                  <li class="profile-games-played">58 games played</li>
+                  <li class="profile-games-won">25 games won</li>
+                </ul>
+                <div class="profile-bio">This player has no bio yet.</div>
+              </div>
+              <div class="profile-sub-container">
+                <div class="profile-header profile-username">Loadout</div>
+                <div class="profile-loadout">
+                  <div class="profile-loadout-box">
+                    <div class="profile-loadout-item profile-loadout-primary-weapon"></div>
+                  </div>
+                  <div class="profile-loadout-box">
+                    <div class="profile-loadout-item profile-loadout-secondary-weapon"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
     <script>
+      let users = [];
+      let loaded = false;
+      let profileOpened = false;
+      let usersWrapper = document.querySelector(".users-wrapper");
+      let usersContainer = document.querySelector(".users-container");
+      let profileWrapper = document.querySelector(".profile-wrapper");
       function formatNumber(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
       }
-      let usersWrapper = document.querySelector(".users-wrapper");
-      let startTime = Date.now();
-      user.getAllUsers(function(users) {
-        for (let i = 0; i < users.length; i++) {
-          let user = users[i];
-          usersWrapper.innerHTML += `
-          <div class="user-container">
-            <div class="user-profile-picture" style="background-image: url(${user.profilePicture})"></div>
-            <div class="user-username">${user.username}</div>
-            <div class="user-points">${formatNumber(user.points)}</div>
-            <div class="user-join-date">${new Date(user.createdAt).toLocaleDateString()}</div>
-            <div class="user-games-played">${formatNumber(user.gamesPlayed)}</div>
-            <div class="user-games-won">${formatNumber(user.gamesWon)}</div>
-          </div>
-          `;
+      function openUserProfile(username) {
+        if (profileOpened) return;
+        profileOpened = true;
+        usersWrapper.style.display = "none";
+        profileWrapper.style.display = "block";
+        let user = users.filter(user => user.username == username)[0];
+        if (user) {
+          location.hash = `#${username}`;
+          document.querySelector(".profile-profile-picture").style.backgroundImage = `url(${user.profilePicture})`;
+          document.querySelector(".profile-username").textContent = user.username;
+          document.querySelector(".profile-points").textContent = formatNumber(user.points) + " points";
+          document.querySelector(".profile-games-played").textContent = formatNumber(user.gamesPlayed) + " games played";
+          document.querySelector(".profile-games-won").textContent = formatNumber(user.gamesWon) + " games won";
+          if (user.bio) {
+            document.querySelector(".profile-bio").textContent = user.bio;
+          }
+          document.querySelector(".profile-loadout-primary-weapon").style.backgroundImage = `url(/images/weapon-previews/${user.loadout[0]}.png)`;
+          document.querySelector(".profile-loadout-secondary-weapon").style.backgroundImage = `url(/images/weapon-previews/${user.loadout[1]}.png)`;
+          let matchesWonPercentage = Math.round((user.gamesWon / user.gamesPlayed) * 100);
+          if (matchesWonPercentage < 25) {
+            document.querySelector(".profile-matches-won-percentage .progress-bar").style.background = "#c6aa46";
+          }
+          document.querySelector(".profile-matches-won-percentage .progress-bar").style.width = matchesWonPercentage + "%";
+          document.querySelector(".profile-matches-won-percentage .value").textContent = matchesWonPercentage;
+          let topPlayersPercentage = Math.round(Math.max(100 - (user.points / Math.max(...users.map(user => user.points))) * 100, 1));
+          if (topPlayersPercentage < 25) {
+            document.querySelector(".profile-top-players-percentage .progress-bar").style.background = "#5aace1";
+          }
+          document.querySelector(".profile-top-players-percentage .progress-bar").style.width = topPlayersPercentage + "%";
+          document.querySelector(".profile-top-players-percentage .value").textContent = topPlayersPercentage;
         }
+      }
+      function closeUserProfile() {
+        if (!profileOpened) return;
+        profileOpened = false;
+        usersWrapper.style.display = "block";
+        profileWrapper.style.display = "none";
+      }
+      let startTime = Date.now();
+      user.getAllUsers(function(_users) {
+        users = _users;
+        loaded = true;
         function checkTime() {
           if (Date.now() - startTime > 2000) {
             let loader = document.querySelector(".loader-banner");
@@ -213,7 +455,31 @@
           }
         }
         checkTime();
+        for (let i = 0; i < users.length; i++) {
+          let user = users[i];
+          usersContainer.innerHTML += `
+          <div class="user-container" onclick="openUserProfile('${user.username}')">
+            <div class="user-profile-picture" style="background-image: url(${user.profilePicture})"></div>
+            <div class="user-username">${user.username}</div>
+            <div class="user-points">${formatNumber(user.points)}</div>
+            <div class="user-join-date">${new Date(user.createdAt).toLocaleDateString()}</div>
+            <div class="user-games-played">${formatNumber(user.gamesPlayed)}</div>
+            <div class="user-games-won">${formatNumber(user.gamesWon)}</div>
+          </div>
+          `;
+        }
       });
+      function checkHash() {
+        if (loaded) {
+          if (location.hash) {
+            let username = location.hash.replace("#", "");
+            openUserProfile(username);
+          } else {
+            closeUserProfile();
+          }
+        }
+      }
+      setInterval(checkHash, 200);
     </script>
   </body>
 </html>
