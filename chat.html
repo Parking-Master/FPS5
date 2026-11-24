@@ -693,7 +693,7 @@
         let menu = document.createElement("div");
         menu.className = "player-context-menu";
         menu.innerHTML = `<div class="player-context-menu-header">${username}</div>`;
-        if (users.filter(user => user.username == username).length > 0) menu.innerHTML += `<div class="player-context-menu-option player-context-menu-option-view_profile">View Profile</div>`;
+        if (users.filter(user => user.username == username).length > 0) menu.innerHTML += `<div class="player-context-menu-option player-context-menu-option-view_profile" data-player-username="${username}">View Profile</div>`;
         if (username != user.data.username) {
           menu.innerHTML += `
           <div class="player-context-menu-option player-context-menu-option-invite_to_lobby" data-player-username="${username}">Invite to Lobby</div>
@@ -743,6 +743,9 @@
             `;
           }
         });
+      }
+      function viewProfile(username) {
+        location.href = `/users/user.html#${username}`;
       }
       function inviteToGame(username = null, lobby = null) {
         if (!username) {
@@ -833,6 +836,8 @@
           openContextMenu(event);
         } else if (event.target.classList.contains("message-username")) {
           openContextMenu(event);
+        } else if (event.target.classList.contains("player-context-menu-option-view_profile")) {
+          viewProfile(event.target.dataset.playerUsername);
         } else if (event.target.classList.contains("player-context-menu-option-invite_to_lobby")) {
           inviteToGame(event.target.dataset.playerUsername);
         } else if (event.target.classList.contains("player-context-menu-option-request_1v1")) {
