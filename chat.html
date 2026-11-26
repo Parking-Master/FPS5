@@ -490,7 +490,7 @@
     <div class="wrapper">
       <div class="chat-wrapper">
         <div class="chat-header">World Chat</div>
-        <div class="chat-description">Chat with other FPS5 players from anywhere in the world. Remember to follow the <a href="">chatroom rules</a>.</div>
+        <div class="chat-description">Chat with other FPS5 players from anywhere in the world! Remember to follow the <a href="/chat-rules.html">chatroom rules</a>.</div>
         <div class="chat-controls">
           <input class="chat-input-box" type="text" placeholder="Enter your message here...">
           <div class="chat-button chat-button-send"></div>
@@ -629,7 +629,7 @@
             if (message.toLowerCase().replace(/[0-9]/g, "").match(new RegExp(`\\b(${RegExp.escape(prohibited_words[i])})\\b`, "g"))) messageContainsProhibitedWord = true;
           }
           if (messageContainsProhibitedWord) {
-            Notiflix.Notify.warning("You are not allowed to post this message. Please remove any innaproppriate words from your message. If you continue this behaviour, you are at risk of being banned. Learn more at our <a href='/terms.html'>Terms and Conditions</a>.");
+            Notiflix.Notify.warning("You are not allowed to post this message. Please remove any innaproppriate words from your message. If you continue this behaviour, you are at risk of being banned. Learn more at our <a href='/terms-of-service.html#world-chat'>Terms and Conditions</a>.");
           } else {
             let time = Date.now();
             if (time - lastMessageTime < 10000) {

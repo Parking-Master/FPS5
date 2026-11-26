@@ -424,14 +424,18 @@
           let matchesWonPercentage = Math.round((user.gamesWon / user.gamesPlayed) * 100);
           if (matchesWonPercentage < 25) {
             document.querySelector(".profile-matches-won-percentage .progress-bar").style.background = "#c6aa46";
+          } else {
+            document.querySelector(".profile-matches-won-percentage .progress-bar").style.background = "";
           }
-          document.querySelector(".profile-matches-won-percentage .progress-bar").style.width = matchesWonPercentage + "%";
+          document.querySelector(".profile-matches-won-percentage .progress-bar").style.width = Math.max(matchesWonPercentage, 5) + "%";
           document.querySelector(".profile-matches-won-percentage .value").textContent = matchesWonPercentage;
           let topPlayersPercentage = Math.round(Math.max(100 - (user.points / Math.max(...users.map(user => user.points))) * 100, 1));
           if (topPlayersPercentage < 25) {
             document.querySelector(".profile-top-players-percentage .progress-bar").style.background = "#5aace1";
+          } else {
+            document.querySelector(".profile-top-players-percentage .progress-bar").style.background = "";
           }
-          document.querySelector(".profile-top-players-percentage .progress-bar").style.width = topPlayersPercentage + "%";
+          document.querySelector(".profile-top-players-percentage .progress-bar").style.width = Math.max(topPlayersPercentage, 5) + "%";
           document.querySelector(".profile-top-players-percentage .value").textContent = topPlayersPercentage;
         }
       }
@@ -478,8 +482,9 @@
             closeUserProfile();
           }
         }
+        requestAnimationFrame(checkHash);
       }
-      setInterval(checkHash, 200);
+      checkHash();
     </script>
   </body>
 </html>
